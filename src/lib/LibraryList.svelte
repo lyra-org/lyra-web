@@ -351,22 +351,31 @@ www.meshiplaw.com/lyra.
   </div>
 {:else}
   <div class="mx-auto max-w-3xl">
-    <div class="mb-4 flex items-center justify-end">
-      <button
-        class="rounded-md bg-[#E6CEE3] px-3 py-1.5 text-sm font-medium text-slate-900 hover:bg-[#d4b5cf] dark:bg-[#BB7FB5] dark:text-white dark:hover:bg-[#cfa2c9]"
-        onclick={openCreate}
-      >
-        + New library
-      </button>
-    </div>
-
     {#if libraries.length === 0}
       <div class="py-20 text-center">
-        <p class="text-sm text-slate-500 dark:text-neutral-400">
-          No libraries yet.
+        <h2 class="text-xl font-semibold text-slate-900 dark:text-neutral-100">
+          Your library is empty
+        </h2>
+        <p class="mt-2 text-sm text-slate-500 dark:text-neutral-400">
+          Point Lyra at a folder of music to start listening.
         </p>
+        <button
+          class="mt-6 rounded-md bg-[#E6CEE3] px-5 py-2 text-base font-medium text-slate-900 hover:bg-[#d4b5cf] dark:bg-[#BB7FB5] dark:text-white dark:hover:bg-[#cfa2c9]"
+          onclick={openCreate}
+        >
+          Add your first library
+        </button>
       </div>
     {:else}
+      <div class="mb-4 flex items-center justify-end">
+        <button
+          class="rounded-md bg-[#E6CEE3] px-3 py-1.5 text-sm font-medium text-slate-900 hover:bg-[#d4b5cf] dark:bg-[#BB7FB5] dark:text-white dark:hover:bg-[#cfa2c9]"
+          onclick={openCreate}
+        >
+          + New library
+        </button>
+      </div>
+
       <div class="space-y-2">
         {#each libraries as lib (lib.id ?? lib.name)}
           <a

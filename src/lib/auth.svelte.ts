@@ -3,11 +3,12 @@
 // You can obtain one here:
 // www.meshiplaw.com/lyra.
 
-import type { Session } from "./types";
+import type { MeResponse, Permission, Session } from "./types";
 
 const TOKEN_KEY = "token";
 
 let session = $state<Session | null>(restore());
+let me = $state<MeResponse | null>(null);
 
 function restore(): Session | null {
   const token = localStorage.getItem(TOKEN_KEY);
@@ -17,13 +18,24 @@ function restore(): Session | null {
 
 function login(s: Session) {
   localStorage.setItem(TOKEN_KEY, s.token);
+  me = null;
   session = s;
 }
 
 function logout() {
   localStorage.removeItem(TOKEN_KEY);
   session = null;
+  me = null;
   window.location.hash = "#/login";
+}
+
+function setMe(m: MeResponse | null) {
+  me = m;
+}
+
+function hasPermission(permission: Permission): boolean {
+  const permissions = me?.permissions ?? [];
+  return permissions.includes("admin") || permissions.includes(permission);
 }
 
 export function getAuth() {
@@ -37,7 +49,12 @@ export function getAuth() {
     get token() {
       return session?.token ?? null;
     },
+    get me() {
+      return me;
+    },
     login,
     logout,
+    setMe,
+    hasPermission,
   };
 }

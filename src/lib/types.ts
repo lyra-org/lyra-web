@@ -443,6 +443,7 @@ export type Permission =
   | "manage_plugins"
   | "manage_providers"
   | "manage_metadata"
+  | "manage_server"
   | "download";
 
 export interface MeResponse {
@@ -458,10 +459,17 @@ export interface PublicUser {
   role?: string | null;
 }
 
+export interface SetupStatus {
+  account_required: boolean;
+  plugin_selection_required: boolean;
+}
+
 export interface ServerInfoResponse {
   server_id: string;
   version: string;
-  setup_complete: boolean;
+  published_url?: string | null;
+  setup: SetupStatus;
+  auth_enabled: boolean;
 }
 
 export interface PlaybackUrlResponse {
@@ -688,4 +696,65 @@ export interface ActivePlaybackSession {
   connection_token?: string | null;
   supported_commands: RemoteAction[];
   remote_control_degraded: boolean;
+}
+
+// Plugin repositories
+
+export interface PluginRepositoryResponse {
+  id: string;
+  origin: string;
+  name: string;
+  description: string;
+  ref?: string | null;
+  last_commit?: string | null;
+  refreshed_at_ms: number;
+}
+
+export interface PluginRepositoriesResponse {
+  repositories: PluginRepositoryResponse[];
+}
+
+export interface PluginPreviewResponse {
+  id: string;
+  name: string;
+  version: string;
+  description: string;
+  // Capability scopes the plugin will be granted when installed.
+  scopes: string[];
+  origin: string;
+  subpath?: string | null;
+  commit?: string | null;
+  installed: boolean;
+  managed: boolean;
+  update_available?: boolean | null;
+}
+
+export interface RepositoryPreviewResponse {
+  origin: string;
+  ref: string;
+  commit?: string | null;
+  name?: string | null;
+  description?: string | null;
+  plugins: PluginPreviewResponse[];
+}
+
+export interface RepositoryWithPreviewResponse {
+  repository: PluginRepositoryResponse;
+  preview: RepositoryPreviewResponse;
+}
+
+export interface InstalledPluginResponse {
+  id: string;
+  version: string;
+  commit?: string | null;
+}
+
+export interface FailedInstallResponse {
+  id: string;
+  error: string;
+}
+
+export interface InstallPluginsResponse {
+  installed: InstalledPluginResponse[];
+  failed: FailedInstallResponse[];
 }

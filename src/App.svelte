@@ -16,13 +16,17 @@ www.meshiplaw.com/lyra.
   import LibraryList from "./lib/LibraryList.svelte";
   import LibraryAlbums from "./lib/LibraryAlbums.svelte";
   import LoginPage from "./lib/LoginPage.svelte";
+  import RegisterPage from "./lib/RegisterPage.svelte";
+  import PluginSetupPage from "./lib/PluginSetupPage.svelte";
   import PlaylistList from "./lib/PlaylistList.svelte";
   import PlaylistPage from "./lib/PlaylistPage.svelte";
   import NowPlayingPage from "./lib/NowPlayingPage.svelte";
   import Player from "./lib/Player.svelte";
   import SettingsPanel from "./lib/SettingsPanel.svelte";
   import RemotePanel from "./lib/RemotePanel.svelte";
+  import { onMount } from "svelte";
   import { getAuth } from "./lib/auth.svelte";
+  import { getSetup } from "./lib/setup.svelte";
   import { getPlayer } from "./lib/player.svelte.ts";
   import { getTheme } from "./lib/theme.svelte";
   import {
@@ -35,6 +39,7 @@ www.meshiplaw.com/lyra.
   import logo from "./assets/logo.svg";
 
   const auth = getAuth();
+  const setup = getSetup();
   const theme = getTheme();
   const remote = getRemote();
   const player = getPlayer();
@@ -49,6 +54,74 @@ www.meshiplaw.com/lyra.
 
   let hash = $state(window.location.hash);
   let settingsOpen = $state(false);
+
+  // Server discovery and onboarding.
+  let booted = $state(false);
+  let loginUsername = $state("");
+  let loginNotice = $state<string | null>(null);
+
+  onMount(() => {
+    setup.refresh().finally(() => (booted = true));
+  });
+
+  // Load the current user's permissions once per session token. On logout
+  // (or a 401 from the API) drop everything tied to the previous session.
+  $effect(() => {
+    const token = auth.token;
+    if (token == null) {
+      setup.clearSession();
+      return;
+    }
+    if (
+      setup.meRequestedFor !== token ||
+      (setup.meLoadedFor !== token && !setup.meLoading && setup.meError == null)
+    ) {
+      setup.loadMe();
+    }
+  });
+
+  type Screen =
+    | "loading"
+    | "server_error"
+    | "register"
+    | "login"
+    | "account_error"
+    | "plugin_setup"
+    | "app";
+
+  let screen = $derived.by((): Screen => {
+    if (!booted) return "loading";
+    if (setup.info == null) {
+      return setup.infoError != null ? "server_error" : "loading";
+    }
+    if (!auth.isLoggedIn) {
+      return setup.accountRequired ? "register" : "login";
+    }
+    if (setup.meLoadedFor !== auth.token) {
+      return setup.meError != null ? "account_error" : "loading";
+    }
+    if (setup.pluginSelectionRequired && auth.hasPermission("manage_plugins")) {
+      return "plugin_setup";
+    }
+    return "app";
+  });
+
+  async function onSignedIn() {
+    loginNotice = null;
+    loginUsername = "";
+    await setup.refresh();
+  }
+
+  function onRegisterLoginFailed(username: string, message: string) {
+    loginUsername = username;
+    loginNotice = `Your account was created, but signing in failed (${message}). Please sign in.`;
+    setup.refresh();
+  }
+
+  function onAccountExists() {
+    loginNotice = "An account already exists on this server. Please sign in.";
+    setup.refresh();
+  }
 
   $effect(() => {
     if (!auth.isLoggedIn && remote.isOpen) {
@@ -226,12 +299,64 @@ www.meshiplaw.com/lyra.
   </button>
 {/snippet}
 
-{#if route.page === "login"}
+{#if screen !== "app"}
   <main class="min-h-screen bg-white dark:bg-[#1b1d1e]">
-    <div class="absolute top-3 right-3">
+    <div class="absolute top-3 right-3 flex items-center gap-2">
       {@render themeToggle()}
+      {#if auth.isLoggedIn}
+        <button
+          class="text-sm text-slate-500 hover:text-slate-700 dark:text-neutral-400 dark:hover:text-neutral-200"
+          onclick={() => auth.logout()}
+        >
+          Log out
+        </button>
+      {/if}
     </div>
-    <LoginPage />
+    {#if screen === "loading"}
+      <div class="flex min-h-screen items-center justify-center">
+        <div
+          class="h-8 w-8 animate-spin rounded-full border-2 border-slate-300 border-t-slate-600 dark:border-neutral-600 dark:border-t-neutral-300"
+        ></div>
+      </div>
+    {:else if screen === "register"}
+      <RegisterPage
+        ondone={onSignedIn}
+        onloginfailed={onRegisterLoginFailed}
+        onaccountexists={onAccountExists}
+      />
+    {:else if screen === "login"}
+      <LoginPage
+        initialUsername={loginUsername}
+        notice={loginNotice}
+        ondone={onSignedIn}
+      />
+    {:else if screen === "server_error" || screen === "account_error"}
+      <div class="flex min-h-screen items-center justify-center px-4">
+        <div class="w-full max-w-sm text-center">
+          <p role="alert" class="text-sm text-red-600 dark:text-red-400">
+            {#if screen === "server_error"}
+              Couldn't reach the server: {setup.infoError}
+            {:else}
+              Couldn't load your account: {setup.meError}
+            {/if}
+          </p>
+          <button
+            type="button"
+            class="mt-4 rounded-md bg-[#E6CEE3] px-4 py-1.5 text-sm font-medium text-slate-900 hover:bg-[#d4b5cf] dark:bg-[#BB7FB5] dark:text-white dark:hover:bg-[#cfa2c9]"
+            onclick={() =>
+              screen === "server_error" ? setup.refresh() : setup.loadMe()}
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    {:else if screen === "plugin_setup"}
+      <PluginSetupPage
+        ondone={async () => {
+          await setup.refresh();
+        }}
+      />
+    {/if}
   </main>
 {:else}
   <main class="min-h-screen bg-white dark:bg-[#1b1d1e]">

@@ -44,6 +44,9 @@ import type {
   PluginSettingsResponse,
   PluginSettingsListResponse,
   PluginSettingValue,
+  PluginRepositoriesResponse,
+  RepositoryWithPreviewResponse,
+  InstallPluginsResponse,
   Page,
   PlaybackUrlResponse,
   LyricsResponse,
@@ -85,9 +88,14 @@ function authHeaders(extra?: Record<string, string>): Record<string, string> {
   return headers;
 }
 
-function handleResponse(res: Response, method: string, path: string) {
+function handleResponse(
+  res: Response,
+  method: string,
+  path: string,
+  token = getAuth().token,
+) {
   if (res.status === 401) {
-    getAuth().logout();
+    if (getAuth().token === token) getAuth().logout();
     throw new ApiError(401, method, path, "Unauthorized");
   }
   if (!res.ok) {
@@ -108,8 +116,9 @@ async function parseBody<T>(res: Response): Promise<T> {
 }
 
 async function get<T>(path: string): Promise<T> {
+  const token = getAuth().token;
   const res = await fetch(`${BASE}${path}`, { headers: authHeaders() });
-  handleResponse(res, "GET", path);
+  handleResponse(res, "GET", path, token);
   return parseBody<T>(res);
 }
 
@@ -172,6 +181,12 @@ export function fetchMe(): Promise<MeResponse> {
 
 export function fetchServerInfo(): Promise<ServerInfoResponse> {
   return get<ServerInfoResponse>("/server/public");
+}
+
+export function updateServerSetup(opts: {
+  plugin_selection_skipped: boolean;
+}): Promise<void> {
+  return patch<void>("/server/setup", opts);
 }
 
 // Releases (formerly "albums" in this UI)
@@ -935,4 +950,33 @@ export function updateUserPluginSettings(
 
 export function deleteUserPluginSettings(pluginId: string): Promise<void> {
   return del<void>(`/me/plugins/${encodeURIComponent(pluginId)}/settings`);
+}
+
+// Plugin repositories
+
+export function fetchPluginRepositories(): Promise<PluginRepositoriesResponse> {
+  return get<PluginRepositoriesResponse>("/plugins/repositories");
+}
+
+export function refreshPluginRepository(
+  repositoryId: string,
+): Promise<RepositoryWithPreviewResponse> {
+  return post<RepositoryWithPreviewResponse>(
+    `/plugins/repositories/${encodeURIComponent(repositoryId)}/refresh`,
+    {},
+  );
+}
+
+// `plugins` is required on purpose: omitting it installs every plugin the
+// repository provides.
+export function installPlugins(opts: {
+  url: string;
+  ref?: string | null;
+  plugins: string[];
+}): Promise<InstallPluginsResponse> {
+  return post<InstallPluginsResponse>("/plugins/install", {
+    url: opts.url,
+    ref: opts.ref ?? undefined,
+    plugins: opts.plugins,
+  });
 }
