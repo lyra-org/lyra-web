@@ -7,7 +7,12 @@ www.meshiplaw.com/lyra.
 
 <script lang="ts">
   import type { PlaylistResponse } from "./types";
-  import { fetchPlaylists, createPlaylist, deletePlaylist } from "./api";
+  import {
+    fetchPlaylists,
+    fetchAllPages,
+    createPlaylist,
+    deletePlaylist,
+  } from "./api";
 
   let playlists: PlaylistResponse[] = $state([]);
   let loading = $state(true);
@@ -22,7 +27,7 @@ www.meshiplaw.com/lyra.
 
   async function load() {
     try {
-      playlists = await fetchPlaylists();
+      playlists = await fetchAllPages(fetchPlaylists);
     } catch (e) {
       error = e instanceof Error ? e.message : "Failed to load playlists";
     } finally {

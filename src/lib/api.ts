@@ -122,6 +122,19 @@ async function get<T>(path: string): Promise<T> {
   return parseBody<T>(res);
 }
 
+export async function fetchAllPages<T>(
+  fetchPage: (cursor?: string) => Promise<Page<T>>,
+): Promise<T[]> {
+  const items: T[] = [];
+  let cursor: string | undefined;
+  do {
+    const page = await fetchPage(cursor);
+    items.push(...page.items);
+    cursor = page.next_cursor ?? undefined;
+  } while (cursor);
+  return items;
+}
+
 async function post<T>(path: string, body: unknown): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {
     method: "POST",
@@ -194,11 +207,13 @@ export function updateServerSetup(opts: {
 export function fetchReleases(opts?: {
   libraryId?: string;
   genreId?: string;
+  cursor?: string;
   limit?: number;
 }): Promise<Page<ReleaseResponse>> {
   const params = new URLSearchParams({ inc: "artists,covers" });
   if (opts?.libraryId) params.set("library_id", opts.libraryId);
   if (opts?.genreId) params.set("genre_id", opts.genreId);
+  if (opts?.cursor) params.set("cursor", opts.cursor);
   if (opts?.limit != null) params.set("limit", String(opts.limit));
   return get<Page<ReleaseResponse>>(`/releases?${params}`);
 }
@@ -213,13 +228,15 @@ export function fetchGenres(opts?: {
   libraryId?: string;
   sortBy?: string;
   sortOrder?: "ascending" | "descending";
-}): Promise<GenreResponse[]> {
+  cursor?: string;
+}): Promise<Page<GenreResponse>> {
   const params = new URLSearchParams();
   if (opts?.libraryId) params.set("library_id", opts.libraryId);
   if (opts?.sortBy) params.set("sort_by", opts.sortBy);
   if (opts?.sortOrder) params.set("sort_order", opts.sortOrder);
+  if (opts?.cursor) params.set("cursor", opts.cursor);
   const query = params.toString();
-  return get<GenreResponse[]>(`/genres${query ? `?${query}` : ""}`);
+  return get<Page<GenreResponse>>(`/genres${query ? `?${query}` : ""}`);
 }
 
 export function fetchGenre(
@@ -345,9 +362,11 @@ export async function fetchActivePlaybacks(): Promise<ActivePlayback[]> {
 
 export function fetchArtists(opts?: {
   libraryId?: string;
+  cursor?: string;
 }): Promise<Page<ArtistResponse>> {
   const params = new URLSearchParams({ inc: "covers" });
   if (opts?.libraryId) params.set("library_id", opts.libraryId);
+  if (opts?.cursor) params.set("cursor", opts.cursor);
   return get<Page<ArtistResponse>>(`/artists?${params}`);
 }
 
@@ -694,8 +713,12 @@ export async function streamSyncRun(
 
 // Playlists
 
-export function fetchPlaylists(): Promise<PlaylistResponse[]> {
-  return get<PlaylistResponse[]>("/playlists?inc=tracks,artists,releases");
+export function fetchPlaylists(
+  cursor?: string,
+): Promise<Page<PlaylistResponse>> {
+  const params = new URLSearchParams({ inc: "tracks,artists,releases" });
+  if (cursor) params.set("cursor", cursor);
+  return get<Page<PlaylistResponse>>(`/playlists?${params}`);
 }
 
 export function fetchPlaylist(id: string): Promise<PlaylistResponse> {

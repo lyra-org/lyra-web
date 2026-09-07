@@ -7,7 +7,7 @@ www.meshiplaw.com/lyra.
 
 <script lang="ts">
   import type { ArtistResponse } from "./types";
-  import { fetchArtists } from "./api";
+  import { fetchArtists, fetchAllPages } from "./api";
   import ArtistCard from "./ArtistCard.svelte";
 
   interface Props {
@@ -22,8 +22,9 @@ www.meshiplaw.com/lyra.
 
   async function load() {
     try {
-      const page = await fetchArtists({ libraryId });
-      artists = page.items;
+      artists = await fetchAllPages((cursor) =>
+        fetchArtists({ libraryId, cursor }),
+      );
     } catch (e) {
       error = e instanceof Error ? e.message : "Failed to load artists";
     } finally {

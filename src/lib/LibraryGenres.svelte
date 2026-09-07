@@ -7,7 +7,7 @@ www.meshiplaw.com/lyra.
 
 <script lang="ts">
   import type { CoverResponse, GenreResponse } from "./types";
-  import { fetchGenres, fetchReleases } from "./api";
+  import { fetchGenres, fetchReleases, fetchAllPages } from "./api";
   import { pickGenreHeroAlbum } from "./genreStyle";
   import GenreCard from "./GenreCard.svelte";
 
@@ -45,11 +45,14 @@ www.meshiplaw.com/lyra.
     error = null;
     heroCovers = {};
     try {
-      const genreList = await fetchGenres({
-        libraryId: id,
-        sortBy: sort === "recent" ? "last_played_at" : "name",
-        sortOrder: sort === "recent" ? "descending" : "ascending",
-      });
+      const genreList = await fetchAllPages((cursor) =>
+        fetchGenres({
+          cursor,
+          libraryId: id,
+          sortBy: sort === "recent" ? "last_played_at" : "name",
+          sortOrder: sort === "recent" ? "descending" : "ascending",
+        }),
+      );
       genres = genreList;
       await loadHeroCovers(id, genreList);
     } catch (e) {

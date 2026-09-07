@@ -105,6 +105,7 @@ export interface GenreSummary {
 export interface GenreResponse extends GenreSummary {
   parents?: GenreSummary[];
   children?: GenreSummary[];
+  cover?: CoverResponse | null;
 }
 
 export interface EntryResponse {
@@ -233,11 +234,14 @@ export interface PlaylistResponse {
   id: string;
   name: string;
   is_public: boolean;
+  track_count: number;
+  total_duration_ms: number;
+  cover?: CoverResponse | null;
   description?: string | null;
   tracks?: PlaylistTrackResponse[];
   owner_id?: string | null;
-  created_at?: number | null;
-  updated_at?: number | null;
+  created_at?: string | null;
+  updated_at?: string | null;
 }
 
 export type CreditType =
@@ -306,13 +310,12 @@ export interface LyricsLineResponse {
   words: LyricsWordResponse[];
 }
 
-export type LyricsOriginResponse = "user" | "plugin";
-
 export interface LyricsResponse {
   id: string;
-  provider_id: string;
+  provider_id?: string | null;
   language: string;
-  origin: LyricsOriginResponse;
+  scope: "personal" | "shared";
+  source: "manual" | "provider";
   plain_text: string;
   has_word_cues: boolean;
   // RFC 3339 timestamp; updated only when content changes.
@@ -343,10 +346,7 @@ export interface TagListResponse {
   next_cursor?: string | null;
 }
 
-export interface TargetListResponse {
-  target_ids: string[];
-  next_cursor?: string | null;
-}
+export type TargetListResponse = Page<string>;
 
 export interface TargetStateResponse {
   tagged: boolean;
@@ -530,7 +530,7 @@ export interface PluginManifestResponse {
   name: string;
   version: string;
   description: string;
-  entrypoint: string;
+  entrypoint?: string | null;
 }
 
 export interface ChoiceOptionResponse {

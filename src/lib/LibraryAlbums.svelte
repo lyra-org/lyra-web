@@ -7,7 +7,7 @@ www.meshiplaw.com/lyra.
 
 <script lang="ts">
   import type { ReleaseResponse } from "./types";
-  import { fetchReleases } from "./api";
+  import { fetchReleases, fetchAllPages } from "./api";
   import AlbumCard from "./AlbumCard.svelte";
 
   interface Props {
@@ -22,8 +22,9 @@ www.meshiplaw.com/lyra.
 
   async function load() {
     try {
-      const page = await fetchReleases({ libraryId });
-      albums = page.items;
+      albums = await fetchAllPages((cursor) =>
+        fetchReleases({ libraryId, cursor }),
+      );
     } catch (e) {
       error = e instanceof Error ? e.message : "Failed to load albums";
     } finally {

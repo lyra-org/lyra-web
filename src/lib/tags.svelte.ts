@@ -22,7 +22,7 @@ async function fetchAllTargets(tagId: string): Promise<string[]> {
   let cursor: string | undefined;
   do {
     const page = await fetchTagTargets(tagId, cursor, 500);
-    ids.push(...page.target_ids);
+    ids.push(...page.items);
     cursor = page.next_cursor ?? undefined;
   } while (cursor);
   return ids;

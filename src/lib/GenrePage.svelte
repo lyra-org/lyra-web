@@ -7,7 +7,7 @@ www.meshiplaw.com/lyra.
 
 <script lang="ts">
   import type { GenreResponse, ReleaseResponse } from "./types";
-  import { fetchGenre, fetchReleases } from "./api";
+  import { fetchGenre, fetchReleases, fetchAllPages } from "./api";
   import {
     genreGradient,
     genreCoverObjectPosition,
@@ -54,15 +54,18 @@ www.meshiplaw.com/lyra.
     genre = null;
     albums = [];
     try {
-      const [genreData, releasesPage] = await Promise.all([
+      const [genreData, releases] = await Promise.all([
         fetchGenre(id, { inc: ["parents", "children"] }),
-        fetchReleases({
-          genreId: id,
-          libraryId: scopeLibraryId ?? undefined,
-        }),
+        fetchAllPages((cursor) =>
+          fetchReleases({
+            cursor,
+            genreId: id,
+            libraryId: scopeLibraryId ?? undefined,
+          }),
+        ),
       ]);
       genre = genreData;
-      albums = releasesPage.items;
+      albums = releases;
     } catch (e) {
       error = e instanceof Error ? e.message : "Failed to load genre";
     } finally {

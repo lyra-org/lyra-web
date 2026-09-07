@@ -13,7 +13,7 @@ www.meshiplaw.com/lyra.
     TrackResponse,
   } from "./types";
   import type { PlaybackContext } from "./player.svelte.ts";
-  import { addPlaylistTracks, fetchPlaylists } from "./api";
+  import { addPlaylistTracks, fetchPlaylists, fetchAllPages } from "./api";
   import { getPlayer } from "./player.svelte.ts";
   import { TAG_COLORS, getTags, tagSwatchClass } from "./tags.svelte.ts";
 
@@ -45,7 +45,7 @@ www.meshiplaw.com/lyra.
   async function loadPlaylists() {
     if (playlistsLoaded) return;
     try {
-      playlists = await fetchPlaylists();
+      playlists = await fetchAllPages(fetchPlaylists);
     } catch {
       // ignore
     } finally {
