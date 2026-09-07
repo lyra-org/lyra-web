@@ -6,17 +6,10 @@ www.meshiplaw.com/lyra.
 -->
 
 <script lang="ts">
-  import type { PlaylistResponse } from "./types";
-  import {
-    fetchPlaylists,
-    fetchAllPages,
-    createPlaylist,
-    deletePlaylist,
-  } from "./api";
+  import PaginatedList from "./PaginatedList.svelte";
+  import { fetchPlaylists, createPlaylist, deletePlaylist } from "./api";
 
-  let playlists: PlaylistResponse[] = $state([]);
-  let loading = $state(true);
-  let error: string | null = $state(null);
+  let list: { reload: () => Promise<void> } | undefined = $state();
 
   let showCreate = $state(false);
   let newName = $state("");
@@ -25,23 +18,13 @@ www.meshiplaw.com/lyra.
   let menuOpenId = $state<string | null>(null);
   let deleting = $state<string | null>(null);
 
-  async function load() {
-    try {
-      playlists = await fetchAllPages(fetchPlaylists);
-    } catch (e) {
-      error = e instanceof Error ? e.message : "Failed to load playlists";
-    } finally {
-      loading = false;
-    }
-  }
-
   async function handleCreate(e: SubmitEvent) {
     e.preventDefault();
     if (!newName.trim() || creating) return;
     creating = true;
     try {
-      const pl = await createPlaylist(newName.trim());
-      playlists = [pl, ...playlists];
+      await createPlaylist(newName.trim());
+      await list?.reload();
       newName = "";
       showCreate = false;
     } catch {
@@ -56,7 +39,7 @@ www.meshiplaw.com/lyra.
     deleting = id;
     try {
       await deletePlaylist(id);
-      playlists = playlists.filter((p) => p.id !== id);
+      await list?.reload();
     } catch {
       // ignore
     } finally {
@@ -67,59 +50,47 @@ www.meshiplaw.com/lyra.
   function handleWindowClick() {
     if (menuOpenId != null) menuOpenId = null;
   }
-
-  load();
 </script>
 
 <svelte:window onclick={handleWindowClick} />
 
-{#if loading}
-  <div class="flex items-center justify-center py-20">
-    <div
-      class="h-8 w-8 animate-spin rounded-full border-2 border-slate-300 border-t-slate-600 dark:border-neutral-600 dark:border-t-neutral-300"
-    ></div>
+<div class="mx-auto max-w-3xl">
+  <!-- Header with create button -->
+  <div class="mb-4 flex items-center justify-end">
+    <button
+      class="rounded-md bg-[#E6CEE3] px-3 py-1.5 text-sm font-medium text-slate-900 hover:bg-[#d4b5cf] dark:bg-[#BB7FB5] dark:text-white dark:hover:bg-[#cfa2c9]"
+      onclick={() => (showCreate = !showCreate)}
+    >
+      {showCreate ? "Cancel" : "+ New playlist"}
+    </button>
   </div>
-{:else if error}
-  <div class="py-20 text-center">
-    <p class="text-sm text-red-500 dark:text-red-400">{error}</p>
-  </div>
-{:else}
-  <div class="mx-auto max-w-3xl">
-    <!-- Header with create button -->
-    <div class="mb-4 flex items-center justify-end">
+
+  {#if showCreate}
+    <form class="mb-4 flex gap-2" onsubmit={handleCreate}>
+      <input
+        type="text"
+        bind:value={newName}
+        placeholder="Playlist name..."
+        class="flex-1 rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm focus:border-slate-500 focus:outline-none dark:border-neutral-600 dark:bg-[#1b1d1e] dark:text-neutral-100 dark:placeholder:text-neutral-500 dark:focus:border-neutral-400"
+      />
       <button
-        class="rounded-md bg-[#E6CEE3] px-3 py-1.5 text-sm font-medium text-slate-900 hover:bg-[#d4b5cf] dark:bg-[#BB7FB5] dark:text-white dark:hover:bg-[#cfa2c9]"
-        onclick={() => (showCreate = !showCreate)}
+        type="submit"
+        disabled={creating || !newName.trim()}
+        class="rounded-md bg-[#E6CEE3] px-3 py-1.5 text-sm font-medium text-slate-900 hover:bg-[#d4b5cf] disabled:opacity-50 dark:bg-[#BB7FB5] dark:text-white dark:hover:bg-[#cfa2c9]"
       >
-        {showCreate ? "Cancel" : "+ New playlist"}
+        {creating ? "Creating..." : "Create"}
       </button>
-    </div>
+    </form>
+  {/if}
 
-    {#if showCreate}
-      <form class="mb-4 flex gap-2" onsubmit={handleCreate}>
-        <input
-          type="text"
-          bind:value={newName}
-          placeholder="Playlist name..."
-          class="flex-1 rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm focus:border-slate-500 focus:outline-none dark:border-neutral-600 dark:bg-[#1b1d1e] dark:text-neutral-100 dark:placeholder:text-neutral-500 dark:focus:border-neutral-400"
-        />
-        <button
-          type="submit"
-          disabled={creating || !newName.trim()}
-          class="rounded-md bg-[#E6CEE3] px-3 py-1.5 text-sm font-medium text-slate-900 hover:bg-[#d4b5cf] disabled:opacity-50 dark:bg-[#BB7FB5] dark:text-white dark:hover:bg-[#cfa2c9]"
-        >
-          {creating ? "Creating..." : "Create"}
-        </button>
-      </form>
-    {/if}
-
-    {#if playlists.length === 0}
-      <div class="py-20 text-center">
-        <p class="text-sm text-slate-500 dark:text-neutral-400">
-          No playlists yet.
-        </p>
-      </div>
-    {:else}
+  <PaginatedList
+    bind:this={list}
+    label="playlists"
+    pageSize={100}
+    empty="No playlists yet."
+    loadPage={fetchPlaylists}
+  >
+    {#snippet children(playlists)}
       <div class="space-y-2">
         {#each playlists as playlist (playlist.id ?? playlist.name)}
           <div class="relative">
@@ -140,8 +111,7 @@ www.meshiplaw.com/lyra.
                     {playlist.name}
                   </h3>
                   <p class="text-xs text-slate-500 dark:text-neutral-400">
-                    {playlist.tracks?.length ?? 0} track{(playlist.tracks
-                      ?.length ?? 0) !== 1
+                    {playlist.track_count} track{playlist.track_count !== 1
                       ? "s"
                       : ""}
                     {#if playlist.description}
@@ -216,6 +186,6 @@ www.meshiplaw.com/lyra.
           </div>
         {/each}
       </div>
-    {/if}
-  </div>
-{/if}
+    {/snippet}
+  </PaginatedList>
+</div>

@@ -6,14 +6,11 @@ www.meshiplaw.com/lyra.
 -->
 
 <script lang="ts">
-  import type { GenreResponse, ReleaseResponse } from "./types";
-  import { fetchGenre, fetchReleases, fetchAllPages } from "./api";
-  import {
-    genreGradient,
-    genreCoverObjectPosition,
-    pickGenreHeroAlbum,
-  } from "./genreStyle";
+  import type { GenreResponse } from "./types";
+  import { fetchGenre, fetchReleases } from "./api";
+  import { genreGradient, genreCoverObjectPosition } from "./genreStyle";
   import BlurhashCanvas from "./BlurhashCanvas.svelte";
+  import PaginatedList from "./PaginatedList.svelte";
   import AlbumCard from "./AlbumCard.svelte";
 
   interface Props {
@@ -24,21 +21,8 @@ www.meshiplaw.com/lyra.
   let { genreId, libraryId = null }: Props = $props();
 
   let genre = $state<GenreResponse | null>(null);
-  let albums: ReleaseResponse[] = $state([]);
   let loading = $state(true);
   let error: string | null = $state(null);
-
-  let sortedAlbums = $derived.by(() => {
-    return [...albums].sort((a, b) => {
-      const ay = a.release_date ?? "";
-      const by = b.release_date ?? "";
-      return by.localeCompare(ay);
-    });
-  });
-
-  let heroAlbum = $derived(
-    genre ? pickGenreHeroAlbum(albums, genre.id ?? genre.name) : null,
-  );
 
   let heroGradient = $derived(
     genre ? genreGradient(genre.id ?? genre.name) : "",
@@ -48,33 +32,26 @@ www.meshiplaw.com/lyra.
     genre ? genreCoverObjectPosition(genre.id ?? genre.name) : "object-center",
   );
 
-  async function load(id: string, scopeLibraryId: string | null) {
+  $effect(() => {
+    const id = genreId;
+    let cancelled = false;
     loading = true;
     error = null;
     genre = null;
-    albums = [];
-    try {
-      const [genreData, releases] = await Promise.all([
-        fetchGenre(id, { inc: ["parents", "children"] }),
-        fetchAllPages((cursor) =>
-          fetchReleases({
-            cursor,
-            genreId: id,
-            libraryId: scopeLibraryId ?? undefined,
-          }),
-        ),
-      ]);
-      genre = genreData;
-      albums = releases;
-    } catch (e) {
-      error = e instanceof Error ? e.message : "Failed to load genre";
-    } finally {
-      loading = false;
-    }
-  }
-
-  $effect(() => {
-    load(genreId, libraryId);
+    fetchGenre(id, { inc: ["parents", "children", "covers"] })
+      .then((result) => {
+        if (!cancelled) genre = result;
+      })
+      .catch((e) => {
+        if (!cancelled)
+          error = e instanceof Error ? e.message : "Failed to load genre";
+      })
+      .finally(() => {
+        if (!cancelled) loading = false;
+      });
+    return () => {
+      cancelled = true;
+    };
   });
 </script>
 
@@ -97,12 +74,12 @@ www.meshiplaw.com/lyra.
   <div class="mx-auto max-w-5xl">
     <div class="flex flex-col gap-6 sm:flex-row sm:items-end">
       <div class="w-48 shrink-0 sm:w-56">
-        {#if heroAlbum?.cover?.blurhash}
+        {#if genre.cover?.blurhash}
           <div
             class="relative aspect-[4/3] w-full overflow-hidden rounded-lg bg-slate-200 shadow-md dark:bg-neutral-600 dark:shadow-black/40"
           >
             <BlurhashCanvas
-              hash={heroAlbum.cover.blurhash}
+              hash={genre.cover.blurhash}
               class="absolute inset-0 h-full w-full object-cover {coverPosition}"
             />
           </div>
@@ -132,11 +109,6 @@ www.meshiplaw.com/lyra.
         <h2 class="text-3xl font-bold text-slate-900 dark:text-neutral-100">
           {genre.name}
         </h2>
-        {#if sortedAlbums.length > 0}
-          <p class="mt-2 text-sm text-slate-500 dark:text-neutral-400">
-            {sortedAlbums.length} album{sortedAlbums.length !== 1 ? "s" : ""}
-          </p>
-        {/if}
       </div>
     </div>
 
@@ -179,27 +151,36 @@ www.meshiplaw.com/lyra.
       </div>
     {/if}
 
-    {#if sortedAlbums.length > 0}
-      <div class="mt-8">
-        <h3
-          class="mb-3 text-xs font-semibold tracking-wide text-slate-400 uppercase dark:text-neutral-500"
-        >
-          Albums
-        </h3>
-        <div
-          class="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6"
-        >
-          {#each sortedAlbums as album (album.id ?? album.title)}
-            <AlbumCard {album} />
-          {/each}
-        </div>
-      </div>
-    {:else}
-      <div class="mt-8 py-12 text-center">
-        <p class="text-sm text-slate-500 dark:text-neutral-400">
-          No albums tagged with this genre.
-        </p>
-      </div>
-    {/if}
+    <div class="mt-8">
+      <h3
+        class="mb-3 text-xs font-semibold tracking-wide text-slate-400 uppercase dark:text-neutral-500"
+      >
+        Albums
+      </h3>
+      <PaginatedList
+        scope={`${genreId}/${libraryId ?? ""}`}
+        label="albums"
+        empty="No albums tagged with this genre."
+        loadPage={(cursor, limit) =>
+          fetchReleases({
+            genreId,
+            libraryId: libraryId ?? undefined,
+            cursor,
+            limit,
+            sortBy: "release_date",
+            sortOrder: "descending",
+          })}
+      >
+        {#snippet children(albums)}
+          <div
+            class="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6"
+          >
+            {#each albums as album (album.id)}
+              <AlbumCard {album} />
+            {/each}
+          </div>
+        {/snippet}
+      </PaginatedList>
+    </div>
   </div>
 {/if}
