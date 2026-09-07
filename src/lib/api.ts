@@ -12,7 +12,7 @@ import type {
   TrackResponse,
   PlaybackResponse,
   PlaybackState,
-  ActivePlaybackSession,
+  ActivePlayback,
   RefreshResponse,
   ProviderResponse,
   SearchResult,
@@ -318,10 +318,27 @@ export async function fetchTrackForRemote(id: string): Promise<TrackResponse> {
   return track;
 }
 
-export function fetchActivePlaybackSessions(): Promise<
-  ActivePlaybackSession[]
-> {
-  return get<ActivePlaybackSession[]>("/playback-sessions/active");
+export async function fetchActivePlaybacks(): Promise<ActivePlayback[]> {
+  const sessions: ActivePlayback[] = [];
+  let cursor: string | null | undefined;
+  do {
+    const page = await fetchPlaybacks(true, cursor, true);
+    for (const playback of page.items) {
+      if (playback.current == null) continue;
+      sessions.push({
+        ...playback.current,
+        playback_id: playback.id,
+        user_id: playback.user_id,
+        connection_token: playback.controller?.connection_token,
+        connection_session_key: playback.controller?.connection_session_key,
+        supported_commands: playback.controller?.supported_commands ?? [],
+        remote_control_degraded:
+          playback.controller?.remote_control_degraded ?? false,
+      });
+    }
+    cursor = page.next_cursor;
+  } while (cursor);
+  return sessions;
 }
 
 // Artists
@@ -354,8 +371,13 @@ export function coverUrl(coverId: string): string {
 
 export function createPlaybackUrl(
   trackId: string,
+  format?: "mp3",
 ): Promise<PlaybackUrlResponse> {
-  return post<PlaybackUrlResponse>(`/tracks/${trackId}/playback-url`, {});
+  const query = format ? `?format=${format}` : "";
+  return post<PlaybackUrlResponse>(
+    `/tracks/${trackId}/playback-url${query}`,
+    {},
+  );
 }
 
 // Playback
@@ -366,8 +388,11 @@ export function startPlayback(
   positionMs?: number | null,
   state?: PlaybackState | null,
 ): Promise<PlaybackResponse> {
-  return post<PlaybackResponse>("/playback-sessions", {
-    track_id: trackId,
+  return post<PlaybackResponse>("/playbacks", {
+    track_ids: [trackId],
+    current_index: 0,
+    repeat_mode: "none",
+    shuffle_enabled: false,
     connection_session_key: CONNECTION_SESSION_KEY,
     duration_ms: durationMs ?? undefined,
     position_ms: positionMs ?? undefined,
@@ -375,22 +400,29 @@ export function startPlayback(
   });
 }
 
-export function fetchPlaybackSessions(
+export function fetchPlaybacks(
   active?: boolean,
-): Promise<PlaybackResponse[]> {
-  const params = active != null ? `?active=${active}` : "";
-  return get<PlaybackResponse[]>(`/playback-sessions${params}`);
+  cursor?: string | null,
+  includeController = false,
+): Promise<Page<PlaybackResponse>> {
+  const params = new URLSearchParams();
+  if (active != null) params.set("active", String(active));
+  if (cursor) params.set("cursor", cursor);
+  if (includeController) params.set("inc", "controller");
+  return get<Page<PlaybackResponse>>(`/playbacks?${params}`);
 }
 
 export function reportPlaybackProgress(
-  playbackSessionId: string,
+  playbackId: string,
+  queueRevision: number,
   positionMs: number,
   state: PlaybackState | string,
   durationMs?: number | null,
 ): Promise<PlaybackResponse> {
   return post<PlaybackResponse>(
-    `/playback-sessions/${playbackSessionId}/progress`,
+    `/playbacks/${encodeURIComponent(playbackId)}/progress`,
     {
+      queue_revision: queueRevision,
       connection_session_key: CONNECTION_SESSION_KEY,
       position_ms: positionMs,
       state,

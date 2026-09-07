@@ -40,9 +40,18 @@ export type PlaybackState =
   | "completed";
 
 export interface PlaybackResponse {
-  playback_session_id: string;
-  track_id: string;
+  id: string;
   user_id: string;
+  queue_revision: number;
+  current: CurrentPlayback | null;
+  created_at: string;
+  updated_at: string;
+  controller?: PlaybackController | null;
+}
+
+export interface CurrentPlayback {
+  track_id: string;
+  client_name: string | null;
   position_ms: number;
   state: PlaybackState;
   activity_ms: number;
@@ -50,6 +59,14 @@ export interface PlaybackResponse {
   updated_at: string;
   effective_position_ms: number;
   duration_ms?: number | null;
+}
+
+export interface PlaybackController {
+  connection_token: string;
+  connection_session_key: string;
+  client_name: string | null;
+  supported_commands: RemoteAction[];
+  remote_control_degraded: boolean;
 }
 
 export type EntityType = "release" | "artist" | "track";
@@ -473,7 +490,7 @@ export interface ServerInfoResponse {
 }
 
 export interface PlaybackUrlResponse {
-  stream_url: string;
+  stream_url?: string | null;
   hls_url: string;
   download_url?: string | null;
   // RFC 3339 absolute media-token expiration.
@@ -682,8 +699,8 @@ export type ForwardedCommand =
 
 export type OutgoingMessage = ResponseMessage | EventMessage | ForwardedCommand;
 
-export interface ActivePlaybackSession {
-  playback_session_id: string;
+export interface ActivePlayback {
+  playback_id: string;
   track_id: string;
   user_id: string;
   position_ms: number;

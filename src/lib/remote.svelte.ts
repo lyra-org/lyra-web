@@ -3,8 +3,8 @@
 // You can obtain one here:
 // www.meshiplaw.com/lyra.
 
-import type { ActivePlaybackSession, TrackResponse } from "./types";
-import { fetchActivePlaybackSessions, fetchTrackForRemote } from "./api";
+import type { ActivePlayback, TrackResponse } from "./types";
+import { fetchActivePlaybacks, fetchTrackForRemote } from "./api";
 import {
   sendPlay,
   sendPause,
@@ -19,7 +19,7 @@ import {
 const POLL_MS = 2_500;
 const REFRESH_AFTER_COMMAND_MS = 350;
 
-let sessions = $state<ActivePlaybackSession[]>([]);
+let sessions = $state<ActivePlayback[]>([]);
 let tracks = $state<Record<string, TrackResponse>>({});
 let loading = $state(false);
 let error = $state<string | null>(null);
@@ -47,7 +47,7 @@ async function loadTrack(id: string) {
 async function doRefresh() {
   loading = true;
   try {
-    const list = await fetchActivePlaybackSessions();
+    const list = await fetchActivePlaybacks();
     sessions = list;
     error = null;
     lastRefreshAt = Date.now();
@@ -101,7 +101,7 @@ function close() {
   }
 }
 
-function applyOptimistic(token: string, patch: Partial<ActivePlaybackSession>) {
+function applyOptimistic(token: string, patch: Partial<ActivePlayback>) {
   sessions = sessions.map((s) =>
     s.connection_token === token ? { ...s, ...patch } : s,
   );

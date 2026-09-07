@@ -43,6 +43,7 @@ let shuffledIds = $state<string[]>([]);
 let queue = $state<QueuedItem[]>([]);
 let skippedUpNextIds = $state<Set<string>>(new Set());
 let playbackId: string | null = null;
+let playbackQueueRevision = 0;
 let reportIntervalId: ReturnType<typeof setInterval> | null = null;
 
 function shuffleTracksFrom(
@@ -115,7 +116,13 @@ function reportProgress(state: string) {
   if (playbackId == null) return;
   const posMs = Math.round(audio.currentTime * 1000);
   const durMs = audio.duration ? Math.round(audio.duration * 1000) : undefined;
-  reportPlaybackProgress(playbackId, posMs, state, durMs).catch(() => {});
+  reportPlaybackProgress(
+    playbackId,
+    playbackQueueRevision,
+    posMs,
+    state,
+    durMs,
+  ).catch(() => {});
 }
 
 function startReportInterval() {
@@ -196,9 +203,17 @@ async function playTrackInternal(
       startPlayback(track.id, track.duration_ms),
     ]);
     if (currentTrack?.id !== track.id) return;
-    audio.src = playbackUrl.stream_url;
+    // Some source containers cannot stream directly. Ask for a browser-playable
+    // transcode when the server only offers HLS for the original request.
+    const streamUrl =
+      playbackUrl.stream_url ??
+      (await createPlaybackUrl(track.id, "mp3")).stream_url;
+    if (currentTrack?.id !== track.id) return;
+    if (!streamUrl) throw new Error("No playable audio stream available");
+    audio.src = streamUrl;
     await audio.play();
-    playbackId = pb.playback_session_id;
+    playbackId = pb.id;
+    playbackQueueRevision = pb.queue_revision;
     startReportInterval();
   } catch (e) {
     console.error("Playback failed:", e);
@@ -374,7 +389,7 @@ export function getPlayer() {
     get volume() {
       return volume;
     },
-    get playbackSessionId() {
+    get playbackId() {
       return playbackId;
     },
     get shuffle() {

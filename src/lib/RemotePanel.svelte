@@ -7,7 +7,7 @@ www.meshiplaw.com/lyra.
 
 <script lang="ts">
   import type {
-    ActivePlaybackSession,
+    ActivePlayback,
     PlaybackState,
     RemoteAction,
     TrackResponse,
@@ -63,7 +63,7 @@ www.meshiplaw.com/lyra.
     return track.artists.map((a) => a.name).join(", ");
   }
 
-  function livePosition(s: ActivePlaybackSession): number {
+  function livePosition(s: ActivePlayback): number {
     if (s.state !== "playing") return s.effective_position_ms;
     const updated = Date.parse(s.updated_at);
     if (!Number.isFinite(updated)) return s.effective_position_ms;
@@ -91,18 +91,15 @@ www.meshiplaw.com/lyra.
     return `${h}h ago`;
   }
 
-  function supports(s: ActivePlaybackSession, a: RemoteAction): boolean {
+  function supports(s: ActivePlayback, a: RemoteAction): boolean {
     return s.supported_commands.includes(a);
   }
 
-  function isSelf(s: ActivePlaybackSession): boolean {
-    return (
-      player.playbackSessionId != null &&
-      player.playbackSessionId === s.playback_session_id
-    );
+  function isSelf(s: ActivePlayback): boolean {
+    return player.playbackId != null && player.playbackId === s.playback_id;
   }
 
-  function deviceLabel(s: ActivePlaybackSession): string {
+  function deviceLabel(s: ActivePlayback): string {
     if (isSelf(s)) return "This browser";
     const key = s.connection_session_key;
     if (key && key.length > 0) {
@@ -129,11 +126,11 @@ www.meshiplaw.com/lyra.
     }
   }
 
-  function controllable(s: ActivePlaybackSession): boolean {
+  function controllable(s: ActivePlayback): boolean {
     return s.connection_token != null && s.supported_commands.length > 0;
   }
 
-  function onSeekClick(e: MouseEvent, s: ActivePlaybackSession) {
+  function onSeekClick(e: MouseEvent, s: ActivePlayback) {
     if (!controllable(s) || !supports(s, "seek")) return;
     if (s.duration_ms == null || s.duration_ms <= 0) return;
     const bar = e.currentTarget as HTMLElement;
@@ -146,7 +143,7 @@ www.meshiplaw.com/lyra.
     remote.seek(s.connection_token!, ms);
   }
 
-  function togglePlay(s: ActivePlaybackSession) {
+  function togglePlay(s: ActivePlayback) {
     if (!controllable(s) || !s.connection_token) return;
     if (s.state === "playing" || s.state === "buffering") {
       if (supports(s, "pause")) remote.pause(s.connection_token);
@@ -158,7 +155,7 @@ www.meshiplaw.com/lyra.
     }
   }
 
-  function togglePlayDisabled(s: ActivePlaybackSession): boolean {
+  function togglePlayDisabled(s: ActivePlayback): boolean {
     if (!controllable(s)) return true;
     if (s.state === "playing" || s.state === "buffering") {
       return !supports(s, "pause");
@@ -169,16 +166,16 @@ www.meshiplaw.com/lyra.
     return !supports(s, "play");
   }
 
-  function volumeOf(s: ActivePlaybackSession): number {
-    return pendingVolume[s.playback_session_id] ?? 1;
+  function volumeOf(s: ActivePlayback): number {
+    return pendingVolume[s.playback_id] ?? 1;
   }
 
-  function onVolumeInput(e: Event, s: ActivePlaybackSession) {
+  function onVolumeInput(e: Event, s: ActivePlayback) {
     const v = Number((e.currentTarget as HTMLInputElement).value);
-    pendingVolume = { ...pendingVolume, [s.playback_session_id]: v };
+    pendingVolume = { ...pendingVolume, [s.playback_id]: v };
   }
 
-  function onVolumeCommit(s: ActivePlaybackSession) {
+  function onVolumeCommit(s: ActivePlayback) {
     if (!controllable(s) || !supports(s, "set_volume") || !s.connection_token)
       return;
     const v = volumeOf(s);
@@ -347,7 +344,7 @@ www.meshiplaw.com/lyra.
         {/if}
       {:else}
         <ul class="space-y-3">
-          {#each remote.sessions as s (s.playback_session_id)}
+          {#each remote.sessions as s (s.playback_id)}
             {@const t = trackOf(s.track_id)}
             {@const cv = coverFor(t)}
             {@const artistNames = artistNamesFor(t)}
