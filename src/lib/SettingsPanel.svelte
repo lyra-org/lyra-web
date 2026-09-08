@@ -6,6 +6,11 @@ www.meshiplaw.com/lyra.
 -->
 
 <script lang="ts">
+  import { onMount, untrack } from "svelte";
+  import type { PublicUser } from "./types";
+  import { fetchUsers } from "./api";
+  import UserSettings from "./UserSettings.svelte";
+  import { getAuth } from "./auth.svelte";
   import type {
     PluginManifestResponse,
     PluginSettingsResponse,
@@ -31,6 +36,54 @@ www.meshiplaw.com/lyra.
   }
 
   let { onclose }: Props = $props();
+  const auth = getAuth();
+  let section = $state<"plugins" | "users">(
+    untrack(() => (auth.hasPermission("manage_users") ? "users" : "plugins")),
+  );
+  let usersExpanded = $state(true);
+  let users = $state<PublicUser[]>([]);
+  let loadingUsers = $state(true);
+  let usersError = $state<string | null>(null);
+  let selectedUserId = $state<string | null>(null);
+  let selectedUser = $derived(
+    users.find((user) => user.id === selectedUserId) ?? null,
+  );
+
+  async function loadUsers() {
+    loadingUsers = true;
+    usersError = null;
+    try {
+      users = await fetchUsers();
+    } catch {
+      usersError = "Unable to load users.";
+    } finally {
+      loadingUsers = false;
+    }
+  }
+
+  function updateUser(user: PublicUser) {
+    users = users.some((item) => item.id === user.id)
+      ? users.map((item) => (item.id === user.id ? user : item))
+      : [...users, user];
+  }
+
+  function removeUser(id: string) {
+    users = users.filter((user) => user.id !== id);
+    if (selectedUserId === id) selectedUserId = null;
+  }
+
+  function toggleUsers() {
+    usersExpanded = !usersExpanded;
+    if (usersExpanded) {
+      section = "users";
+      selectedUserId = null;
+    }
+  }
+
+  onMount(() => {
+    if (auth.hasPermission("manage_users")) void loadUsers();
+  });
+  let pluginsExpanded = $state(false);
 
   let plugins = $state<PluginManifestResponse[]>([]);
   let loadingPlugins = $state(true);
@@ -218,6 +271,7 @@ www.meshiplaw.com/lyra.
   }
 
   function selectPlugin(id: string) {
+    section = "plugins";
     if (selectedPluginId === id) return;
     if (
       dirty &&
@@ -326,14 +380,140 @@ www.meshiplaw.com/lyra.
     <div class="flex flex-1 overflow-hidden">
       <!-- Left sidebar -->
       <aside
-        class="flex w-64 flex-col border-r border-slate-200 bg-slate-50 dark:border-neutral-800 dark:bg-[#181a1b]"
+        class="flex w-40 shrink-0 flex-col overflow-y-auto border-r border-slate-200 bg-slate-50 sm:w-64 dark:border-neutral-800 dark:bg-[#181a1b]"
       >
-        <div
-          class="px-4 pt-4 pb-2 text-xs font-semibold tracking-wide text-slate-500 uppercase dark:text-neutral-500"
-        >
-          Plugins
+        {#if auth.hasPermission("manage_users")}
+          <div class="border-b border-slate-200 p-2 dark:border-neutral-800">
+            <button
+              type="button"
+              onclick={toggleUsers}
+              aria-expanded={usersExpanded}
+              aria-controls="settings-user-list"
+              aria-current={section === "users" && selectedUserId === null
+                ? "page"
+                : undefined}
+              class="flex w-full items-center justify-between rounded-md px-2 py-2 text-left text-sm font-medium text-slate-700 hover:bg-slate-200 dark:text-neutral-200 dark:hover:bg-neutral-800"
+              class:bg-slate-200={section === "users" &&
+                selectedUserId === null}
+              class:dark:bg-neutral-800={section === "users" &&
+                selectedUserId === null}
+            >
+              Users
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="h-4 w-4 transition-transform"
+                class:-rotate-90={!usersExpanded}
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                aria-hidden="true"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="m6 9 6 6 6-6"
+                />
+              </svg>
+            </button>
+            <nav
+              id="settings-user-list"
+              aria-label="Users"
+              class:hidden={!usersExpanded}
+            >
+              {#if loadingUsers}
+                <p
+                  role="status"
+                  class="px-3 py-2 text-sm text-slate-500 dark:text-neutral-400"
+                >
+                  Loading users…
+                </p>
+              {:else if usersError}
+                <p
+                  role="alert"
+                  class="px-3 py-2 text-sm text-red-600 dark:text-red-400"
+                >
+                  {usersError}
+                </p>
+                <button
+                  type="button"
+                  onclick={loadUsers}
+                  class="px-3 py-2 text-sm underline">Retry</button
+                >
+              {:else}
+                <ul class="space-y-0.5">
+                  {#each users as user (user.id)}
+                    {@const active =
+                      section === "users" && selectedUserId === user.id}
+                    <li>
+                      <button
+                        type="button"
+                        onclick={() => {
+                          section = "users";
+                          selectedUserId = user.id;
+                        }}
+                        aria-current={active ? "page" : undefined}
+                        class="w-full rounded-md px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-200 dark:text-neutral-200 dark:hover:bg-neutral-800"
+                        class:bg-slate-200={active}
+                        class:dark:bg-neutral-800={active}
+                      >
+                        <div class="font-medium break-all">
+                          {user.username}{user.id === auth.me?.id
+                            ? " (you)"
+                            : ""}
+                        </div>
+                        <div
+                          class="text-xs text-slate-500 dark:text-neutral-400"
+                        >
+                          {user.role ?? "No role"}
+                        </div>
+                      </button>
+                    </li>
+                  {:else}
+                    <li
+                      class="px-3 py-2 text-sm text-slate-500 dark:text-neutral-400"
+                    >
+                      No users found.
+                    </li>
+                  {/each}
+                </ul>
+              {/if}
+            </nav>
+          </div>
+        {/if}
+        <div class="p-2">
+          <button
+            type="button"
+            aria-expanded={pluginsExpanded}
+            aria-controls="settings-plugin-list"
+            onclick={() => (pluginsExpanded = !pluginsExpanded)}
+            class="flex w-full items-center justify-between rounded-md px-2 py-2 text-left text-sm font-medium text-slate-700 hover:bg-slate-200 dark:text-neutral-200 dark:hover:bg-neutral-800"
+          >
+            Plugins
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              class="h-4 w-4 transition-transform"
+              class:-rotate-90={!pluginsExpanded}
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              aria-hidden="true"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="m6 9 6 6 6-6"
+              />
+            </svg>
+          </button>
         </div>
-        <nav class="flex-1 overflow-y-auto px-2 pb-4">
+        <nav
+          id="settings-plugin-list"
+          aria-label="Plugins"
+          class="shrink-0 px-2 pb-4"
+          class:hidden={!pluginsExpanded}
+        >
           {#if loadingPlugins}
             <p class="px-2 py-1 text-sm text-slate-500 dark:text-neutral-400">
               Loading…
@@ -349,7 +529,8 @@ www.meshiplaw.com/lyra.
           {:else}
             <ul class="space-y-0.5">
               {#each plugins as plugin (plugin.id)}
-                {@const active = plugin.id === selectedPluginId}
+                {@const active =
+                  section === "plugins" && plugin.id === selectedPluginId}
                 <li>
                   <button
                     type="button"
@@ -379,8 +560,16 @@ www.meshiplaw.com/lyra.
       </aside>
 
       <!-- Main content -->
-      <section class="flex flex-1 flex-col overflow-hidden">
-        {#if selectedPlugin == null}
+      <section class="flex min-w-0 flex-1 flex-col overflow-hidden">
+        {#if section === "users" && auth.hasPermission("manage_users")}
+          {#key selectedUserId}
+            <UserSettings
+              user={selectedUser}
+              onupdate={updateUser}
+              onremove={removeUser}
+            />
+          {/key}
+        {:else if selectedPlugin == null}
           <div
             class="flex flex-1 items-center justify-center text-sm text-slate-500 dark:text-neutral-400"
           >

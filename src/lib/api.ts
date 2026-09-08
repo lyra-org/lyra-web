@@ -33,6 +33,7 @@ import type {
   LoginResponse,
   MeResponse,
   PublicUser,
+  RoleResponse,
   ServerInfoResponse,
   FavoriteListResponse,
   FavoriteStateResponse,
@@ -976,6 +977,22 @@ export function searchArtistCovers(
 }
 
 // Users
+
+export function fetchRoles(): Promise<RoleResponse[]> {
+  return get<RoleResponse[]>("/roles");
+}
+
+export function updateUserRole(userId: string, role: string): Promise<void> {
+  return put<void>(`/users/${encodeURIComponent(userId)}/role`, { role });
+}
+
+export function fetchUsers(): Promise<PublicUser[]> {
+  return get<PublicUser[]>("/users");
+}
+
+export function deleteUser(userId: string): Promise<void> {
+  return del<void>(`/users/${encodeURIComponent(userId)}`);
+}
 
 export function createUser(
   username: string,

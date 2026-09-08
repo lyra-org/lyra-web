@@ -470,6 +470,13 @@ export interface MeResponse {
   permissions?: Permission[];
 }
 
+export interface RoleResponse {
+  id: string;
+  name: string;
+  permissions: Permission[];
+  builtin: boolean;
+}
+
 export interface PublicUser {
   id: string;
   username: string;
