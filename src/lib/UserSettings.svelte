@@ -175,20 +175,14 @@ www.meshiplaw.com/lyra.
   });
 </script>
 
-<div class="border-b border-slate-200 px-6 py-4 dark:border-neutral-800">
+<div class="px-6 pt-5 pb-1">
   <h3 class="text-base font-semibold text-slate-900 dark:text-neutral-100">
-    {user ? user.username : "Users"}
+    {user ? user.username : "Add user"}
   </h3>
-  <p class="mt-1 text-sm text-slate-600 dark:text-neutral-300">
-    {user
-      ? "Manage this user’s role and account."
-      : "Add a user to this server."}
-  </p>
 </div>
 <div class="flex-1 space-y-6 overflow-y-auto px-6 py-5">
   {#if user}
     <form class="max-w-md space-y-4" onsubmit={saveRole}>
-      <h4 class="text-sm font-semibold">Role</h4>
       {#if !auth.hasPermission("manage_roles")}
         <p class="text-sm text-slate-600 dark:text-neutral-300">
           {user.role ?? "No role"}. You do not have permission to change roles.
@@ -210,9 +204,7 @@ www.meshiplaw.com/lyra.
           >Retry</button
         >
       {:else}
-        <label for="user-role" class="block text-sm font-medium"
-          >Assigned role</label
-        >
+        <label for="user-role" class="block text-sm font-medium">Role</label>
         <select
           id="user-role"
           bind:value={role}
@@ -236,10 +228,7 @@ www.meshiplaw.com/lyra.
         >
       {/if}
     </form>
-    <div
-      class="space-y-3 border-t border-slate-200 pt-5 dark:border-neutral-800"
-    >
-      <h4 class="text-sm font-semibold">Remove user</h4>
+    <div class="space-y-3">
       <p class="text-sm text-slate-600 dark:text-neutral-300">
         {user.id === auth.me?.id
           ? "You cannot remove your own account."
@@ -255,9 +244,6 @@ www.meshiplaw.com/lyra.
     </div>
   {:else}
     <form class="max-w-md space-y-4" onsubmit={addUser}>
-      <h4 class="text-sm font-semibold text-slate-900 dark:text-neutral-100">
-        Add user
-      </h4>
       <fieldset disabled={busy} class="space-y-4 disabled:opacity-60">
         <div>
           <label

@@ -782,3 +782,35 @@ export interface InstallPluginsResponse {
   installed: InstalledPluginResponse[];
   failed: FailedInstallResponse[];
 }
+
+export type ServerSettingValue = string | number | boolean | string[] | null;
+
+interface ServerSettingProps {
+  key: string;
+  label: string;
+  description: string;
+  required: boolean;
+  locked: boolean;
+  source: "default" | "database" | "file";
+  restart_required: boolean;
+}
+
+export type ServerSettingField = ServerSettingProps &
+  (
+    | { type: "string"; value: string | null; default: string | null }
+    | {
+        type: "number";
+        value: number | null;
+        default: number | null;
+        min: number;
+        max?: number;
+      }
+    | { type: "bool"; value: boolean | null; default: boolean | null }
+    | { type: "string_list"; value: string[] | null; default: string[] | null }
+  );
+
+export interface ServerSettingsResponse {
+  groups: { id: string; label: string; fields: ServerSettingField[] }[];
+  pending_restart: string[];
+  boot: { port: number; data_dir: string; db: { kind: string; path: string } };
+}

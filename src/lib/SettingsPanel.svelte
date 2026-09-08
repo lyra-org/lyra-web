@@ -9,6 +9,7 @@ www.meshiplaw.com/lyra.
   import { onMount, untrack } from "svelte";
   import type { PublicUser } from "./types";
   import { fetchUsers } from "./api";
+  import ServerSettings from "./ServerSettings.svelte";
   import UserSettings from "./UserSettings.svelte";
   import { getAuth } from "./auth.svelte";
   import type {
@@ -37,9 +38,24 @@ www.meshiplaw.com/lyra.
 
   let { onclose }: Props = $props();
   const auth = getAuth();
-  let section = $state<"plugins" | "users">(
-    untrack(() => (auth.hasPermission("manage_users") ? "users" : "plugins")),
+  let section = $state<"server" | "plugins" | "users">(
+    untrack(() =>
+      auth.hasPermission("manage_server")
+        ? "server"
+        : auth.hasPermission("manage_users")
+          ? "users"
+          : "plugins",
+    ),
   );
+  let serverDirty = $state(false);
+  let serverBusy = $state(false);
+
+  function closeSettings() {
+    if (serverBusy) return;
+    if (serverDirty && !confirm("Discard unsaved server settings?")) return;
+    onclose();
+  }
+
   let usersExpanded = $state(true);
   let users = $state<PublicUser[]>([]);
   let loadingUsers = $state(true);
@@ -294,11 +310,11 @@ www.meshiplaw.com/lyra.
   }
 
   function handleKeydown(e: KeyboardEvent) {
-    if (e.key === "Escape") onclose();
+    if (e.key === "Escape") closeSettings();
   }
 
   function handleBackdropClick(e: MouseEvent) {
-    if (e.target === e.currentTarget) onclose();
+    if (e.target === e.currentTarget) closeSettings();
   }
 
   $effect(() => {
@@ -358,7 +374,7 @@ www.meshiplaw.com/lyra.
         type="button"
         aria-label="Close settings"
         class="flex h-8 w-8 items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:text-neutral-500 dark:hover:bg-neutral-700 dark:hover:text-neutral-300"
-        onclick={onclose}
+        onclick={closeSettings}
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -382,8 +398,20 @@ www.meshiplaw.com/lyra.
       <aside
         class="flex w-40 shrink-0 flex-col overflow-y-auto border-r border-slate-200 bg-slate-50 sm:w-64 dark:border-neutral-800 dark:bg-[#181a1b]"
       >
+        {#if auth.hasPermission("manage_server")}
+          <div class="px-2 pt-2">
+            <button
+              type="button"
+              onclick={() => (section = "server")}
+              aria-current={section === "server" ? "page" : undefined}
+              class="w-full rounded-md px-2 py-2 text-left text-sm font-medium text-slate-700 hover:bg-slate-200 dark:text-neutral-200 dark:hover:bg-neutral-800"
+              class:bg-slate-200={section === "server"}
+              class:dark:bg-neutral-800={section === "server"}>Server</button
+            >
+          </div>
+        {/if}
         {#if auth.hasPermission("manage_users")}
-          <div class="border-b border-slate-200 p-2 dark:border-neutral-800">
+          <div class="px-2 pt-2">
             <button
               type="button"
               onclick={toggleUsers}
@@ -561,7 +589,17 @@ www.meshiplaw.com/lyra.
 
       <!-- Main content -->
       <section class="flex min-w-0 flex-1 flex-col overflow-hidden">
-        {#if section === "users" && auth.hasPermission("manage_users")}
+        {#if auth.hasPermission("manage_server")}
+          <div
+            class="flex min-h-0 flex-1 flex-col"
+            class:hidden={section !== "server"}
+          >
+            <ServerSettings bind:dirty={serverDirty} bind:busy={serverBusy} />
+          </div>
+        {/if}
+        {#if section === "server"}
+          <!-- Server settings stay mounted to preserve drafts when switching sections. -->
+        {:else if section === "users" && auth.hasPermission("manage_users")}
           {#key selectedUserId}
             <UserSettings
               user={selectedUser}
@@ -673,7 +711,7 @@ www.meshiplaw.com/lyra.
                 {#each groups as group (group.id)}
                   <fieldset class="space-y-4">
                     <legend
-                      class="border-b border-slate-200 pb-1 text-sm font-semibold text-slate-700 dark:border-neutral-800 dark:text-neutral-200"
+                      class="pb-1 text-sm font-semibold text-slate-700 dark:text-neutral-200"
                     >
                       {group.label}
                     </legend>

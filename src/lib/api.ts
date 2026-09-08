@@ -35,6 +35,8 @@ import type {
   PublicUser,
   RoleResponse,
   ServerInfoResponse,
+  ServerSettingsResponse,
+  ServerSettingValue,
   FavoriteListResponse,
   FavoriteStateResponse,
   CheckResponse,
@@ -1074,4 +1076,18 @@ export function installPlugins(opts: {
     ref: opts.ref ?? undefined,
     plugins: opts.plugins,
   });
+}
+
+export function fetchServerSettings(): Promise<ServerSettingsResponse> {
+  return get<ServerSettingsResponse>("/server/settings");
+}
+
+export function updateServerSettings(
+  values: Record<string, ServerSettingValue>,
+): Promise<ServerSettingsResponse> {
+  return patch<ServerSettingsResponse>("/server/settings", { values });
+}
+
+export function resetServerSettings(): Promise<ServerSettingsResponse> {
+  return del<ServerSettingsResponse>("/server/settings");
 }
