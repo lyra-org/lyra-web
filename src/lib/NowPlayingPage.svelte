@@ -22,14 +22,15 @@ www.meshiplaw.com/lyra.
   let coverBlurhash = $derived(player.playbackContext?.coverBlurhash ?? null);
   let artistNames = $derived(player.currentArtistNames);
 
-  let isSynced = $derived(!!lyrics && lyrics.lines.length > 0);
+  let lyricLines = $derived(lyrics?.lines ?? []);
+  let isSynced = $derived(lyricLines.length > 0);
   let currentMs = $derived(player.currentTime * 1000);
 
   let activeLineIndex = $derived.by(() => {
-    if (!isSynced || !lyrics) return -1;
+    if (!isSynced) return -1;
     let idx = -1;
-    for (let i = 0; i < lyrics.lines.length; i++) {
-      if (lyrics.lines[i].ts_ms <= currentMs) idx = i;
+    for (let i = 0; i < lyricLines.length; i++) {
+      if (lyricLines[i].ts_ms <= currentMs) idx = i;
       else break;
     }
     return idx;
@@ -404,7 +405,7 @@ www.meshiplaw.com/lyra.
             </p>
           {:else if isSynced}
             <div class="flex flex-col items-center gap-0.5 text-center">
-              {#each lyrics.lines as line, i (i)}
+              {#each lyricLines as line, i (i)}
                 <button
                   type="button"
                   bind:this={lineEls[i]}

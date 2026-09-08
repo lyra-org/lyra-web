@@ -307,7 +307,7 @@ export interface LyricsWordResponse {
 export interface LyricsLineResponse {
   ts_ms: number;
   text: string;
-  words: LyricsWordResponse[];
+  words?: LyricsWordResponse[];
 }
 
 export interface LyricsResponse {
@@ -320,7 +320,7 @@ export interface LyricsResponse {
   has_word_cues: boolean;
   // RFC 3339 timestamp; updated only when content changes.
   updated_at: string;
-  lines: LyricsLineResponse[];
+  lines?: LyricsLineResponse[];
 }
 
 export type TagColor =
