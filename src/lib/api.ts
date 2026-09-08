@@ -208,7 +208,7 @@ export function fetchReleases(opts?: {
   libraryId?: string;
   genreId?: string;
   cursor?: string;
-  sortBy?: "release_date";
+  sortBy?: string;
   sortOrder?: "ascending" | "descending";
   limit?: number;
 }): Promise<Page<ReleaseResponse>> {
@@ -368,11 +368,15 @@ export async function fetchActivePlaybacks(): Promise<ActivePlayback[]> {
 
 export function fetchArtists(opts?: {
   libraryId?: string;
+  sortBy?: string;
+  sortOrder?: "ascending" | "descending";
   cursor?: string;
   limit?: number;
 }): Promise<Page<ArtistResponse>> {
   const params = new URLSearchParams({ inc: "covers" });
   if (opts?.limit != null) params.set("limit", String(opts.limit));
+  if (opts?.sortBy) params.set("sort_by", opts.sortBy);
+  if (opts?.sortOrder) params.set("sort_order", opts.sortOrder);
   if (opts?.libraryId) params.set("library_id", opts.libraryId);
   if (opts?.cursor) params.set("cursor", opts.cursor);
   return get<Page<ArtistResponse>>(`/artists?${params}`);
@@ -724,8 +728,13 @@ export async function streamSyncRun(
 export function fetchPlaylists(
   cursor?: string,
   limit?: number,
+  sort?: { sortBy: string; sortOrder: "ascending" | "descending" },
 ): Promise<Page<PlaylistResponse>> {
   const params = new URLSearchParams();
+  if (sort) {
+    params.set("sort_by", sort.sortBy);
+    params.set("sort_order", sort.sortOrder);
+  }
   if (limit != null) params.set("limit", String(limit));
   if (cursor) params.set("cursor", cursor);
   return get<Page<PlaylistResponse>>(`/playlists?${params}`);
@@ -902,12 +911,16 @@ export function removeFavorite(targetId: string): Promise<void> {
 
 export function fetchTracks(opts?: {
   libraryId?: string;
+  sortBy?: string;
+  sortOrder?: "ascending" | "descending";
   cursor?: string;
   limit?: number;
 }): Promise<Page<TrackResponse>> {
   const params = new URLSearchParams({
     inc: "releases,artists,release_covers",
   });
+  if (opts?.sortBy) params.set("sort_by", opts.sortBy);
+  if (opts?.sortOrder) params.set("sort_order", opts.sortOrder);
   if (opts?.libraryId) params.set("library_id", opts.libraryId);
   if (opts?.cursor) params.set("cursor", opts.cursor);
   if (opts?.limit != null) params.set("limit", String(opts.limit));

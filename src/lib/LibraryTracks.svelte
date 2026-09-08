@@ -7,6 +7,7 @@ www.meshiplaw.com/lyra.
 
 <script lang="ts">
   import type { TrackResponse } from "./types";
+  import SortControls from "./SortControls.svelte";
   import PaginatedList from "./PaginatedList.svelte";
   import { fetchTracks } from "./api";
   import { getPlayer } from "./player.svelte.ts";
@@ -49,16 +50,22 @@ www.meshiplaw.com/lyra.
   function openTrack(track: TrackResponse) {
     if (track.id) window.location.hash = `#/tracks/${track.id}`;
   }
+  let sortBy = $state("name");
+  let sortOrder = $state<"ascending" | "descending">("ascending");
 </script>
 
 <div class="mx-auto max-w-4xl">
   <PaginatedList
-    scope={libraryId}
+    scope={`${libraryId}/${sortBy}/${sortOrder}`}
     label="tracks"
     pageSize={100}
     empty="No tracks in this library."
-    loadPage={(cursor, limit) => fetchTracks({ libraryId, cursor, limit })}
+    loadPage={(cursor, limit) =>
+      fetchTracks({ libraryId, cursor, limit, sortBy, sortOrder })}
   >
+    {#snippet toolbar()}
+      <SortControls kind="tracks" bind:sortBy bind:sortOrder />
+    {/snippet}
     {#snippet children(tracks)}
       <table class="w-full">
         <tbody>

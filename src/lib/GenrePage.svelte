@@ -10,6 +10,7 @@ www.meshiplaw.com/lyra.
   import { fetchGenre, fetchReleases } from "./api";
   import { genreGradient, genreCoverObjectPosition } from "./genreStyle";
   import BlurhashCanvas from "./BlurhashCanvas.svelte";
+  import SortControls from "./SortControls.svelte";
   import PaginatedList from "./PaginatedList.svelte";
   import AlbumCard from "./AlbumCard.svelte";
 
@@ -53,6 +54,8 @@ www.meshiplaw.com/lyra.
       cancelled = true;
     };
   });
+  let sortBy = $state("release_date");
+  let sortOrder = $state<"ascending" | "descending">("descending");
 </script>
 
 {#if loading}
@@ -158,7 +161,7 @@ www.meshiplaw.com/lyra.
         Albums
       </h3>
       <PaginatedList
-        scope={`${genreId}/${libraryId ?? ""}`}
+        scope={`${genreId}/${libraryId ?? ""}/${sortBy}/${sortOrder}`}
         label="albums"
         empty="No albums tagged with this genre."
         loadPage={(cursor, limit) =>
@@ -167,10 +170,13 @@ www.meshiplaw.com/lyra.
             libraryId: libraryId ?? undefined,
             cursor,
             limit,
-            sortBy: "release_date",
-            sortOrder: "descending",
+            sortBy,
+            sortOrder,
           })}
       >
+        {#snippet toolbar()}
+          <SortControls kind="albums" bind:sortBy bind:sortOrder />
+        {/snippet}
         {#snippet children(albums)}
           <div
             class="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6"

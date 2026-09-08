@@ -6,6 +6,7 @@ www.meshiplaw.com/lyra.
 -->
 
 <script lang="ts">
+  import SortControls from "./SortControls.svelte";
   import PaginatedList from "./PaginatedList.svelte";
   import { fetchPlaylists, createPlaylist, deletePlaylist } from "./api";
 
@@ -50,6 +51,8 @@ www.meshiplaw.com/lyra.
   function handleWindowClick() {
     if (menuOpenId != null) menuOpenId = null;
   }
+  let sortBy = $state("name");
+  let sortOrder = $state<"ascending" | "descending">("ascending");
 </script>
 
 <svelte:window onclick={handleWindowClick} />
@@ -84,12 +87,17 @@ www.meshiplaw.com/lyra.
   {/if}
 
   <PaginatedList
+    scope={`${sortBy}/${sortOrder}`}
     bind:this={list}
     label="playlists"
     pageSize={100}
     empty="No playlists yet."
-    loadPage={fetchPlaylists}
+    loadPage={(cursor, limit) =>
+      fetchPlaylists(cursor, limit, { sortBy, sortOrder })}
   >
+    {#snippet toolbar()}
+      <SortControls kind="playlists" bind:sortBy bind:sortOrder />
+    {/snippet}
     {#snippet children(playlists)}
       <div class="space-y-2">
         {#each playlists as playlist (playlist.id ?? playlist.name)}
