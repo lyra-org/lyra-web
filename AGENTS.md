@@ -7,7 +7,7 @@ This file provides guidance to AI coding agents when working with code in this r
 - **Dev server**: `bun run dev` (Vite dev server with HMR, proxies `/api` to `localhost:4746`)
 - **Build**: `bun run build` (production build via Vite)
 - **Type check**: `bun run check` (runs svelte-check and tsc)
-- **Lint**: `bun run lint` (Oxlint; also runs during check and build)
+- **Lint**: `bun run lint` (Oxlint; also runs during check)
 - **Format**: `bun run format` (Oxfmt with Svelte and Tailwind class sorting)
 - **Format check**: `bun run format:check`
 - **Preview**: `bun run preview` (serve production build locally)

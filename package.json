@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "bun run lint && vite build",
+    "build": "vite build",
     "preview": "vite preview",
     "check": "bun run lint && svelte-check --tsconfig ./tsconfig.app.json && tsc -p tsconfig.node.json",
     "lint": "oxlint src",
