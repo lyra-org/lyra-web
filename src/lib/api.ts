@@ -91,7 +91,7 @@ function authHeaders(extra?: Record<string, string>): Record<string, string> {
   return headers;
 }
 
-function handleResponse(
+async function handleResponse(
   res: Response,
   method: string,
   path: string,
@@ -102,12 +102,17 @@ function handleResponse(
     throw new ApiError(401, method, path, "Unauthorized");
   }
   if (!res.ok) {
-    throw new ApiError(
-      res.status,
-      method,
-      path,
-      `${method} ${path} failed: ${res.status} ${res.statusText}`,
-    );
+    let message = "The request failed.";
+    const contentType = res.headers.get("Content-Type")?.split(";")[0].trim();
+    if (contentType === "text/plain") {
+      const body = await res.text().catch(() => "");
+      message =
+        body
+          .trim()
+          .replace(/^Error:\s*/, "")
+          .trim() || message;
+    }
+    throw new ApiError(res.status, method, path, message);
   }
 }
 
@@ -121,7 +126,7 @@ async function parseBody<T>(res: Response): Promise<T> {
 async function get<T>(path: string): Promise<T> {
   const token = getAuth().token;
   const res = await fetch(`${BASE}${path}`, { headers: authHeaders() });
-  handleResponse(res, "GET", path, token);
+  await handleResponse(res, "GET", path, token);
   return parseBody<T>(res);
 }
 
@@ -144,7 +149,7 @@ async function post<T>(path: string, body: unknown): Promise<T> {
     headers: authHeaders({ "Content-Type": "application/json" }),
     body: JSON.stringify(body),
   });
-  handleResponse(res, "POST", path);
+  await handleResponse(res, "POST", path);
   return parseBody<T>(res);
 }
 
@@ -154,7 +159,7 @@ async function patch<T>(path: string, body: unknown): Promise<T> {
     headers: authHeaders({ "Content-Type": "application/json" }),
     body: JSON.stringify(body),
   });
-  handleResponse(res, "PATCH", path);
+  await handleResponse(res, "PATCH", path);
   return parseBody<T>(res);
 }
 
@@ -166,7 +171,7 @@ async function put<T>(path: string, body?: unknown): Promise<T> {
     ),
     body: body !== undefined ? JSON.stringify(body) : undefined,
   });
-  handleResponse(res, "PUT", path);
+  await handleResponse(res, "PUT", path);
   return parseBody<T>(res);
 }
 
@@ -178,7 +183,7 @@ async function del<T>(path: string, body?: unknown): Promise<T> {
     ),
     body: body ? JSON.stringify(body) : undefined,
   });
-  handleResponse(res, "DELETE", path);
+  await handleResponse(res, "DELETE", path);
   return parseBody<T>(res);
 }
 
@@ -685,7 +690,7 @@ export async function streamSyncRun(
     cache: "no-store",
     signal: options.signal,
   });
-  handleResponse(res, "GET", path);
+  await handleResponse(res, "GET", path);
   if (res.body == null) {
     throw new Error("Sync event stream is not readable");
   }
@@ -937,7 +942,7 @@ export async function fetchLyrics(
     headers: authHeaders(),
   });
   if (res.status === 404 || res.status === 406) return null;
-  handleResponse(res, "GET", `/tracks/${trackId}/lyrics`);
+  await handleResponse(res, "GET", `/tracks/${trackId}/lyrics`);
   return parseBody<LyricsResponse>(res);
 }
 
