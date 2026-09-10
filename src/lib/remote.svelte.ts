@@ -14,7 +14,7 @@ import {
   sendPreviousTrack,
   sendSeek,
   sendSetVolume,
-} from "./ws.svelte";
+} from "./ws.svelte.ts";
 
 const POLL_MS = 2_500;
 const REFRESH_AFTER_COMMAND_MS = 350;

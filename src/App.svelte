@@ -25,15 +25,15 @@ www.meshiplaw.com/lyra.
   import SettingsPanel from "./lib/SettingsPanel.svelte";
   import RemotePanel from "./lib/RemotePanel.svelte";
   import { onMount } from "svelte";
-  import { getAuth } from "./lib/auth.svelte";
-  import { getSetup } from "./lib/setup.svelte";
+  import { getAuth } from "./lib/auth.svelte.ts";
+  import { getSetup } from "./lib/setup.svelte.ts";
   import { getPlayer } from "./lib/player.svelte.ts";
-  import { getTheme } from "./lib/theme.svelte";
+  import { getTheme } from "./lib/theme.svelte.ts";
   import {
     connect as wsConnect,
     disconnect as wsDisconnect,
-  } from "./lib/ws.svelte";
-  import { getRemote } from "./lib/remote.svelte";
+  } from "./lib/ws.svelte.ts";
+  import { getRemote } from "./lib/remote.svelte.ts";
   import MixButton from "./lib/MixButton.svelte";
   import { headerMixForRoute } from "./lib/headerMix.svelte.ts";
   import logo from "./assets/logo.svg";

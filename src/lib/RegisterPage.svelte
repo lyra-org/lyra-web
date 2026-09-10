@@ -7,7 +7,7 @@ www.meshiplaw.com/lyra.
 
 <script lang="ts">
   import { ApiError, createUser, loginUser } from "./api";
-  import { getAuth } from "./auth.svelte";
+  import { getAuth } from "./auth.svelte.ts";
   import logo from "../assets/logo.svg";
 
   interface Props {

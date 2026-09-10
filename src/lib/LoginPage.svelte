@@ -8,7 +8,7 @@ www.meshiplaw.com/lyra.
 <script lang="ts">
   import { untrack } from "svelte";
   import { loginUser } from "./api";
-  import { getAuth } from "./auth.svelte";
+  import { getAuth } from "./auth.svelte.ts";
   import logo from "../assets/logo.svg";
 
   interface Props {

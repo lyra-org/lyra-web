@@ -15,7 +15,7 @@ www.meshiplaw.com/lyra.
     updateUserRole,
     fetchMe,
   } from "./api";
-  import { getAuth } from "./auth.svelte";
+  import { getAuth } from "./auth.svelte.ts";
   import type { PublicUser, RoleResponse } from "./types";
 
   const auth = getAuth();

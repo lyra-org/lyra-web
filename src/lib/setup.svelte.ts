@@ -13,7 +13,7 @@ import {
   fetchServerInfo,
   refreshPluginRepository,
 } from "./api";
-import { getAuth } from "./auth.svelte";
+import { getAuth } from "./auth.svelte.ts";
 
 // Server discovery and first-run setup state. Everything here is keyed to the
 // server identity reported by `/api/server/public`; when a different server

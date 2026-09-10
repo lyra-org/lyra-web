@@ -14,8 +14,8 @@ import type {
   SetVolumeCommand,
 } from "./types";
 import { connectionSessionKey } from "./api";
-import { getAuth } from "./auth.svelte";
-import { getPlayer } from "./player.svelte";
+import { getAuth } from "./auth.svelte.ts";
+import { getPlayer } from "./player.svelte.ts";
 
 const CAPABILITIES: RemoteAction[] = [
   "play",

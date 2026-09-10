@@ -54,7 +54,7 @@ import type {
   PlaybackUrlResponse,
   LyricsResponse,
 } from "./types";
-import { getAuth } from "./auth.svelte";
+import { getAuth } from "./auth.svelte.ts";
 
 const BASE = "/api";
 

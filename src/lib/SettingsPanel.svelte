@@ -11,7 +11,7 @@ www.meshiplaw.com/lyra.
   import { fetchUsers } from "./api";
   import ServerSettings from "./ServerSettings.svelte";
   import UserSettings from "./UserSettings.svelte";
-  import { getAuth } from "./auth.svelte";
+  import { getAuth } from "./auth.svelte.ts";
   import type {
     PluginManifestResponse,
     PluginSettingsResponse,

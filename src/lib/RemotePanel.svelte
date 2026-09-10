@@ -12,8 +12,8 @@ www.meshiplaw.com/lyra.
     RemoteAction,
     TrackResponse,
   } from "./types";
-  import { getRemote } from "./remote.svelte";
-  import { getPlayer } from "./player.svelte";
+  import { getRemote } from "./remote.svelte.ts";
+  import { getPlayer } from "./player.svelte.ts";
   import { coverUrl } from "./api";
   import BlurhashCanvas from "./BlurhashCanvas.svelte";
 

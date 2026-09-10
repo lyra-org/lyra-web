@@ -13,7 +13,7 @@ www.meshiplaw.com/lyra.
     RepositoryWithPreviewResponse,
   } from "./types";
   import { installPlugins, updateServerSetup } from "./api";
-  import { getSetup } from "./setup.svelte";
+  import { getSetup } from "./setup.svelte.ts";
   import logo from "../assets/logo.svg";
 
   interface Props {

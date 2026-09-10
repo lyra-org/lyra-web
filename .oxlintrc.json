@@ -1,0 +1,17 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "categories": { "correctness": "off" },
+  "rules": {
+    "no-restricted-imports": [
+      "error",
+      {
+        "patterns": [
+          {
+            "regex": "(?:^|/)[a-z][^/]*\\.svelte$",
+            "message": "Use the full .svelte.ts extension for rune modules. Component filenames must start with an uppercase letter."
+          }
+        ]
+      }
+    ]
+  }
+}

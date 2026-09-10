@@ -287,8 +287,7 @@ www.meshiplaw.com/lyra.
                   disabled={field.locked}
                   oninput={(event) => edit(field, event.currentTarget.value)}
                   aria-describedby={`${id}-description`}
-                  class={inputClass}
-                ></textarea>
+                  class={inputClass}></textarea>
               {:else if field.type !== "bool"}
                 <input
                   {id}

@@ -7,7 +7,7 @@ import { mount } from "svelte";
 import "./app.css";
 // Side-effect import: applies the .dark class to <html> before App mounts,
 // so the initial paint matches the active theme (no flash).
-import "./lib/theme.svelte";
+import "./lib/theme.svelte.ts";
 import App from "./App.svelte";
 
 const app = mount(App, {
