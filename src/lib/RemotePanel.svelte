@@ -101,12 +101,13 @@ www.meshiplaw.com/lyra.
 
   function deviceLabel(s: ActivePlayback): string {
     if (isSelf(s)) return "This browser";
+    if (s.client_name?.trim()) return s.client_name.trim();
     const key = s.connection_session_key;
     if (key && key.length > 0) {
       if (/^[0-9a-f-]{8,}$/i.test(key)) return `Device ${key.slice(0, 6)}`;
       return key;
     }
-    if (!s.connection_token) return "Offline session";
+    if (!s.connection_token) return "External player";
     return "Connected device";
   }
 

@@ -203,6 +203,9 @@ async function playTrackInternal(
       startPlayback(track.id, track.duration_ms),
     ]);
     if (currentTrack?.id !== track.id) return;
+    if (pb.queue_revision == null) {
+      throw new Error("Started playback has no server-managed queue");
+    }
     // Some source containers cannot stream directly. Ask for a browser-playable
     // transcode when the server only offers HLS for the original request.
     const streamUrl =

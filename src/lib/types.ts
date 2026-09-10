@@ -42,7 +42,8 @@ export type PlaybackState =
 export interface PlaybackResponse {
   id: string;
   user_id: string;
-  queue_revision: number;
+  // Null for plugin-reported playback without a server-managed queue.
+  queue_revision: number | null;
   current: CurrentPlayback | null;
   created_at: string;
   updated_at: string;
@@ -710,6 +711,7 @@ export interface ActivePlayback {
   playback_id: string;
   track_id: string;
   user_id: string;
+  client_name: string | null;
   position_ms: number;
   effective_position_ms: number;
   duration_ms?: number | null;
