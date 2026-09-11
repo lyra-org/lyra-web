@@ -6,6 +6,7 @@ www.meshiplaw.com/lyra.
 -->
 
 <script lang="ts">
+  import { untrack } from "svelte";
   import {
     getFavoriteState,
     isFavoriteLoading,
@@ -50,7 +51,7 @@ www.meshiplaw.com/lyra.
 
   $effect(() => {
     const id = targetId;
-    loadFavorite(id).catch(() => {});
+    untrack(() => loadFavorite(id)).catch(() => {});
   });
 
   async function handleClick(e: MouseEvent) {

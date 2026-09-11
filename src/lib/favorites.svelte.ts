@@ -3,7 +3,8 @@
 // You can obtain one here:
 // www.meshiplaw.com/lyra.
 
-import { checkFavorite, addFavorite, removeFavorite } from "./api";
+import { checkFavorites, addFavorite, removeFavorite } from "./api";
+import type { CheckResponse } from "./types";
 
 const states = $state<Record<string, boolean>>({});
 const loadingIds = $state<Record<string, boolean>>({});
@@ -21,24 +22,49 @@ export function isFavoriteToggling(targetId: string): boolean {
   return togglingIds[targetId] ?? false;
 }
 
+const pending = new Map<string, Promise<boolean>>();
+let batch: { ids: string[]; response: Promise<CheckResponse> } | undefined;
+
 export async function loadFavorite(targetId: string): Promise<boolean> {
   if (states[targetId] !== undefined) return states[targetId];
 
-  loadingIds[targetId] = true;
-  try {
-    const res = await checkFavorite(targetId);
-    states[targetId] = res.favorited;
-    return res.favorited;
-  } catch {
-    states[targetId] = false;
-    return false;
-  } finally {
-    loadingIds[targetId] = false;
+  const existing = pending.get(targetId);
+  if (existing) return existing;
+
+  if (!batch) {
+    const ids: string[] = [];
+    const response = Promise.resolve().then(() => {
+      if (batch?.ids === ids) batch = undefined;
+      return checkFavorites(ids);
+    });
+    batch = { ids, response };
   }
+
+  const { ids, response } = batch;
+  ids.push(targetId);
+  // The server accepts at most 500 targets per bulk check.
+  if (ids.length === 500) batch = undefined;
+
+  loadingIds[targetId] = true;
+  const request = response
+    .then((res) => {
+      const favorited = res.favorited[targetId];
+      if (favorited === undefined) {
+        throw new Error("Missing favorite state");
+      }
+      states[targetId] = favorited;
+      return favorited;
+    })
+    .finally(() => {
+      loadingIds[targetId] = false;
+      pending.delete(targetId);
+    });
+  pending.set(targetId, request);
+  return request;
 }
 
 export async function toggleFavorite(targetId: string): Promise<boolean> {
-  const current = states[targetId] ?? false;
+  const current = await loadFavorite(targetId);
   const next = !current;
   states[targetId] = next;
   togglingIds[targetId] = true;
