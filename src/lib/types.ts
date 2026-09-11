@@ -800,3 +800,14 @@ export interface ServerSettingsResponse {
   pending_restart: string[];
   boot: { port: number; data_dir: string; db: { kind: string; path: string } };
 }
+
+export interface ApiKeyResponse {
+  id: string;
+  name: string;
+  created_at: string;
+  last_used_at: string | null;
+}
+
+export interface CreatedApiKeyResponse extends ApiKeyResponse {
+  key: string;
+}

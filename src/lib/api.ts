@@ -4,6 +4,8 @@
 // www.meshiplaw.com/lyra.
 
 import type {
+  ApiKeyResponse,
+  CreatedApiKeyResponse,
   ReleaseResponse,
   ReleaseCoverSearchResponse,
   ArtistCoverSearchResponse,
@@ -1092,4 +1094,16 @@ export function updateServerSettings(
 
 export function resetServerSettings(): Promise<ServerSettingsResponse> {
   return del<ServerSettingsResponse>("/server/settings");
+}
+
+export function fetchApiKeys(): Promise<ApiKeyResponse[]> {
+  return get<ApiKeyResponse[]>("/me/api-keys");
+}
+
+export function createApiKey(name: string): Promise<CreatedApiKeyResponse> {
+  return post<CreatedApiKeyResponse>("/me/api-keys", { name });
+}
+
+export function revokeApiKey(id: string): Promise<void> {
+  return del<void>(`/me/api-keys/${encodeURIComponent(id)}`);
 }

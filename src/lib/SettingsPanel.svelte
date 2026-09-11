@@ -10,6 +10,7 @@ www.meshiplaw.com/lyra.
   import type { PublicUser } from "./types";
   import { fetchUsers } from "./api";
   import ServerSettings from "./ServerSettings.svelte";
+  import ApiKeySettings from "./ApiKeySettings.svelte";
   import UserSettings from "./UserSettings.svelte";
   import { getAuth } from "./auth.svelte.ts";
   import type {
@@ -38,7 +39,7 @@ www.meshiplaw.com/lyra.
 
   let { onclose }: Props = $props();
   const auth = getAuth();
-  let section = $state<"server" | "plugins" | "users">(
+  let section = $state<"server" | "plugins" | "users" | "api-keys">(
     untrack(() =>
       auth.hasPermission("manage_server")
         ? "server"
@@ -47,11 +48,12 @@ www.meshiplaw.com/lyra.
           : "plugins",
     ),
   );
+  let apiKeysBusy = $state(false);
   let serverDirty = $state(false);
   let serverBusy = $state(false);
 
   function closeSettings() {
-    if (serverBusy) return;
+    if (serverBusy || apiKeysBusy) return;
     if (serverDirty && !confirm("Discard unsaved server settings?")) return;
     onclose();
   }
@@ -396,6 +398,7 @@ www.meshiplaw.com/lyra.
     <div class="flex flex-1 overflow-hidden">
       <!-- Left sidebar -->
       <aside
+        inert={apiKeysBusy}
         class="flex w-40 shrink-0 flex-col overflow-y-auto border-r border-slate-200 bg-slate-50 sm:w-64 dark:border-neutral-800 dark:bg-[#181a1b]"
       >
         {#if auth.hasPermission("manage_server")}
@@ -585,6 +588,22 @@ www.meshiplaw.com/lyra.
             </ul>
           {/if}
         </nav>
+        <nav aria-labelledby="settings-account-heading" class="px-2 pt-6 pb-2">
+          <h3
+            id="settings-account-heading"
+            class="px-2 pb-2 text-xs font-medium text-slate-500 dark:text-neutral-400"
+          >
+            Account
+          </h3>
+          <button
+            type="button"
+            onclick={() => (section = "api-keys")}
+            aria-current={section === "api-keys" ? "page" : undefined}
+            class="w-full rounded-md px-2 py-2 text-left text-sm font-medium text-slate-700 hover:bg-slate-200 dark:text-neutral-200 dark:hover:bg-neutral-800"
+            class:bg-slate-200={section === "api-keys"}
+            class:dark:bg-neutral-800={section === "api-keys"}>API keys</button
+          >
+        </nav>
       </aside>
 
       <!-- Main content -->
@@ -599,6 +618,8 @@ www.meshiplaw.com/lyra.
         {/if}
         {#if section === "server"}
           <!-- Server settings stay mounted to preserve drafts when switching sections. -->
+        {:else if section === "api-keys"}
+          <ApiKeySettings bind:busy={apiKeysBusy} />
         {:else if section === "users" && auth.hasPermission("manage_users")}
           {#key selectedUserId}
             <UserSettings
