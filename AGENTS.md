@@ -4,23 +4,19 @@ This file provides guidance to AI coding agents when working with code in this r
 
 ## Commands
 
-- **Dev server**: `bun run dev` (Vite dev server with HMR, proxies `/api` to `localhost:4746`)
-- **Build**: `bun run build` (production build via Vite)
-- **Type check**: `bun run check` (runs svelte-check and tsc)
-- **Lint**: `bun run lint` (Oxlint; also runs during check)
-- **Format**: `bun run format` (Oxfmt with Svelte and Tailwind class sorting)
-- **Format check**: `bun run format:check`
-- **Preview**: `bun run preview` (serve production build locally)
+Use `pnpm` as the package manager (pnpm-lock.yaml). The `packageManager` field
+in package.json pins the version, and pnpm switches to it automatically. Scripts
+run as `pnpm run <script>`:
 
-Use `bun` as the package manager (bun.lock).
+- **Dev server**: `dev` (Vite dev server with HMR, proxies `/api` to `localhost:4746`)
+- **Build**: `build` (production build via Vite)
+- **Type check**: `check` (runs svelte-check and tsc)
+- **Lint**: `lint` (Oxlint; also runs during check)
+- **Format**: `format` (Oxfmt with Svelte and Tailwind class sorting)
+- **Format check**: `format:check`
+- **Preview**: `preview` (serve production build locally)
 
-### Workflow
-
-Run type checking, build check, and formatting between changes:
-
-- `bun run format` (format)
-- `bun run check` (type check)
-- `bun run build` (build check)
+Run `format`, `check`, and `build` between changes.
 
 ## Architecture
 
