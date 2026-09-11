@@ -192,22 +192,6 @@ export type SearchResult =
   | ArtistSearchResult
   | TrackSearchResult;
 
-export interface SearchTitleHit {
-  id: string;
-  title: string;
-}
-
-export interface SearchArtistHit {
-  id: string;
-  name: string;
-}
-
-export interface SearchResponse {
-  tracks: SearchTitleHit[];
-  artists: SearchArtistHit[];
-  releases: SearchTitleHit[];
-}
-
 export interface ExternalIdResponse {
   provider_id: string;
   id_type: string;

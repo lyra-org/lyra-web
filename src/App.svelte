@@ -24,6 +24,8 @@ www.meshiplaw.com/lyra.
   import Player from "./lib/Player.svelte";
   import SettingsPanel from "./lib/SettingsPanel.svelte";
   import RemotePanel from "./lib/RemotePanel.svelte";
+  import SearchNav from "./lib/SearchNav.svelte";
+  import SearchResults from "./lib/SearchResults.svelte";
   import { onMount } from "svelte";
   import { getAuth } from "./lib/auth.svelte.ts";
   import { getSetup } from "./lib/setup.svelte.ts";
@@ -54,6 +56,16 @@ www.meshiplaw.com/lyra.
 
   let hash = $state(window.location.hash);
   let settingsOpen = $state(false);
+  let searchOpen = $state(false);
+  let searchQuery = $state("");
+  let committedSearchQuery = $state("");
+
+  $effect(() => {
+    if (!searchOpen) {
+      searchQuery = "";
+      committedSearchQuery = "";
+    }
+  });
 
   // Server discovery and onboarding.
   let booted = $state(false);
@@ -130,8 +142,15 @@ www.meshiplaw.com/lyra.
   });
 
   function onHashChange() {
+    searchOpen = false;
     hash = window.location.hash;
   }
+
+  $effect(() => {
+    if (screen !== "app" || settingsOpen || remote.isOpen) {
+      searchOpen = false;
+    }
+  });
 
   type Route =
     | { page: "login" }
@@ -361,16 +380,22 @@ www.meshiplaw.com/lyra.
 {:else}
   <main class="min-h-screen bg-white dark:bg-[#1b1d1e]">
     <header
-      class="relative flex items-center gap-4 bg-slate-50 px-6 py-4 dark:bg-[#181a1b]"
+      class="relative flex flex-wrap items-center gap-4 bg-slate-50 px-6 py-4 dark:bg-[#181a1b]"
     >
       <a href="#/">
         <img src={logo} alt="Lyra" class="h-10 w-10 scale-175" />
       </a>
-      {#if route.page !== "libraries"}
+      {#if searchOpen}
+        <SearchNav
+          bind:query={searchQuery}
+          bind:committedQuery={committedSearchQuery}
+          onclose={() => (searchOpen = false)}
+        />
+      {:else if route.page !== "libraries"}
         <nav
-          class="pointer-events-none absolute inset-x-0 flex justify-center gap-6"
+          class="order-last flex w-full gap-6 overflow-x-auto sm:justify-center xl:pointer-events-none xl:absolute xl:inset-x-0 xl:order-none xl:w-auto"
         >
-          <div class="pointer-events-auto flex gap-6">
+          <div class="pointer-events-auto flex shrink-0 gap-6">
             <a
               href={currentLibraryId != null
                 ? `#/libraries/${currentLibraryId}`
@@ -434,6 +459,28 @@ www.meshiplaw.com/lyra.
         </nav>
       {/if}
       <div class="ml-auto flex items-center gap-2">
+        <button
+          type="button"
+          aria-label="Search your music"
+          title={searchOpen ? "Close search" : "Search your music"}
+          aria-expanded={searchOpen}
+          aria-controls={searchOpen ? "search-results" : undefined}
+          class="flex h-8 w-8 items-center justify-center rounded-full text-slate-500 hover:bg-slate-100 hover:text-slate-700 dark:text-neutral-400 dark:hover:bg-neutral-700 dark:hover:text-neutral-200"
+          onclick={() => (searchOpen = !searchOpen)}
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            class="h-5 w-5"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            stroke-width="2"
+            aria-hidden="true"
+          >
+            <circle cx="10.5" cy="10.5" r="6.5" />
+            <path stroke-linecap="round" d="m16 16 4.5 4.5" />
+          </svg>
+        </button>
         {#if headerMix}
           <MixButton
             variant="icon"
@@ -503,7 +550,27 @@ www.meshiplaw.com/lyra.
       </div>
     </header>
     <section class="mx-auto max-w-7xl px-4 py-6 pb-20 sm:px-6">
-      {#if route.page === "library"}
+      {#if searchOpen}
+        <div id="search-results">
+          {#if !searchQuery.trim()}
+            <p
+              role="status"
+              class="py-12 text-center text-slate-500 dark:text-neutral-400"
+            >
+              Search for albums, artists, and tracks.
+            </p>
+          {:else if !committedSearchQuery}
+            <p
+              role="status"
+              class="py-12 text-center text-slate-500 dark:text-neutral-400"
+            >
+              Searching…
+            </p>
+          {:else}
+            <SearchResults query={committedSearchQuery} />
+          {/if}
+        </div>
+      {:else if route.page === "library"}
         {#key route.id}
           <LibraryAlbums libraryId={route.id} />
         {/key}

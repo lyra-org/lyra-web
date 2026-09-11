@@ -16,7 +16,6 @@ import type {
   RefreshResponse,
   ProviderResponse,
   SearchResult,
-  SearchResponse,
   SearchEntityType,
   ExternalIdResponse,
   EntryResponse,
@@ -123,9 +122,9 @@ async function parseBody<T>(res: Response): Promise<T> {
   return JSON.parse(text) as T;
 }
 
-async function get<T>(path: string): Promise<T> {
+async function get<T>(path: string, signal?: AbortSignal): Promise<T> {
   const token = getAuth().token;
-  const res = await fetch(`${BASE}${path}`, { headers: authHeaders() });
+  const res = await fetch(`${BASE}${path}`, { headers: authHeaders(), signal });
   await handleResponse(res, "GET", path, token);
   return parseBody<T>(res);
 }
@@ -214,6 +213,8 @@ export function updateServerSetup(opts: {
 
 export function fetchReleases(opts?: {
   libraryId?: string;
+  query?: string;
+  signal?: AbortSignal;
   genreId?: string;
   cursor?: string;
   sortBy?: string;
@@ -221,13 +222,14 @@ export function fetchReleases(opts?: {
   limit?: number;
 }): Promise<Page<ReleaseResponse>> {
   const params = new URLSearchParams({ inc: "artists,covers" });
+  if (opts?.query != null) params.set("query", opts.query);
   if (opts?.libraryId) params.set("library_id", opts.libraryId);
   if (opts?.genreId) params.set("genre_id", opts.genreId);
   if (opts?.sortBy) params.set("sort_by", opts.sortBy);
   if (opts?.sortOrder) params.set("sort_order", opts.sortOrder);
   if (opts?.cursor) params.set("cursor", opts.cursor);
   if (opts?.limit != null) params.set("limit", String(opts.limit));
-  return get<Page<ReleaseResponse>>(`/releases?${params}`);
+  return get<Page<ReleaseResponse>>(`/releases?${params}`, opts?.signal);
 }
 
 export function fetchRelease(id: string): Promise<ReleaseResponse> {
@@ -376,6 +378,8 @@ export async function fetchActivePlaybacks(): Promise<ActivePlayback[]> {
 
 export function fetchArtists(opts?: {
   libraryId?: string;
+  query?: string;
+  signal?: AbortSignal;
   sortBy?: string;
   sortOrder?: "ascending" | "descending";
   cursor?: string;
@@ -385,9 +389,10 @@ export function fetchArtists(opts?: {
   if (opts?.limit != null) params.set("limit", String(opts.limit));
   if (opts?.sortBy) params.set("sort_by", opts.sortBy);
   if (opts?.sortOrder) params.set("sort_order", opts.sortOrder);
+  if (opts?.query != null) params.set("query", opts.query);
   if (opts?.libraryId) params.set("library_id", opts.libraryId);
   if (opts?.cursor) params.set("cursor", opts.cursor);
-  return get<Page<ArtistResponse>>(`/artists?${params}`);
+  return get<Page<ArtistResponse>>(`/artists?${params}`, opts?.signal);
 }
 
 export function fetchArtist(id: string): Promise<ArtistResponse> {
@@ -556,17 +561,6 @@ export function setExternalId(
     `/entities/${entityId}/external-ids/${encodeURIComponent(providerId)}/${encodeURIComponent(idType)}`,
     { id_value: idValue },
   );
-}
-
-// Cross-entity search
-
-export function searchAll(
-  query: string,
-  limit?: number,
-): Promise<SearchResponse> {
-  const params = new URLSearchParams({ query });
-  if (limit != null) params.set("limit", String(limit));
-  return get<SearchResponse>(`/search?${params}`);
 }
 
 // Libraries
@@ -919,6 +913,8 @@ export function removeFavorite(targetId: string): Promise<void> {
 
 export function fetchTracks(opts?: {
   libraryId?: string;
+  query?: string;
+  signal?: AbortSignal;
   sortBy?: string;
   sortOrder?: "ascending" | "descending";
   cursor?: string;
@@ -929,10 +925,11 @@ export function fetchTracks(opts?: {
   });
   if (opts?.sortBy) params.set("sort_by", opts.sortBy);
   if (opts?.sortOrder) params.set("sort_order", opts.sortOrder);
+  if (opts?.query != null) params.set("query", opts.query);
   if (opts?.libraryId) params.set("library_id", opts.libraryId);
   if (opts?.cursor) params.set("cursor", opts.cursor);
   if (opts?.limit != null) params.set("limit", String(opts.limit));
-  return get<Page<TrackResponse>>(`/tracks?${params}`);
+  return get<Page<TrackResponse>>(`/tracks?${params}`, opts?.signal);
 }
 
 export async function fetchLyrics(

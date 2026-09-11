@@ -18,6 +18,7 @@ www.meshiplaw.com/lyra.
     children: Snippet<[T[]]>;
     toolbar?: Snippet;
     empty?: string;
+    compact?: boolean;
   }
 
   let {
@@ -28,6 +29,7 @@ www.meshiplaw.com/lyra.
     children,
     toolbar,
     empty = "No items found.",
+    compact = false,
   }: Props = $props();
   let pages = $state.raw<Page<T>[]>([]);
   let index = $state(0);
@@ -157,16 +159,20 @@ www.meshiplaw.com/lyra.
 {/snippet}
 
 <div bind:this={content} class="scroll-mt-6" aria-busy={loading}>
-  <div class="mb-4 flex flex-wrap items-center justify-between gap-x-6 gap-y-2">
-    {#if toolbar}
-      {@render toolbar()}
-    {:else}
-      <span class="text-xs text-slate-500 dark:text-neutral-400"
-        >{pageSize} per page</span
-      >
-    {/if}
-    {@render navigation("top")}
-  </div>
+  {#if !compact || toolbar}
+    <div
+      class="mb-4 flex flex-wrap items-center justify-between gap-x-6 gap-y-2"
+    >
+      {#if toolbar}
+        {@render toolbar()}
+      {:else}
+        <span class="text-xs text-slate-500 dark:text-neutral-400"
+          >{pageSize} per page</span
+        >
+      {/if}
+      {#if !compact}{@render navigation("top")}{/if}
+    </div>
+  {/if}
   {#if error}
     <div class="mb-6 flex flex-wrap items-center justify-center gap-3 text-sm">
       <p role="alert" class="text-red-600 dark:text-red-400">{error}</p>
@@ -182,7 +188,9 @@ www.meshiplaw.com/lyra.
 
   {#if !page && loading}
     <div
-      class="flex items-center justify-center py-20"
+      class="flex items-center justify-center"
+      class:py-20={!compact}
+      class:py-6={compact}
       role="status"
       aria-label="Loading items"
     >
@@ -194,13 +202,18 @@ www.meshiplaw.com/lyra.
     {#if page.items.length > 0}
       {@render children(page.items)}
     {:else}
-      <p class="py-20 text-center text-sm text-slate-500 dark:text-neutral-400">
+      <p
+        class="text-sm text-slate-500 dark:text-neutral-400"
+        class:py-20={!compact}
+        class:text-center={!compact}
+        class:py-2={compact}
+      >
         {empty}
       </p>
     {/if}
   {/if}
 
-  {#if page}
+  {#if page && (!compact || index > 0 || page.next_cursor)}
     <div
       class="mt-6 flex flex-wrap items-center justify-between gap-x-6 gap-y-2"
     >
@@ -213,11 +226,13 @@ www.meshiplaw.com/lyra.
           >{page.items.length}
           {page.items.length === 1 ? "item" : "items"}</span
         >
-        <span
-          class="mx-1.5 text-slate-300 dark:text-neutral-600"
-          aria-hidden="true">·</span
-        >
-        <span>{pageSize} per page</span>
+        {#if !compact}
+          <span
+            class="mx-1.5 text-slate-300 dark:text-neutral-600"
+            aria-hidden="true">·</span
+          >
+          <span>{pageSize} per page</span>
+        {/if}
       </div>
       {@render navigation("bottom")}
     </div>
