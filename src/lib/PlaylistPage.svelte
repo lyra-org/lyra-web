@@ -72,7 +72,11 @@ www.meshiplaw.com/lyra.
 
   function playItem(item: PlaylistTrackResponse) {
     if (!playlist) return;
-    const tracks = sortedItems.map((i) => i.track);
+    const tracks = sortedItems.map((item) => ({
+      ...item.track,
+      releases: item.release ? [item.release] : item.track.releases,
+      artists: item.artists ?? item.track.artists,
+    }));
     const trackArtistNames: Record<string, string> = {};
     for (const i of sortedItems) {
       if (i.track.id && i.artists?.length) {

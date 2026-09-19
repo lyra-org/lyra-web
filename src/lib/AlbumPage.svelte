@@ -107,8 +107,12 @@ www.meshiplaw.com/lyra.
 
   let albumContext = $derived.by(() => {
     if (!album) return null;
+    const release = { id: album.id, title: album.title };
     return {
-      tracks: sortedTracks,
+      tracks: sortedTracks.map((track) => ({
+        ...track,
+        releases: [release],
+      })),
       title: album.title,
       coverUrl: album.cover?.url ?? null,
       coverBlurhash: album.cover?.blurhash ?? null,
@@ -253,14 +257,7 @@ www.meshiplaw.com/lyra.
                   class:bg-slate-100={player.isCurrentTrack(track)}
                   class:dark:bg-neutral-700={player.isCurrentTrack(track)}
                   onclick={() =>
-                    album &&
-                    player.playTrack(track, {
-                      tracks: sortedTracks,
-                      title: album.title,
-                      coverUrl: album.cover?.url ?? null,
-                      coverBlurhash: album.cover?.blurhash ?? null,
-                      trackArtistNames,
-                    })}
+                    albumContext && player.playTrack(track, albumContext)}
                 >
                   <td
                     class="w-10 py-2 pr-3 pl-3 text-right text-sm text-slate-400 tabular-nums dark:text-neutral-500"

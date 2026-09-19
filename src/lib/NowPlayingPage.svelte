@@ -21,6 +21,19 @@ www.meshiplaw.com/lyra.
   let coverSrc = $derived(player.playbackContext?.coverUrl ?? null);
   let coverBlurhash = $derived(player.playbackContext?.coverBlurhash ?? null);
   let artistNames = $derived(player.currentArtistNames);
+  let track = $derived(
+    player.playbackContext?.tracks.find(
+      (track) => track.id === player.currentTrack?.id,
+    ) ?? player.currentTrack,
+  );
+  let release = $derived(track?.releases?.[0] ?? null);
+  let artists = $derived.by(() => {
+    const credits = track?.artists ?? [];
+    const primary = credits.filter(
+      (artist) => (artist.credit?.type ?? "artist") === "artist",
+    );
+    return primary.length > 0 ? primary : credits;
+  });
 
   let lyricLines = $derived(lyrics?.lines ?? []);
   let isSynced = $derived(lyricLines.length > 0);
@@ -168,12 +181,32 @@ www.meshiplaw.com/lyra.
             />
           {/if}
         </div>
-        {#if artistNames}
+        {#if artists.length > 0}
+          <p class="mt-1 text-base text-slate-600 dark:text-neutral-300">
+            {#each artists as artist, i}
+              {#if i > 0},
+              {/if}
+              <a
+                href={`#/artists/${artist.id}`}
+                class="rounded-sm hover:text-slate-900 hover:underline focus-visible:underline dark:hover:text-neutral-100"
+                >{artist.name}</a
+              >
+            {/each}
+          </p>
+        {:else if artistNames}
           <p class="mt-1 text-base text-slate-600 dark:text-neutral-300">
             {artistNames}
           </p>
         {/if}
-        {#if player.playbackContext?.title}
+        {#if release}
+          <p class="mt-1 text-sm text-slate-400 dark:text-neutral-500">
+            From <a
+              href={`#/albums/${release.id}`}
+              class="rounded-sm hover:text-slate-700 hover:underline focus-visible:underline dark:hover:text-neutral-200"
+              >{release.title}</a
+            >
+          </p>
+        {:else if player.playbackContext?.title}
           <p class="mt-1 text-sm text-slate-400 dark:text-neutral-500">
             From {player.playbackContext.title}
           </p>
