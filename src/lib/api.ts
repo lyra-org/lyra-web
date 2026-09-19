@@ -571,6 +571,10 @@ export function fetchLibraries(): Promise<LibraryResponse[]> {
   return get<LibraryResponse[]>("/libraries");
 }
 
+export function deleteLibrary(id: string): Promise<void> {
+  return del<void>(`/libraries/${id}`);
+}
+
 export function createLibrary(
   name: string,
   directory: string,

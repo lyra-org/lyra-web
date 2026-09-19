@@ -10,6 +10,7 @@ www.meshiplaw.com/lyra.
   import type { LibraryResponse, LibrarySyncStatus } from "./types";
   import {
     cancelSyncRun,
+    deleteLibrary,
     fetchLibraries,
     fetchLibrarySyncStatus,
     refreshLibrary,
@@ -29,6 +30,9 @@ www.meshiplaw.com/lyra.
 
   let openMenuId = $state<string | null>(null);
   let actioningId = $state<string | null>(null);
+  let deleteError = $state<string | null>(null);
+  let deletingLibrary = $state<LibraryResponse | null>(null);
+  let deleteDialog: HTMLDialogElement;
   let statusRefreshNonce = $state(0);
 
   interface SyncRunStream {
@@ -279,6 +283,38 @@ www.meshiplaw.com/lyra.
     e.stopPropagation();
     openMenuId = null;
     modalLibrary = lib;
+  }
+
+  function handleDelete(lib: LibraryResponse, e: MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    openMenuId = null;
+    const id = lib.id;
+    if (id == null || actioningId != null || isActiveSync(syncStatuses[id]))
+      return;
+    deleteError = null;
+    deletingLibrary = lib;
+    deleteDialog.showModal();
+  }
+
+  async function confirmDelete() {
+    const id = deletingLibrary?.id;
+    if (id == null || actioningId != null) return;
+    actioningId = id;
+    deleteError = null;
+    try {
+      await deleteLibrary(id);
+      closeSyncRunStream(id);
+      delete syncStatuses[id];
+      libraries = libraries.filter((library) => library.id !== id);
+      deleteDialog.close();
+    } catch (err) {
+      deleteError =
+        err instanceof Error ? err.message : "Failed to delete library";
+      statusRefreshNonce++;
+    } finally {
+      actioningId = null;
+    }
   }
 
   async function handleSyncLibrary(lib: LibraryResponse, e: MouseEvent) {
@@ -571,6 +607,32 @@ www.meshiplaw.com/lyra.
                       Cancel run
                     </button>
                   {/if}
+                  <button
+                    type="button"
+                    role="menuitem"
+                    disabled={isRunning || actioningId != null}
+                    title={isRunning
+                      ? "Wait for the current run to finish or cancel it before deleting this library"
+                      : undefined}
+                    class="flex w-full items-center gap-2 border-t border-slate-200 px-3 py-1.5 text-left text-sm text-red-600 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-transparent dark:border-neutral-600 dark:text-red-300 dark:hover:bg-red-950/30 dark:disabled:hover:bg-transparent"
+                    onclick={(e) => handleDelete(lib, e)}
+                  >
+                    <svg
+                      class="h-4 w-4"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M4 7h16M9 7V4a1 1 0 011-1h4a1 1 0 011 1v3"
+                      />
+                    </svg>
+                    {actioningId === lib.id ? "Working…" : "Delete library"}
+                  </button>
                 </div>
               {/if}
             </div>
@@ -580,6 +642,57 @@ www.meshiplaw.com/lyra.
     {/if}
   </div>
 {/if}
+
+<dialog
+  bind:this={deleteDialog}
+  aria-labelledby="delete-library-title"
+  aria-describedby="delete-library-description"
+  class="fixed inset-0 m-auto w-[calc(100%-2rem)] max-w-md rounded-lg bg-white p-0 text-slate-900 shadow-xl backdrop:bg-black/50 dark:bg-[#1b1d1e] dark:text-neutral-100 dark:shadow-black/50"
+  oncancel={(e) => {
+    if (actioningId != null) e.preventDefault();
+  }}
+  onclose={() => {
+    deletingLibrary = null;
+    deleteError = null;
+  }}
+>
+  <div class="border-b border-slate-200 px-5 py-3 dark:border-neutral-900">
+    <h2 id="delete-library-title" class="text-lg font-semibold">
+      Delete library?
+    </h2>
+  </div>
+  <div class="space-y-4 px-5 py-4">
+    <p
+      id="delete-library-description"
+      class="text-sm text-slate-600 dark:text-neutral-300"
+    >
+      Delete “{deletingLibrary?.name}” and its indexed music from Lyra? Your
+      music files will remain on disk. This cannot be undone.
+    </p>
+    {#if deleteError}
+      <p role="alert" class="text-sm text-red-600 dark:text-red-400">
+        {deleteError}
+      </p>
+    {/if}
+    <div class="flex justify-end gap-2 pt-1">
+      <button
+        type="button"
+        disabled={actioningId != null}
+        class="rounded-md px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-100 disabled:opacity-50 dark:text-neutral-300 dark:hover:bg-neutral-700"
+        onclick={() => deleteDialog.close()}>Cancel</button
+      >
+      <button
+        type="button"
+        disabled={actioningId != null ||
+          (deletingLibrary?.id != null &&
+            isActiveSync(syncStatuses[deletingLibrary.id]))}
+        class="rounded-md bg-red-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-red-700 dark:hover:bg-red-600"
+        onclick={confirmDelete}
+        >{actioningId != null ? "Deleting…" : "Delete library"}</button
+      >
+    </div>
+  </div>
+</dialog>
 
 {#if modalLibrary !== undefined}
   <LibraryModal
