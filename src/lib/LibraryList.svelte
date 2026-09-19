@@ -233,15 +233,8 @@ www.meshiplaw.com/lyra.
     if (s.run.status === "cancelling") return "Cancelling";
 
     const verb = s.run.kind === "library_refresh" ? "Refreshing" : "Syncing";
-    const completion = syncCompletion(s);
-    if (completion != null) {
-      return `${verb} ${completion.toFixed(1)}%`;
-    }
-
     if (s.current) {
-      const stage = stageLabels[s.current.stage] ?? verb;
-      const subject = s.current.subject ?? null;
-      return subject ? `${stage}: ${subject}` : stage;
+      return stageLabels[s.current.stage] ?? verb;
     }
 
     if (s.run.status === "planning" || s.progress.mode === "estimating") {
@@ -414,6 +407,9 @@ www.meshiplaw.com/lyra.
 
       <div class="space-y-2">
         {#each libraries as lib (lib.id ?? lib.name)}
+          {@const status = lib.id != null ? syncStatuses[lib.id] : undefined}
+          {@const label = syncLabel(status)}
+          {@const completion = status ? syncCompletion(status) : null}
           <a
             href={lib.id != null ? `#/libraries/${lib.id}` : undefined}
             class="block"
@@ -423,40 +419,50 @@ www.meshiplaw.com/lyra.
             >
               <div class="min-w-0 flex-1">
                 <h3
-                  class="flex items-center gap-2 text-sm font-semibold text-slate-900 dark:text-neutral-100"
+                  class="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm font-semibold text-slate-900 dark:text-neutral-100"
                 >
-                  <span class="truncate">{lib.name}</span>
-                  {#if lib.id != null}
-                    {@const label = syncLabel(syncStatuses[lib.id])}
-                    {#if label}
-                      <span
-                        class="inline-flex shrink-0 items-center rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700 dark:bg-blue-950/40 dark:text-blue-300"
+                  <span class="max-w-full min-w-0 truncate" title={lib.name}
+                    >{lib.name}</span
+                  >
+                  {#if label}
+                    <span
+                      class="inline-flex max-w-full items-center gap-1.5 rounded bg-[#E6CEE3]/35 px-1.5 py-0.5 text-xs font-medium text-[#785473] dark:bg-[#BB7FB5]/10 dark:text-[#cfa2c9]"
+                      title={status
+                        ? `${settledUnits(status).toLocaleString()} steps processed${status.current?.subject ? ` · ${status.current.subject}` : ""}`
+                        : undefined}
+                    >
+                      <span class="truncate"
+                        >{completion != null &&
+                        status?.run.status !== "cancelling"
+                          ? status?.run.kind === "library_refresh"
+                            ? "Refreshing"
+                            : "Syncing"
+                          : label}</span
                       >
-                        {label}
-                      </span>
-                    {/if}
+                      {#if completion != null && status?.run.status !== "cancelling"}
+                        <span class="shrink-0 tabular-nums"
+                          >{completion.toFixed(1)}%</span
+                        >
+                      {/if}
+                    </span>
                   {/if}
                 </h3>
                 <p
-                  class="truncate text-xs text-slate-500 dark:text-neutral-400"
+                  class="mt-1 flex items-center gap-3 text-xs text-slate-500 dark:text-neutral-400"
                 >
-                  {lib.directory}
+                  <span
+                    class="min-w-0 truncate"
+                    title={lib.directory ?? undefined}>{lib.directory}</span
+                  >
                   {#if lib.language || lib.country}
-                    <span class="text-slate-300 dark:text-neutral-600"
-                      >&middot;</span
-                    >
-                    {#if lib.language}
-                      <span
-                        class="ml-1 inline-block rounded bg-slate-100 px-1.5 py-0.5 text-xs text-slate-600 dark:bg-[#1b1d1e] dark:text-neutral-300"
-                        >{lib.language}</span
-                      >
-                    {/if}
-                    {#if lib.country}
-                      <span
-                        class="ml-1 inline-block rounded bg-slate-100 px-1.5 py-0.5 text-xs text-slate-600 dark:bg-[#1b1d1e] dark:text-neutral-300"
-                        >{lib.country}</span
-                      >
-                    {/if}
+                    <span class="inline-flex shrink-0 items-center gap-2">
+                      {#if lib.language}
+                        <span>{lib.language}</span>
+                      {/if}
+                      {#if lib.country}
+                        <span>{lib.country}</span>
+                      {/if}
+                    </span>
                   {/if}
                 </p>
               </div>
