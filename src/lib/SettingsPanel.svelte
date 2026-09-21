@@ -66,6 +66,7 @@ www.meshiplaw.com/lyra.
   let selectedUser = $derived(
     users.find((user) => user.id === selectedUserId) ?? null,
   );
+  let addingUser = $derived(section === "users" && selectedUserId === null);
 
   async function loadUsers() {
     loadingUsers = true;
@@ -88,14 +89,6 @@ www.meshiplaw.com/lyra.
   function removeUser(id: string) {
     users = users.filter((user) => user.id !== id);
     if (selectedUserId === id) selectedUserId = null;
-  }
-
-  function toggleUsers() {
-    usersExpanded = !usersExpanded;
-    if (usersExpanded) {
-      section = "users";
-      selectedUserId = null;
-    }
   }
 
   onMount(() => {
@@ -415,38 +408,47 @@ www.meshiplaw.com/lyra.
         {/if}
         {#if auth.hasPermission("manage_users")}
           <div class="px-2 pt-2">
-            <button
-              type="button"
-              onclick={toggleUsers}
-              aria-expanded={usersExpanded}
-              aria-controls="settings-user-list"
-              aria-current={section === "users" && selectedUserId === null
-                ? "page"
-                : undefined}
-              class="flex w-full items-center justify-between rounded-md px-2 py-2 text-left text-sm font-medium text-slate-700 hover:bg-slate-200 dark:text-neutral-200 dark:hover:bg-neutral-800"
-              class:bg-slate-200={section === "users" &&
-                selectedUserId === null}
-              class:dark:bg-neutral-800={section === "users" &&
-                selectedUserId === null}
+            <div
+              class="flex items-center rounded-md text-slate-700 hover:bg-slate-200 dark:text-neutral-200 dark:hover:bg-neutral-800"
+              class:bg-slate-200={addingUser}
+              class:dark:bg-neutral-800={addingUser}
             >
-              Users
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                class="h-4 w-4 transition-transform"
-                class:-rotate-90={!usersExpanded}
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                aria-hidden="true"
+              <button
+                type="button"
+                onclick={() => {
+                  section = "users";
+                  selectedUserId = null;
+                }}
+                aria-current={addingUser ? "page" : undefined}
+                class="min-w-0 flex-1 rounded-md px-2 py-2 text-left text-sm font-medium"
+                >Users</button
               >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  d="m6 9 6 6 6-6"
-                />
-              </svg>
-            </button>
+              <button
+                type="button"
+                onclick={() => (usersExpanded = !usersExpanded)}
+                aria-expanded={usersExpanded}
+                aria-controls="settings-user-list"
+                aria-label="Toggle user list"
+                class="rounded-md p-2 hover:bg-slate-300 dark:hover:bg-neutral-700"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  class="h-4 w-4 transition-transform"
+                  class:-rotate-90={!usersExpanded}
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  aria-hidden="true"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    d="m6 9 6 6 6-6"
+                  />
+                </svg>
+              </button>
+            </div>
             <nav
               id="settings-user-list"
               aria-label="Users"
