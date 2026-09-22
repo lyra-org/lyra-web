@@ -48,10 +48,9 @@ import type {
   PluginSettingsResponse,
   PluginSettingsEntry,
   PluginSettingValue,
-  PluginRepositoriesResponse,
-  RepositoryWithPreviewResponse,
+  PluginRepositoryResponse,
+  ResolvedRepositoryResponse,
   InstallPluginsResponse,
-  RepositoryPreviewResponse,
   UpdatePluginsResponse,
   Page,
   PlaybackUrlResponse,
@@ -1070,15 +1069,15 @@ export function deleteUserPluginSettings(pluginId: string): Promise<void> {
 
 // Plugin repositories
 
-export function fetchPluginRepositories(): Promise<PluginRepositoriesResponse> {
-  return get<PluginRepositoriesResponse>("/plugins/repositories");
+export function fetchPluginRepositories(): Promise<PluginRepositoryResponse[]> {
+  return get<PluginRepositoryResponse[]>("/plugins/repositories");
 }
 
 export function resolvePluginRepository(opts: {
   url: string;
   ref?: string | null;
-}): Promise<RepositoryPreviewResponse> {
-  return post<RepositoryPreviewResponse>("/plugins/resolve", {
+}): Promise<ResolvedRepositoryResponse> {
+  return post<ResolvedRepositoryResponse>("/plugins/resolve", {
     url: opts.url,
     ref: opts.ref ?? undefined,
   });
@@ -1087,8 +1086,8 @@ export function resolvePluginRepository(opts: {
 export function addPluginRepository(opts: {
   url: string;
   ref?: string | null;
-}): Promise<RepositoryWithPreviewResponse> {
-  return post<RepositoryWithPreviewResponse>("/plugins/repositories", {
+}): Promise<ResolvedRepositoryResponse> {
+  return post<ResolvedRepositoryResponse>("/plugins/repositories", {
     url: opts.url,
     ref: opts.ref ?? undefined,
   });
@@ -1100,8 +1099,8 @@ export function removePluginRepository(repositoryId: string): Promise<void> {
 
 export function refreshPluginRepository(
   repositoryId: string,
-): Promise<RepositoryWithPreviewResponse> {
-  return post<RepositoryWithPreviewResponse>(
+): Promise<ResolvedRepositoryResponse> {
+  return post<ResolvedRepositoryResponse>(
     `/plugins/repositories/${encodeURIComponent(repositoryId)}/refresh`,
     {},
   );
@@ -1109,16 +1108,14 @@ export function refreshPluginRepository(
 
 // `plugins` is required on purpose: omitting it installs every plugin the
 // repository provides.
-export function installPlugins(opts: {
-  url: string;
-  ref?: string | null;
-  plugins: string[];
-}): Promise<InstallPluginsResponse> {
-  return post<InstallPluginsResponse>("/plugins/install", {
-    url: opts.url,
-    ref: opts.ref ?? undefined,
-    plugins: opts.plugins,
-  });
+export function installRepositoryPlugins(
+  repositoryId: string,
+  plugins: string[],
+): Promise<InstallPluginsResponse> {
+  return post<InstallPluginsResponse>(
+    `/plugins/repositories/${encodeURIComponent(repositoryId)}/install`,
+    { plugins },
+  );
 }
 
 export function fetchServerSettings(): Promise<ServerSettingsResponse> {

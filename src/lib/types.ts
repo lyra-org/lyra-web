@@ -721,19 +721,26 @@ export interface ActivePlayback {
 
 // Plugin repositories
 
+// A subscription as remembered by the server, without resolving it.
 export interface PluginRepositoryResponse {
   id: string;
   origin: string;
   name: string;
   description: string;
   ref?: string | null;
-  last_commit?: string | null;
-  refreshed_at_ms: number;
+  commit?: string | null;
+  // Absent until the first refresh.
+  refreshed_at?: string | null;
 }
 
-export interface PluginRepositoriesResponse {
-  repositories: PluginRepositoryResponse[];
-}
+// `unknown`: installed from a repository but no commit is recorded on one
+// side. `local`: installed without a source record.
+export type CatalogStatus =
+  | "available"
+  | "up_to_date"
+  | "update_available"
+  | "unknown"
+  | "local";
 
 export interface PluginPreviewResponse {
   id: string;
@@ -742,26 +749,24 @@ export interface PluginPreviewResponse {
   description: string;
   // Capability scopes the plugin will be granted when installed.
   scopes: string[];
-  origin: string;
-  subpath?: string | null;
   commit?: string | null;
-  installed: boolean;
-  managed: boolean;
-  update_available?: boolean | null;
+  status: CatalogStatus;
+  // Present only when the repository index points at another repository.
+  source?: { origin: string } | null;
 }
 
-export interface RepositoryPreviewResponse {
+// `id` is present only for subscribed repositories, `refreshed_at` only once
+// one has been refreshed.
+export interface ResolvedRepositoryResponse {
+  id?: string | null;
   origin: string;
-  ref: string;
+  name: string;
+  description: string;
+  ref?: string | null;
+  resolved_ref: string;
   commit?: string | null;
-  name?: string | null;
-  description?: string | null;
+  refreshed_at?: string | null;
   plugins: PluginPreviewResponse[];
-}
-
-export interface RepositoryWithPreviewResponse {
-  repository: PluginRepositoryResponse;
-  preview: RepositoryPreviewResponse;
 }
 
 export interface InstalledPluginResponse {

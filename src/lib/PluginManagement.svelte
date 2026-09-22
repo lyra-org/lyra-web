@@ -10,12 +10,11 @@ www.meshiplaw.com/lyra.
   import type {
     PluginManifestResponse,
     PluginPreviewResponse,
-    RepositoryPreviewResponse,
-    RepositoryWithPreviewResponse,
+    ResolvedRepositoryResponse,
   } from "./types";
   import {
     addPluginRepository,
-    installPlugins,
+    installRepositoryPlugins,
     removePluginRepository,
     resolvePluginRepository,
     updatePlugins,
@@ -40,7 +39,7 @@ www.meshiplaw.com/lyra.
 
   let repositoryUrl = $state("");
   let repositoryRef = $state("");
-  let repositoryPreview = $state<RepositoryPreviewResponse | null>(null);
+  let repositoryPreview = $state<ResolvedRepositoryResponse | null>(null);
 
   $effect(() => {
     busy = pending != null;
@@ -49,36 +48,35 @@ www.meshiplaw.com/lyra.
   let disabled = $derived(pending != null || setup.catalogLoading);
 
   interface CatalogEntry {
-    repo: RepositoryWithPreviewResponse;
+    repo: ResolvedRepositoryResponse;
     plugin: PluginPreviewResponse;
   }
 
-  let installedEntries = $derived.by(() => {
-    const entries = new Map<string, CatalogEntry>();
+  let catalogStatus = $derived.by(() => {
+    const statuses = new Map<string, PluginPreviewResponse["status"]>();
     for (const repo of setup.catalog ?? []) {
-      for (const plugin of repo.preview.plugins) {
-        if (plugin.installed && !entries.has(plugin.id)) {
-          entries.set(plugin.id, { repo, plugin });
+      for (const plugin of repo.plugins) {
+        if (plugin.status !== "available" && !statuses.has(plugin.id)) {
+          statuses.set(plugin.id, plugin.status);
         }
       }
     }
-    return entries;
+    return statuses;
   });
 
   let available = $derived(
     (setup.catalog ?? [])
       .map((repo) => ({
         repo,
-        plugins: repo.preview.plugins.filter((plugin) => !plugin.installed),
+        plugins: repo.plugins.filter((plugin) => plugin.status === "available"),
       }))
       .filter((group) => group.plugins.length > 0),
   );
 
   let outdated = $derived(
-    plugins.filter((plugin) => {
-      const entry = installedEntries.get(plugin.id);
-      return entry?.plugin.managed && entry.plugin.update_available === true;
-    }),
+    plugins.filter(
+      (plugin) => catalogStatus.get(plugin.id) === "update_available",
+    ),
   );
 
   onMount(() => {
@@ -86,10 +84,6 @@ www.meshiplaw.com/lyra.
       void setup.loadCatalog();
     }
   });
-
-  function repositoryName(repo: RepositoryWithPreviewResponse): string {
-    return repo.preview.name ?? repo.repository.name;
-  }
 
   async function run(key: string, action: () => Promise<string>) {
     if (disabled) return;
@@ -127,11 +121,9 @@ www.meshiplaw.com/lyra.
 
   function install(entry: CatalogEntry) {
     return run(`install:${entry.plugin.id}`, async () => {
-      const result = await installPlugins({
-        url: entry.repo.preview.origin,
-        ref: entry.repo.preview.ref,
-        plugins: [entry.plugin.id],
-      });
+      const result = await installRepositoryPlugins(entry.repo.id!, [
+        entry.plugin.id,
+      ]);
       await reloadAfterChange();
       const failure = result.failed[0];
       if (failure) throw new Error(`${failure.id}: ${failure.error}`);
@@ -160,19 +152,20 @@ www.meshiplaw.com/lyra.
       repositoryRef = "";
       repositoryPreview = null;
       await setup.loadCatalog();
-      return `Added ${added.preview.name ?? added.repository.name}.`;
+      return `Added ${added.name}.`;
     });
   }
 
-  function removeRepository(repo: RepositoryWithPreviewResponse) {
-    const name = repositoryName(repo);
-    if (!confirm(`Remove ${name}? Plugins installed from it stay installed.`)) {
+  function removeRepository(repo: ResolvedRepositoryResponse) {
+    if (
+      !confirm(`Remove ${repo.name}? Plugins installed from it stay installed.`)
+    ) {
       return;
     }
-    return run(`remove-repository:${repo.repository.id}`, async () => {
-      await removePluginRepository(repo.repository.id);
+    return run(`remove-repository:${repo.id}`, async () => {
+      await removePluginRepository(repo.id!);
       await setup.loadCatalog();
-      return `Removed ${name}.`;
+      return `Removed ${repo.name}.`;
     });
   }
 
@@ -253,12 +246,12 @@ www.meshiplaw.com/lyra.
         Every plugin from your repositories is installed.
       </p>
     {:else}
-      {#each available as group (group.repo.repository.id)}
+      {#each available as group (group.repo.id)}
         {#if (setup.catalog ?? []).length > 1}
           <p
             class="pt-2 text-xs font-medium text-slate-500 dark:text-neutral-400"
           >
-            {repositoryName(group.repo)}
+            {group.repo.name}
           </p>
         {/if}
         <ul class="divide-y divide-slate-200 dark:divide-neutral-800">
@@ -300,24 +293,21 @@ www.meshiplaw.com/lyra.
         <p class={mutedClass}>No repositories are subscribed.</p>
       {:else}
         <ul class="divide-y divide-slate-200 dark:divide-neutral-800">
-          {#each setup.catalog as repo (repo.repository.id)}
+          {#each setup.catalog as repo (repo.id)}
             <li class="flex flex-wrap items-center justify-between gap-3 py-4">
               <div class="min-w-0 space-y-1">
-                <p class="text-sm font-medium">{repositoryName(repo)}</p>
+                <p class="text-sm font-medium">{repo.name}</p>
                 <p
                   class="text-xs break-all text-slate-500 dark:text-neutral-400"
                 >
-                  {repo.repository.origin}
+                  {repo.origin}
                 </p>
                 <p class="text-xs text-slate-500 dark:text-neutral-400">
-                  <span class="font-mono">{repo.preview.ref}</span>
-                  {#if repo.preview.commit}
-                    · <span class="font-mono"
-                      >{repo.preview.commit.slice(0, 7)}</span
-                    >
+                  <span class="font-mono">{repo.resolved_ref}</span>
+                  {#if repo.commit}
+                    · <span class="font-mono">{repo.commit.slice(0, 7)}</span>
                   {/if}
-                  · {repo.preview.plugins.length} plugin{repo.preview.plugins
-                    .length === 1
+                  · {repo.plugins.length} plugin{repo.plugins.length === 1
                     ? ""
                     : "s"}
                 </p>
@@ -326,7 +316,7 @@ www.meshiplaw.com/lyra.
                 type="button"
                 class={dangerClass}
                 {disabled}
-                aria-label={`Remove ${repositoryName(repo)}`}
+                aria-label={`Remove ${repo.name}`}
                 onclick={() => removeRepository(repo)}>Remove</button
               >
             </li>
@@ -373,9 +363,9 @@ www.meshiplaw.com/lyra.
           class="space-y-2 rounded-md border border-slate-300 p-4 dark:border-neutral-700"
         >
           <p class="text-sm font-medium">
-            {repositoryPreview.name ?? repositoryPreview.origin}
+            {repositoryPreview.name}
             <span class="font-mono text-xs font-normal text-slate-500"
-              >{repositoryPreview.ref}</span
+              >{repositoryPreview.resolved_ref}</span
             >
           </p>
           {#if repositoryPreview.plugins.length === 0}

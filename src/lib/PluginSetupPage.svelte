@@ -10,9 +10,9 @@ www.meshiplaw.com/lyra.
   import type {
     FailedInstallResponse,
     InstalledPluginResponse,
-    RepositoryWithPreviewResponse,
+    ResolvedRepositoryResponse,
   } from "./types";
-  import { installPlugins, updateServerSetup } from "./api";
+  import { installRepositoryPlugins, updateServerSetup } from "./api";
   import { getSetup } from "./setup.svelte.ts";
   import logo from "../assets/logo.svg";
 
@@ -34,8 +34,8 @@ www.meshiplaw.com/lyra.
   let failed = $state<FailedInstallResponse[]>([]);
   let hasResult = $state(false);
 
-  function key(repo: RepositoryWithPreviewResponse, pluginId: string): string {
-    return `${repo.repository.id}/${pluginId}`;
+  function key(repo: ResolvedRepositoryResponse, pluginId: string): string {
+    return `${repo.id}/${pluginId}`;
   }
 
   let selectedCount = $derived(Object.values(selected).filter(Boolean).length);
@@ -45,10 +45,7 @@ www.meshiplaw.com/lyra.
   );
 
   let totalPlugins = $derived(
-    (setup.catalog ?? []).reduce(
-      (n, repo) => n + repo.preview.plugins.length,
-      0,
-    ),
+    (setup.catalog ?? []).reduce((n, repo) => n + repo.plugins.length, 0),
   );
 
   onMount(() => {
@@ -62,13 +59,13 @@ www.meshiplaw.com/lyra.
   }
 
   function selectionsByRepository(): {
-    repo: RepositoryWithPreviewResponse;
+    repo: ResolvedRepositoryResponse;
     plugins: string[];
   }[] {
     return (setup.catalog ?? [])
       .map((repo) => ({
         repo,
-        plugins: repo.preview.plugins
+        plugins: repo.plugins
           .filter((p) => selected[key(repo, p.id)])
           .map((p) => p.id),
       }))
@@ -84,11 +81,7 @@ www.meshiplaw.com/lyra.
     const nextFailed: FailedInstallResponse[] = [];
     try {
       for (const { repo, plugins } of groups) {
-        const result = await installPlugins({
-          url: repo.preview.origin,
-          ref: repo.preview.ref,
-          plugins,
-        });
+        const result = await installRepositoryPlugins(repo.id!, plugins);
         nextInstalled.push(...result.installed);
         nextFailed.push(...result.failed);
       }
@@ -103,7 +96,7 @@ www.meshiplaw.com/lyra.
       const failedIds = new Set(nextFailed.map((f) => f.id));
       const next: Record<string, boolean> = {};
       for (const repo of setup.catalog ?? []) {
-        for (const p of repo.preview.plugins) {
+        for (const p of repo.plugins) {
           if (failedIds.has(p.id)) next[key(repo, p.id)] = true;
         }
       }
@@ -220,28 +213,29 @@ www.meshiplaw.com/lyra.
     </div>
   {:else}
     <div class="space-y-6">
-      {#each setup.catalog ?? [] as repo (repo.repository.id)}
+      {#each setup.catalog ?? [] as repo (repo.id)}
         <section>
           {#if (setup.catalog ?? []).length > 1}
             <h2
               class="mb-2 text-sm font-semibold text-slate-700 dark:text-neutral-300"
             >
-              {repo.preview.name ?? repo.repository.name}
+              {repo.name}
             </h2>
           {/if}
           <ul class="space-y-2">
-            {#each repo.preview.plugins as plugin (plugin.id)}
+            {#each repo.plugins as plugin (plugin.id)}
               {@const k = key(repo, plugin.id)}
+              {@const installed = plugin.status !== "available"}
               <li>
                 <label
                   class="flex cursor-pointer gap-3 rounded-lg bg-white p-4 shadow-sm transition-shadow hover:shadow-md dark:bg-[#1b1d1e] dark:shadow-black/30"
-                  class:opacity-60={plugin.installed}
+                  class:opacity-60={installed}
                 >
                   <input
                     type="checkbox"
                     class="mt-1 h-4 w-4 shrink-0 accent-[#BB7FB5]"
-                    checked={plugin.installed || !!selected[k]}
-                    disabled={plugin.installed || busy}
+                    checked={installed || !!selected[k]}
+                    disabled={installed || busy}
                     onchange={(e) => toggle(k, e.currentTarget.checked)}
                   />
                   <div class="min-w-0 flex-1">
@@ -253,7 +247,7 @@ www.meshiplaw.com/lyra.
                       <span class="text-xs text-slate-400 dark:text-neutral-500"
                         >v{plugin.version}</span
                       >
-                      {#if plugin.installed}
+                      {#if installed}
                         <span
                           class="text-xs text-slate-500 dark:text-neutral-400"
                           >Installed</span

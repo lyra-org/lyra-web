@@ -3,10 +3,7 @@
 // You can obtain one here:
 // www.meshiplaw.com/lyra.
 
-import type {
-  RepositoryWithPreviewResponse,
-  ServerInfoResponse,
-} from "./types";
+import type { ResolvedRepositoryResponse, ServerInfoResponse } from "./types";
 import {
   fetchMe,
   fetchPluginRepositories,
@@ -29,7 +26,7 @@ let meLoadedFor = $state<string | null>(null);
 let meRequestedFor = $state<string | null>(null);
 let meRequest = 0;
 
-let catalog = $state<RepositoryWithPreviewResponse[] | null>(null);
+let catalog = $state<ResolvedRepositoryResponse[] | null>(null);
 let catalogLoading = $state(false);
 let catalogError = $state<string | null>(null);
 
@@ -87,7 +84,7 @@ async function loadCatalog(): Promise<void> {
   catalogLoading = true;
   catalogError = null;
   try {
-    const { repositories } = await fetchPluginRepositories();
+    const repositories = await fetchPluginRepositories();
     catalog = await Promise.all(
       repositories.map((repo) => refreshPluginRepository(repo.id)),
     );
