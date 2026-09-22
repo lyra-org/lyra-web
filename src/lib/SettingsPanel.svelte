@@ -12,6 +12,7 @@ www.meshiplaw.com/lyra.
   import ServerSettings from "./ServerSettings.svelte";
   import ApiKeySettings from "./ApiKeySettings.svelte";
   import UserSettings from "./UserSettings.svelte";
+  import PluginManagement from "./PluginManagement.svelte";
   import { getAuth } from "./auth.svelte.ts";
   import type {
     PluginManifestResponse,
@@ -31,14 +32,20 @@ www.meshiplaw.com/lyra.
     deletePluginSettings,
     deleteUserPluginSettings,
     restartPlugin,
+    uninstallPlugin,
   } from "./api";
+  import { getSetup } from "./setup.svelte.ts";
 
   interface Props {
     onclose: () => void;
   }
 
+  type SidebarPlugin = Pick<PluginManifestResponse, "id" | "name" | "version"> &
+    Partial<Pick<PluginManifestResponse, "description" | "source">>;
+
   let { onclose }: Props = $props();
   const auth = getAuth();
+  const setup = getSetup();
   let section = $state<"server" | "plugins" | "users" | "api-keys">(
     untrack(() =>
       auth.hasPermission("manage_server")
@@ -49,11 +56,12 @@ www.meshiplaw.com/lyra.
     ),
   );
   let apiKeysBusy = $state(false);
+  let pluginsBusy = $state(false);
   let serverDirty = $state(false);
   let serverBusy = $state(false);
 
   function closeSettings() {
-    if (serverBusy || apiKeysBusy) return;
+    if (serverBusy || apiKeysBusy || pluginsBusy) return;
     if (serverDirty && !confirm("Discard unsaved server settings?")) return;
     onclose();
   }
@@ -95,13 +103,15 @@ www.meshiplaw.com/lyra.
     if (auth.hasPermission("manage_users")) void loadUsers();
   });
   let pluginsExpanded = $state(false);
-
-  let plugins = $state<PluginManifestResponse[]>([]);
+  const canManagePlugins = $derived(auth.hasPermission("manage_plugins"));
   let loadingPlugins = $state(true);
   let pluginsError = $state<string | null>(null);
 
   let selectedPluginId = $state<string | null>(null);
-  let scope = $state<PluginSettingsScope>("server");
+  // Only managers may read server-scoped settings; everyone else edits their own.
+  let scope = $state<PluginSettingsScope>(
+    untrack(() => (auth.hasPermission("manage_plugins") ? "server" : "user")),
+  );
 
   let entriesByScope = $state<
     Record<PluginSettingsScope, Map<string, PluginSettingsEntry> | null>
@@ -115,11 +125,26 @@ www.meshiplaw.com/lyra.
     user: null,
   });
 
+  // Managers list every plugin; other users only see plugins that offer them
+  // settings, taken from the user-scoped settings listing.
+  let managedPlugins = $state<PluginManifestResponse[]>([]);
+  let plugins = $derived<SidebarPlugin[]>(
+    canManagePlugins
+      ? managedPlugins
+      : [...(entriesByScope.user?.values() ?? [])].map((e) => ({
+          id: e.plugin_id,
+          name: e.name,
+          version: e.version,
+        })),
+  );
+
   let values = $state<Record<string, PluginSettingValue>>({});
   let dirty = $state(false);
   let saving = $state(false);
   let saveError = $state<string | null>(null);
   let actionMessage = $state<string | null>(null);
+  let uninstalling = $state(false);
+  let uninstallError = $state<string | null>(null);
 
   let selectedPlugin = $derived(
     plugins.find((p) => p.id === selectedPluginId) ?? null,
@@ -140,10 +165,14 @@ www.meshiplaw.com/lyra.
     loadingPlugins = true;
     pluginsError = null;
     try {
-      const list = await fetchPlugins();
-      plugins = list;
-      if (list.length > 0 && selectedPluginId == null) {
-        selectedPluginId = list[0].id;
+      if (canManagePlugins) {
+        managedPlugins = await fetchPlugins();
+      } else {
+        await loadEntries("user", true);
+        pluginsError = errorByScope.user;
+      }
+      if (!plugins.some((plugin) => plugin.id === selectedPluginId)) {
+        selectedPluginId = canManagePlugins ? null : (plugins[0]?.id ?? null);
       }
     } catch (err) {
       pluginsError =
@@ -163,7 +192,7 @@ www.meshiplaw.com/lyra.
           ? await fetchAllPluginSettings()
           : await fetchAllUserPluginSettings();
       const map = new Map<string, PluginSettingsEntry>();
-      for (const e of result.entries) map.set(e.plugin_id, e);
+      for (const e of result) map.set(e.plugin_id, e);
       entriesByScope = { ...entriesByScope, [s]: map };
     } catch (err) {
       errorByScope = {
@@ -179,14 +208,6 @@ www.meshiplaw.com/lyra.
     const existing = entriesByScope[s];
     const next = new Map(existing ?? []);
     next.set(e.plugin_id, e);
-    entriesByScope = { ...entriesByScope, [s]: next };
-  }
-
-  function removeEntry(s: PluginSettingsScope, pluginId: string) {
-    const existing = entriesByScope[s];
-    if (existing == null) return;
-    const next = new Map(existing);
-    next.delete(pluginId);
     entriesByScope = { ...entriesByScope, [s]: next };
   }
 
@@ -219,11 +240,14 @@ www.meshiplaw.com/lyra.
         scope === "server"
           ? await updatePluginSettings(selectedPluginId, values)
           : await updateUserPluginSettings(selectedPluginId, values);
-      setEntry(scope, {
-        status: "ready",
-        plugin_id: updated.plugin_id,
-        groups: updated.groups,
-      });
+      const current = entriesByScope[scope]?.get(selectedPluginId);
+      if (current != null) {
+        setEntry(scope, {
+          ...current,
+          status: "ready",
+          groups: updated.groups,
+        });
+      }
       values = collectValuesFromGroups(updated.groups);
       dirty = false;
       actionMessage = "Settings saved.";
@@ -256,7 +280,6 @@ www.meshiplaw.com/lyra.
       } else {
         await deleteUserPluginSettings(pluginId);
       }
-      removeEntry(targetScope, pluginId);
       await loadEntries(targetScope, true);
       actionMessage = "Settings cleared.";
     } catch (err) {
@@ -281,6 +304,34 @@ www.meshiplaw.com/lyra.
     }
   }
 
+  let selectedPluginLocal = $derived(selectedPlugin?.source?.kind === "local");
+
+  async function uninstall() {
+    const plugin = selectedPlugin;
+    if (plugin == null || saving) return;
+    if (
+      !confirm(
+        `Uninstall ${plugin.name}? This removes its files from the server.`,
+      )
+    ) {
+      return;
+    }
+    saving = true;
+    uninstalling = true;
+    uninstallError = null;
+    try {
+      await uninstallPlugin(plugin.id);
+      await pluginsChanged();
+      if (setup.catalog != null) void setup.loadCatalog();
+    } catch (err) {
+      uninstallError =
+        err instanceof Error ? err.message : "Failed to uninstall";
+    } finally {
+      uninstalling = false;
+      saving = false;
+    }
+  }
+
   function selectPlugin(id: string) {
     section = "plugins";
     if (selectedPluginId === id) return;
@@ -291,6 +342,25 @@ www.meshiplaw.com/lyra.
       return;
     }
     selectedPluginId = id;
+  }
+
+  function openPluginManagement() {
+    section = "plugins";
+    if (selectedPluginId === null) return;
+    if (
+      dirty &&
+      !confirm("You have unsaved changes. Discard them and switch?")
+    ) {
+      return;
+    }
+    selectedPluginId = null;
+  }
+
+  async function pluginsChanged() {
+    await loadPlugins();
+    for (const s of ["server", "user"] as const) {
+      if (entriesByScope[s] != null) await loadEntries(s, true);
+    }
   }
 
   function setScope(next: PluginSettingsScope) {
@@ -312,8 +382,8 @@ www.meshiplaw.com/lyra.
     if (e.target === e.currentTarget) closeSettings();
   }
 
-  $effect(() => {
-    loadPlugins();
+  onMount(() => {
+    void loadPlugins();
   });
 
   $effect(() => {
@@ -325,6 +395,7 @@ www.meshiplaw.com/lyra.
     void scope;
     saveError = null;
     actionMessage = null;
+    uninstallError = null;
   });
 
   $effect(() => {
@@ -342,6 +413,51 @@ www.meshiplaw.com/lyra.
 </script>
 
 <svelte:window onkeydown={handleKeydown} />
+
+{#snippet groupHeader(header: {
+  label: string;
+  controls: string;
+  current: boolean;
+  expanded: boolean;
+  onnavigate: (() => void) | null;
+  ontoggle: () => void;
+})}
+  {@const current = header.onnavigate != null && header.current}
+  <div
+    class="flex items-center rounded-md text-slate-700 hover:bg-slate-200 dark:text-neutral-200 dark:hover:bg-neutral-800"
+    class:bg-slate-200={current}
+    class:dark:bg-neutral-800={current}
+  >
+    <button
+      type="button"
+      onclick={header.onnavigate ?? header.ontoggle}
+      aria-current={current ? "page" : undefined}
+      class="min-w-0 flex-1 rounded-md px-2 py-2 text-left text-sm font-medium"
+      >{header.label}</button
+    >
+    <button
+      type="button"
+      onclick={header.ontoggle}
+      aria-expanded={header.expanded}
+      aria-controls={header.controls}
+      aria-label={`Toggle ${header.label.toLowerCase()} list`}
+      class="rounded-md p-2 hover:bg-slate-300 dark:hover:bg-neutral-700"
+    >
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        class="h-4 w-4 transition-transform"
+        class:-rotate-90={!header.expanded}
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        aria-hidden="true"
+      >
+        <path stroke-linecap="round" stroke-linejoin="round" d="m6 9 6 6 6-6" />
+      </svg>
+    </button>
+  </div>
+{/snippet}
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div
@@ -408,47 +524,17 @@ www.meshiplaw.com/lyra.
         {/if}
         {#if auth.hasPermission("manage_users")}
           <div class="px-2 pt-2">
-            <div
-              class="flex items-center rounded-md text-slate-700 hover:bg-slate-200 dark:text-neutral-200 dark:hover:bg-neutral-800"
-              class:bg-slate-200={addingUser}
-              class:dark:bg-neutral-800={addingUser}
-            >
-              <button
-                type="button"
-                onclick={() => {
-                  section = "users";
-                  selectedUserId = null;
-                }}
-                aria-current={addingUser ? "page" : undefined}
-                class="min-w-0 flex-1 rounded-md px-2 py-2 text-left text-sm font-medium"
-                >Users</button
-              >
-              <button
-                type="button"
-                onclick={() => (usersExpanded = !usersExpanded)}
-                aria-expanded={usersExpanded}
-                aria-controls="settings-user-list"
-                aria-label="Toggle user list"
-                class="rounded-md p-2 hover:bg-slate-300 dark:hover:bg-neutral-700"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  class="h-4 w-4 transition-transform"
-                  class:-rotate-90={!usersExpanded}
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  aria-hidden="true"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    d="m6 9 6 6 6-6"
-                  />
-                </svg>
-              </button>
-            </div>
+            {@render groupHeader({
+              label: "Users",
+              controls: "settings-user-list",
+              current: addingUser,
+              expanded: usersExpanded,
+              onnavigate: () => {
+                section = "users";
+                selectedUserId = null;
+              },
+              ontoggle: () => (usersExpanded = !usersExpanded),
+            })}
             <nav
               id="settings-user-list"
               aria-label="Users"
@@ -515,31 +601,14 @@ www.meshiplaw.com/lyra.
           </div>
         {/if}
         <div class="p-2">
-          <button
-            type="button"
-            aria-expanded={pluginsExpanded}
-            aria-controls="settings-plugin-list"
-            onclick={() => (pluginsExpanded = !pluginsExpanded)}
-            class="flex w-full items-center justify-between rounded-md px-2 py-2 text-left text-sm font-medium text-slate-700 hover:bg-slate-200 dark:text-neutral-200 dark:hover:bg-neutral-800"
-          >
-            Plugins
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              class="h-4 w-4 transition-transform"
-              class:-rotate-90={!pluginsExpanded}
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              aria-hidden="true"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                d="m6 9 6 6 6-6"
-              />
-            </svg>
-          </button>
+          {@render groupHeader({
+            label: "Plugins",
+            controls: "settings-plugin-list",
+            current: section === "plugins" && selectedPluginId === null,
+            expanded: pluginsExpanded,
+            onnavigate: canManagePlugins ? openPluginManagement : null,
+            ontoggle: () => (pluginsExpanded = !pluginsExpanded),
+          })}
         </div>
         <nav
           id="settings-plugin-list"
@@ -630,6 +699,12 @@ www.meshiplaw.com/lyra.
               onremove={removeUser}
             />
           {/key}
+        {:else if selectedPlugin == null && canManagePlugins}
+          <PluginManagement
+            plugins={managedPlugins}
+            bind:busy={pluginsBusy}
+            onchange={pluginsChanged}
+          />
         {:else if selectedPlugin == null}
           <div
             class="flex flex-1 items-center justify-center text-sm text-slate-500 dark:text-neutral-400"
@@ -657,46 +732,48 @@ www.meshiplaw.com/lyra.
               {/if}
             </div>
             <div class="flex items-center gap-2">
-              <div
-                class="inline-flex rounded-md border border-slate-300 bg-white p-0.5 text-xs dark:border-neutral-700 dark:bg-[#1b1d1e]"
-                role="tablist"
-                aria-label="Settings scope"
-              >
-                {#each [{ id: "server", label: "Server" }, { id: "user", label: "Mine" }] as opt (opt.id)}
-                  {@const sActive = scope === opt.id}
+              {#if canManagePlugins}
+                <div
+                  class="inline-flex rounded-md border border-slate-300 bg-white p-0.5 text-xs dark:border-neutral-700 dark:bg-[#1b1d1e]"
+                  role="tablist"
+                  aria-label="Settings scope"
+                >
+                  {#each [{ id: "server", label: "Server" }, { id: "user", label: "Mine" }] as opt (opt.id)}
+                    {@const sActive = scope === opt.id}
+                    <button
+                      type="button"
+                      role="tab"
+                      aria-selected={sActive}
+                      class="rounded px-3 py-1 font-medium transition-colors"
+                      class:bg-[#E6CEE3]={sActive}
+                      class:text-slate-900={sActive}
+                      class:dark:bg-[#BB7FB5]={sActive}
+                      class:dark:text-white={sActive}
+                      class:text-slate-600={!sActive}
+                      class:dark:text-neutral-400={!sActive}
+                      class:hover:bg-[#E6CEE3]={!sActive}
+                      class:hover:text-slate-900={!sActive}
+                      class:dark:hover:bg-[#BB7FB5]={!sActive}
+                      class:dark:hover:text-white={!sActive}
+                      onclick={() => setScope(opt.id as PluginSettingsScope)}
+                    >
+                      {opt.label}
+                    </button>
+                  {/each}
+                </div>
+                <div
+                  class="inline-flex rounded-md border border-slate-300 bg-white p-0.5 text-xs dark:border-neutral-700 dark:bg-[#1b1d1e]"
+                >
                   <button
                     type="button"
-                    role="tab"
-                    aria-selected={sActive}
-                    class="rounded px-3 py-1 font-medium transition-colors"
-                    class:bg-[#E6CEE3]={sActive}
-                    class:text-slate-900={sActive}
-                    class:dark:bg-[#BB7FB5]={sActive}
-                    class:dark:text-white={sActive}
-                    class:text-slate-600={!sActive}
-                    class:dark:text-neutral-400={!sActive}
-                    class:hover:bg-[#E6CEE3]={!sActive}
-                    class:hover:text-slate-900={!sActive}
-                    class:dark:hover:bg-[#BB7FB5]={!sActive}
-                    class:dark:hover:text-white={!sActive}
-                    onclick={() => setScope(opt.id as PluginSettingsScope)}
+                    disabled={saving}
+                    onclick={restart}
+                    class="rounded px-3 py-1 font-medium text-slate-600 transition-colors hover:bg-[#E6CEE3] hover:text-slate-900 disabled:opacity-50 dark:text-neutral-400 dark:hover:bg-[#BB7FB5] dark:hover:text-white"
                   >
-                    {opt.label}
+                    Restart
                   </button>
-                {/each}
-              </div>
-              <div
-                class="inline-flex rounded-md border border-slate-300 bg-white p-0.5 text-xs dark:border-neutral-700 dark:bg-[#1b1d1e]"
-              >
-                <button
-                  type="button"
-                  disabled={saving}
-                  onclick={restart}
-                  class="rounded px-3 py-1 font-medium text-slate-600 transition-colors hover:bg-[#E6CEE3] hover:text-slate-900 disabled:opacity-50 dark:text-neutral-400 dark:hover:bg-[#BB7FB5] dark:hover:text-white"
-                >
-                  Restart
-                </button>
-              </div>
+                </div>
+              {/if}
             </div>
           </div>
 
@@ -718,7 +795,7 @@ www.meshiplaw.com/lyra.
               <p class="text-sm text-red-600 dark:text-red-400">
                 Stored settings are invalid: {entry.message}
               </p>
-            {:else if entry == null || entry.status === "not_declared" || groups.length === 0}
+            {:else if entry == null || groups.length === 0}
               <p class="text-sm text-slate-500 dark:text-neutral-400">
                 This plugin exposes no
                 {scope === "server" ? "server" : "user"} settings.
@@ -744,6 +821,30 @@ www.meshiplaw.com/lyra.
                   </fieldset>
                 {/each}
               </form>
+            {/if}
+            {#if canManagePlugins}
+              <div class="mt-8 space-y-3">
+                <p class="text-sm text-slate-600 dark:text-neutral-300">
+                  {selectedPluginLocal
+                    ? "This plugin was added on the server’s filesystem and can only be removed there."
+                    : "Remove this plugin’s files from the server."}
+                </p>
+                <button
+                  type="button"
+                  onclick={uninstall}
+                  disabled={saving || selectedPluginLocal}
+                  class="rounded-md border border-red-300 px-4 py-2 text-sm font-medium text-red-600 disabled:opacity-50 dark:border-red-900 dark:text-red-400"
+                  >{uninstalling ? "Uninstalling…" : "Uninstall plugin"}</button
+                >
+                {#if uninstallError}
+                  <p
+                    role="alert"
+                    class="text-sm text-red-600 dark:text-red-400"
+                  >
+                    {uninstallError}
+                  </p>
+                {/if}
+              </div>
             {/if}
           </div>
 

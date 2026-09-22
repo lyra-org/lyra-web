@@ -46,11 +46,13 @@ import type {
   TargetStateResponse,
   PluginManifestResponse,
   PluginSettingsResponse,
-  PluginSettingsListResponse,
+  PluginSettingsEntry,
   PluginSettingValue,
   PluginRepositoriesResponse,
   RepositoryWithPreviewResponse,
   InstallPluginsResponse,
+  RepositoryPreviewResponse,
+  UpdatePluginResponse,
   Page,
   PlaybackUrlResponse,
   LyricsResponse,
@@ -1017,8 +1019,8 @@ export function fetchPlugins(): Promise<PluginManifestResponse[]> {
   return get<PluginManifestResponse[]>("/plugins");
 }
 
-export function fetchAllPluginSettings(): Promise<PluginSettingsListResponse> {
-  return get<PluginSettingsListResponse>("/plugins/settings");
+export function fetchAllPluginSettings(): Promise<PluginSettingsEntry[]> {
+  return get<PluginSettingsEntry[]>("/plugins/settings");
 }
 
 export function updatePluginSettings(
@@ -1039,8 +1041,19 @@ export function restartPlugin(pluginId: string): Promise<void> {
   return post<void>(`/plugins/${encodeURIComponent(pluginId)}/restart`, {});
 }
 
-export function fetchAllUserPluginSettings(): Promise<PluginSettingsListResponse> {
-  return get<PluginSettingsListResponse>("/me/plugins/settings");
+export function updatePlugin(pluginId: string): Promise<UpdatePluginResponse> {
+  return post<UpdatePluginResponse>(
+    `/plugins/${encodeURIComponent(pluginId)}/update`,
+    {},
+  );
+}
+
+export function uninstallPlugin(pluginId: string): Promise<void> {
+  return del<void>(`/plugins/${encodeURIComponent(pluginId)}`);
+}
+
+export function fetchAllUserPluginSettings(): Promise<PluginSettingsEntry[]> {
+  return get<PluginSettingsEntry[]>("/me/plugins/settings");
 }
 
 export function updateUserPluginSettings(
@@ -1061,6 +1074,30 @@ export function deleteUserPluginSettings(pluginId: string): Promise<void> {
 
 export function fetchPluginRepositories(): Promise<PluginRepositoriesResponse> {
   return get<PluginRepositoriesResponse>("/plugins/repositories");
+}
+
+export function resolvePluginRepository(opts: {
+  url: string;
+  ref?: string | null;
+}): Promise<RepositoryPreviewResponse> {
+  return post<RepositoryPreviewResponse>("/plugins/resolve", {
+    url: opts.url,
+    ref: opts.ref ?? undefined,
+  });
+}
+
+export function addPluginRepository(opts: {
+  url: string;
+  ref?: string | null;
+}): Promise<RepositoryWithPreviewResponse> {
+  return post<RepositoryWithPreviewResponse>("/plugins/repositories", {
+    url: opts.url,
+    ref: opts.ref ?? undefined,
+  });
+}
+
+export function removePluginRepository(repositoryId: string): Promise<void> {
+  return del<void>(`/plugins/repositories/${encodeURIComponent(repositoryId)}`);
 }
 
 export function refreshPluginRepository(

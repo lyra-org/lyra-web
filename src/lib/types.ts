@@ -517,13 +517,24 @@ export interface CheckResponse {
 // Plugins
 
 export interface PluginManifestResponse {
-  schema_version: number;
   id: string;
   name: string;
   version: string;
   description: string;
-  entrypoint?: string | null;
+  source: PluginSourceResponse;
 }
+
+// `local` plugins were placed in the plugins directory by hand and cannot be
+// updated or uninstalled through the API.
+export type PluginSourceResponse =
+  | { kind: "local" }
+  | {
+      kind: "repository";
+      origin: string;
+      ref?: string | null;
+      commit?: string | null;
+      installed_at?: string | null;
+    };
 
 export interface ChoiceOptionResponse {
   value: string;
@@ -575,7 +586,6 @@ export interface GroupResponse {
 }
 
 export interface PluginSettingsResponse {
-  plugin_id: string;
   groups: GroupResponse[];
 }
 
@@ -585,15 +595,16 @@ export type PluginSettingsStatus =
   | "not_declared"
   | "invalid";
 
-export type PluginSettingsEntry =
-  | { status: "ready"; plugin_id: string; groups: GroupResponse[] }
-  | { status: "initializing"; plugin_id: string }
-  | { status: "not_declared"; plugin_id: string }
-  | { status: "invalid"; plugin_id: string; message: string };
-
-export interface PluginSettingsListResponse {
-  entries: PluginSettingsEntry[];
-}
+// Listings only include plugins that declare the requested scope.
+export type PluginSettingsEntry = {
+  plugin_id: string;
+  name: string;
+  version: string;
+} & (
+  | { status: "ready"; groups: GroupResponse[] }
+  | { status: "initializing" }
+  | { status: "invalid"; message: string }
+);
 
 export type PluginSettingsScope = "server" | "user";
 
@@ -768,6 +779,10 @@ export interface InstallPluginsResponse {
   installed: InstalledPluginResponse[];
   failed: FailedInstallResponse[];
 }
+
+export type UpdatePluginResponse =
+  | { status: "updated"; commit?: string | null }
+  | { status: "up_to_date" };
 
 export type ServerSettingValue = string | number | boolean | string[] | null;
 
