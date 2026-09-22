@@ -325,9 +325,12 @@ www.meshiplaw.com/lyra.
     if (selectedPluginLocal) {
       return "This plugin was added on the server’s filesystem and can only be updated or removed there.";
     }
+    if (selectedPlugin?.source?.kind === "invalid") {
+      return selectedPlugin.source.error;
+    }
     const source = selectedPluginSource;
     if (source == null) return null;
-    let text = `Installed from ${source.origin.replace(/^https?:\/\//, "")} at ${source.ref ?? "the default branch"}`;
+    let text = `Installed from ${source.origin.replace(/^https?:\/\//, "")}, ${source.pinned ? "pinned to" : "tracking"} ${source.ref ?? "the default branch"}`;
     if (source.commit) text += ` (${source.commit.slice(0, 7)})`;
     if (selectedPluginStatus === "update_available")
       return `${text}. An update is available.`;
@@ -887,7 +890,7 @@ www.meshiplaw.com/lyra.
                   </p>
                 {/if}
                 <div class="flex flex-wrap gap-2">
-                  {#if selectedPluginSource}
+                  {#if selectedPluginSource && !selectedPluginSource.pinned}
                     <button
                       type="button"
                       onclick={update}

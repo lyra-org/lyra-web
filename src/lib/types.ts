@@ -525,14 +525,18 @@ export interface PluginManifestResponse {
 }
 
 // `local` plugins were placed in the plugins directory by hand and cannot be
-// updated or uninstalled through the API.
+// updated or uninstalled through the API. `invalid` plugins carry a source
+// record the server could not read; they can be uninstalled or reinstalled.
 export type PluginSourceResponse =
   | { kind: "local" }
+  | { kind: "invalid"; error: string }
   | {
       kind: "repository";
       origin: string;
       ref?: string | null;
       commit?: string | null;
+      // Tag and commit installs never move; branch installs track new commits.
+      pinned: boolean;
       installed_at?: string | null;
     };
 
