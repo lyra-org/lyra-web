@@ -33,6 +33,7 @@ www.meshiplaw.com/lyra.
     deleteUserPluginSettings,
     restartPlugin,
     uninstallPlugin,
+    updatePlugins,
   } from "./api";
   import { getSetup } from "./setup.svelte.ts";
 
@@ -143,8 +144,9 @@ www.meshiplaw.com/lyra.
   let saving = $state(false);
   let saveError = $state<string | null>(null);
   let actionMessage = $state<string | null>(null);
-  let uninstalling = $state(false);
-  let uninstallError = $state<string | null>(null);
+  let lifecycleAction = $state<"update" | "uninstall" | null>(null);
+  let lifecycleMessage = $state<string | null>(null);
+  let lifecycleError = $state<string | null>(null);
 
   let selectedPlugin = $derived(
     plugins.find((p) => p.id === selectedPluginId) ?? null,
@@ -305,31 +307,85 @@ www.meshiplaw.com/lyra.
   }
 
   let selectedPluginLocal = $derived(selectedPlugin?.source?.kind === "local");
+  let selectedPluginSource = $derived(
+    selectedPlugin?.source?.kind === "repository"
+      ? selectedPlugin.source
+      : null,
+  );
+  // Only known once the repository catalog has been fetched.
+  let selectedPluginStatus = $derived.by(() => {
+    if (selectedPluginId == null) return null;
+    for (const repo of setup.catalog ?? []) {
+      const plugin = repo.plugins.find((p) => p.id === selectedPluginId);
+      if (plugin != null && plugin.status !== "available") return plugin.status;
+    }
+    return null;
+  });
+  let sourceDescription = $derived.by(() => {
+    if (selectedPluginLocal) {
+      return "This plugin was added on the server’s filesystem and can only be updated or removed there.";
+    }
+    const source = selectedPluginSource;
+    if (source == null) return null;
+    let text = `Installed from ${source.origin.replace(/^https?:\/\//, "")} at ${source.ref ?? "the default branch"}`;
+    if (source.commit) text += ` (${source.commit.slice(0, 7)})`;
+    if (selectedPluginStatus === "update_available")
+      return `${text}. An update is available.`;
+    if (selectedPluginStatus === "up_to_date") return `${text}. Up to date.`;
+    return `${text}.`;
+  });
 
-  async function uninstall() {
+  async function runLifecycle(
+    action: "update" | "uninstall",
+    work: (
+      plugin: NonNullable<typeof selectedPlugin>,
+    ) => Promise<string | null>,
+  ) {
     const plugin = selectedPlugin;
     if (plugin == null || saving) return;
+    saving = true;
+    lifecycleAction = action;
+    lifecycleMessage = null;
+    lifecycleError = null;
+    try {
+      lifecycleMessage = await work(plugin);
+      await pluginsChanged();
+      if (setup.catalog != null) void setup.loadCatalog();
+    } catch (err) {
+      lifecycleError =
+        err instanceof Error ? err.message : `Failed to ${action}`;
+    } finally {
+      lifecycleAction = null;
+      saving = false;
+    }
+  }
+
+  function update() {
+    return runLifecycle("update", async (plugin) => {
+      const result = await updatePlugins([plugin.id]);
+      const failure = result.failed[0];
+      if (failure) throw new Error(failure.error);
+      const updated = result.updated[0];
+      return updated
+        ? `Updated to v${updated.version}.`
+        : "Already up to date.";
+    });
+  }
+
+  function uninstall() {
+    const plugin = selectedPlugin;
     if (
+      plugin == null ||
       !confirm(
         `Uninstall ${plugin.name}? This removes its files from the server.`,
       )
     ) {
       return;
     }
-    saving = true;
-    uninstalling = true;
-    uninstallError = null;
-    try {
+    return runLifecycle("uninstall", async (plugin) => {
       await uninstallPlugin(plugin.id);
-      await pluginsChanged();
-      if (setup.catalog != null) void setup.loadCatalog();
-    } catch (err) {
-      uninstallError =
-        err instanceof Error ? err.message : "Failed to uninstall";
-    } finally {
-      uninstalling = false;
-      saving = false;
-    }
+      return null;
+    });
   }
 
   function selectPlugin(id: string) {
@@ -395,7 +451,8 @@ www.meshiplaw.com/lyra.
     void scope;
     saveError = null;
     actionMessage = null;
-    uninstallError = null;
+    lifecycleMessage = null;
+    lifecycleError = null;
   });
 
   $effect(() => {
@@ -824,24 +881,48 @@ www.meshiplaw.com/lyra.
             {/if}
             {#if canManagePlugins}
               <div class="mt-8 space-y-3">
-                <p class="text-sm text-slate-600 dark:text-neutral-300">
-                  {selectedPluginLocal
-                    ? "This plugin was added on the server’s filesystem and can only be removed there."
-                    : "Remove this plugin’s files from the server."}
-                </p>
-                <button
-                  type="button"
-                  onclick={uninstall}
-                  disabled={saving || selectedPluginLocal}
-                  class="rounded-md border border-red-300 px-4 py-2 text-sm font-medium text-red-600 disabled:opacity-50 dark:border-red-900 dark:text-red-400"
-                  >{uninstalling ? "Uninstalling…" : "Uninstall plugin"}</button
-                >
-                {#if uninstallError}
+                {#if sourceDescription}
+                  <p class="text-sm text-slate-600 dark:text-neutral-300">
+                    {sourceDescription}
+                  </p>
+                {/if}
+                <div class="flex flex-wrap gap-2">
+                  {#if selectedPluginSource}
+                    <button
+                      type="button"
+                      onclick={update}
+                      disabled={saving}
+                      class={selectedPluginStatus === "update_available"
+                        ? "rounded-md bg-[#E6CEE3] px-4 py-2 text-sm font-medium text-slate-900 hover:bg-[#d4b5cf] disabled:opacity-50 dark:bg-[#BB7FB5] dark:text-white dark:hover:bg-[#cfa2c9]"
+                        : "rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 disabled:opacity-50 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-800"}
+                      >{lifecycleAction === "update"
+                        ? "Updating…"
+                        : "Update plugin"}</button
+                    >
+                  {/if}
+                  <button
+                    type="button"
+                    onclick={uninstall}
+                    disabled={saving || selectedPluginLocal}
+                    class="rounded-md border border-red-300 px-4 py-2 text-sm font-medium text-red-600 disabled:opacity-50 dark:border-red-900 dark:text-red-400"
+                    >{lifecycleAction === "uninstall"
+                      ? "Uninstalling…"
+                      : "Uninstall plugin"}</button
+                  >
+                </div>
+                {#if lifecycleError}
                   <p
                     role="alert"
                     class="text-sm text-red-600 dark:text-red-400"
                   >
-                    {uninstallError}
+                    {lifecycleError}
+                  </p>
+                {:else if lifecycleMessage}
+                  <p
+                    role="status"
+                    class="text-sm text-slate-600 dark:text-neutral-400"
+                  >
+                    {lifecycleMessage}
                   </p>
                 {/if}
               </div>
