@@ -780,9 +780,17 @@ export interface InstallPluginsResponse {
   failed: FailedInstallResponse[];
 }
 
-export type UpdatePluginResponse =
-  | { status: "updated"; commit?: string | null }
-  | { status: "up_to_date" };
+export interface UpdatedPluginResponse {
+  id: string;
+  version: string;
+  commit?: string | null;
+}
+
+export interface UpdatePluginsResponse {
+  updated: UpdatedPluginResponse[];
+  up_to_date: string[];
+  failed: FailedInstallResponse[];
+}
 
 export type ServerSettingValue = string | number | boolean | string[] | null;
 

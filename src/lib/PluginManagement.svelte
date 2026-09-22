@@ -18,7 +18,7 @@ www.meshiplaw.com/lyra.
     installPlugins,
     removePluginRepository,
     resolvePluginRepository,
-    updatePlugin,
+    updatePlugins,
   } from "./api";
   import { getSetup } from "./setup.svelte.ts";
 
@@ -113,9 +113,15 @@ www.meshiplaw.com/lyra.
   function updateAll() {
     const targets = outdated;
     return run("update-all", async () => {
-      for (const plugin of targets) await updatePlugin(plugin.id);
+      const result = await updatePlugins(targets.map((plugin) => plugin.id));
       await reloadAfterChange();
-      return `Updated ${targets.length} plugin${targets.length === 1 ? "" : "s"}.`;
+      const count = result.updated.length;
+      const summary = `Updated ${count} plugin${count === 1 ? "" : "s"}.`;
+      const failure = result.failed[0];
+      if (failure) {
+        throw new Error(`${summary} ${failure.id}: ${failure.error}`);
+      }
+      return summary;
     });
   }
 

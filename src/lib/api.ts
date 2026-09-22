@@ -52,7 +52,7 @@ import type {
   RepositoryWithPreviewResponse,
   InstallPluginsResponse,
   RepositoryPreviewResponse,
-  UpdatePluginResponse,
+  UpdatePluginsResponse,
   Page,
   PlaybackUrlResponse,
   LyricsResponse,
@@ -1041,11 +1041,9 @@ export function restartPlugin(pluginId: string): Promise<void> {
   return post<void>(`/plugins/${encodeURIComponent(pluginId)}/restart`, {});
 }
 
-export function updatePlugin(pluginId: string): Promise<UpdatePluginResponse> {
-  return post<UpdatePluginResponse>(
-    `/plugins/${encodeURIComponent(pluginId)}/update`,
-    {},
-  );
+// Omitting `ids` sends `{}`, which updates every repository-managed plugin.
+export function updatePlugins(ids?: string[]): Promise<UpdatePluginsResponse> {
+  return post<UpdatePluginsResponse>("/plugins/update", { plugins: ids });
 }
 
 export function uninstallPlugin(pluginId: string): Promise<void> {
