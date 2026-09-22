@@ -52,18 +52,6 @@ www.meshiplaw.com/lyra.
     plugin: PluginPreviewResponse;
   }
 
-  let catalogStatus = $derived.by(() => {
-    const statuses = new Map<string, PluginPreviewResponse["status"]>();
-    for (const repo of setup.catalog ?? []) {
-      for (const plugin of repo.plugins) {
-        if (plugin.status !== "available" && !statuses.has(plugin.id)) {
-          statuses.set(plugin.id, plugin.status);
-        }
-      }
-    }
-    return statuses;
-  });
-
   let available = $derived(
     (setup.catalog ?? [])
       .map((repo) => ({
@@ -75,7 +63,9 @@ www.meshiplaw.com/lyra.
 
   let outdated = $derived(
     plugins.filter(
-      (plugin) => catalogStatus.get(plugin.id) === "update_available",
+      (plugin) =>
+        plugin.source.kind === "repository" &&
+        plugin.source.status === "update_available",
     ),
   );
 
@@ -102,6 +92,13 @@ www.meshiplaw.com/lyra.
   async function reloadAfterChange() {
     await onchange();
     await setup.loadCatalog();
+  }
+
+  // Refreshing the catalog stores each repository's latest commit, which
+  // is what the plugin statuses are derived from.
+  async function checkForUpdates() {
+    await setup.loadCatalog();
+    await onchange();
   }
 
   function updateAll() {
@@ -213,7 +210,7 @@ www.meshiplaw.com/lyra.
       type="button"
       class={secondaryClass}
       {disabled}
-      onclick={() => setup.loadCatalog()}
+      onclick={checkForUpdates}
     >
       {setup.catalogLoading ? "Checking…" : "Check for updates"}
     </button>

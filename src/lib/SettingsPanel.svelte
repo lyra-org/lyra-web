@@ -312,15 +312,6 @@ www.meshiplaw.com/lyra.
       ? selectedPlugin.source
       : null,
   );
-  // Only known once the repository catalog has been fetched.
-  let selectedPluginStatus = $derived.by(() => {
-    if (selectedPluginId == null) return null;
-    for (const repo of setup.catalog ?? []) {
-      const plugin = repo.plugins.find((p) => p.id === selectedPluginId);
-      if (plugin != null && plugin.status !== "available") return plugin.status;
-    }
-    return null;
-  });
   let sourceDescription = $derived.by(() => {
     if (selectedPluginLocal) {
       return "This plugin was added on the server’s filesystem and can only be updated or removed there.";
@@ -332,9 +323,9 @@ www.meshiplaw.com/lyra.
     if (source == null) return null;
     let text = `Installed from ${source.origin.replace(/^https?:\/\//, "")}, ${source.pinned ? "pinned to" : "tracking"} ${source.ref ?? "the default branch"}`;
     if (source.commit) text += ` (${source.commit.slice(0, 7)})`;
-    if (selectedPluginStatus === "update_available")
+    if (source.status === "update_available")
       return `${text}. An update is available.`;
-    if (selectedPluginStatus === "up_to_date") return `${text}. Up to date.`;
+    if (source.status === "up_to_date") return `${text}. Up to date.`;
     return `${text}.`;
   });
 
@@ -353,7 +344,11 @@ www.meshiplaw.com/lyra.
     try {
       lifecycleMessage = await work(plugin);
       await pluginsChanged();
-      if (setup.catalog != null) void setup.loadCatalog();
+      // Uninstalling moves the plugin into the catalog's available list;
+      // an update only changes the status reported by the plugin list.
+      if (action === "uninstall" && setup.catalog != null) {
+        void setup.loadCatalog();
+      }
     } catch (err) {
       lifecycleError =
         err instanceof Error ? err.message : `Failed to ${action}`;
@@ -895,7 +890,7 @@ www.meshiplaw.com/lyra.
                       type="button"
                       onclick={update}
                       disabled={saving}
-                      class={selectedPluginStatus === "update_available"
+                      class={selectedPluginSource.status === "update_available"
                         ? "rounded-md bg-[#E6CEE3] px-4 py-2 text-sm font-medium text-slate-900 hover:bg-[#d4b5cf] disabled:opacity-50 dark:bg-[#BB7FB5] dark:text-white dark:hover:bg-[#cfa2c9]"
                         : "rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 disabled:opacity-50 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-800"}
                       >{lifecycleAction === "update"

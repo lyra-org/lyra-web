@@ -537,6 +537,12 @@ export type PluginSourceResponse =
       commit?: string | null;
       // Tag and commit installs never move; branch installs track new commits.
       pinned: boolean;
+      // Installed commit compared with the commit stored for the subscribed
+      // repository of the same origin and ref; no forge call is made.
+      status: Extract<
+        CatalogStatus,
+        "up_to_date" | "update_available" | "unknown"
+      >;
       installed_at?: string | null;
     };
 
