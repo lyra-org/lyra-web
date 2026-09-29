@@ -114,6 +114,8 @@ www.meshiplaw.com/lyra.
     actionError = null;
     try {
       await updateServerSetup({ plugin_selection_skipped: true });
+      // An earlier attempt may have installed some plugins before failing.
+      setup.invalidateCatalog();
       await ondone();
     } catch (e) {
       actionError = e instanceof Error ? e.message : "Failed to skip";
@@ -133,6 +135,7 @@ www.meshiplaw.com/lyra.
       if (info?.setup.plugin_selection_required) {
         await updateServerSetup({ plugin_selection_skipped: true });
       }
+      setup.invalidateCatalog();
       await ondone();
     } catch (e) {
       actionError = e instanceof Error ? e.message : "Failed to continue";

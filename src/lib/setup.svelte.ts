@@ -96,6 +96,13 @@ async function loadCatalog(): Promise<void> {
   }
 }
 
+// Catalog statuses reflect what is installed, so callers that install outside
+// the plugin management page drop the catalog for its next visit to reload.
+function invalidateCatalog() {
+  catalog = null;
+  catalogError = null;
+}
+
 function reset() {
   info = null;
   infoError = null;
@@ -143,6 +150,7 @@ export function getSetup() {
     refresh,
     loadMe,
     loadCatalog,
+    invalidateCatalog,
     clearSession: clearServerScopedState,
     reset,
   };
