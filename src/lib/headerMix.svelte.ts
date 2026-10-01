@@ -27,7 +27,8 @@ export type AppRoute =
   | { page: "genre"; id: string }
   | { page: "playlists" }
   | { page: "playlist"; id: string }
-  | { page: "now_playing" };
+  | { page: "now_playing" }
+  | { page: "search"; query: string };
 
 export type HeaderMixConfig = {
   label: string;
@@ -47,6 +48,7 @@ export function headerMixForRoute(
     case "library_artists":
     case "library_genres":
     case "playlists":
+    case "search":
       return null;
     case "libraries":
     case "library":

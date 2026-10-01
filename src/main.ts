@@ -8,6 +8,9 @@ import "./app.css";
 // Side-effect import: applies the .dark class to <html> before App mounts,
 // so the initial paint matches the active theme (no flash).
 import "./lib/theme.svelte.ts";
+// Side-effect import: takes over scroll restoration before the first route
+// renders, and starts a reloaded page fresh.
+import "./lib/history.ts";
 import App from "./App.svelte";
 
 const app = mount(App, {

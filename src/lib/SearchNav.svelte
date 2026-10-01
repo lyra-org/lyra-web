@@ -6,7 +6,7 @@ www.meshiplaw.com/lyra.
 -->
 
 <script lang="ts">
-  import { onMount } from "svelte";
+  import { onMount, untrack } from "svelte";
 
   let {
     query = $bindable(""),
@@ -24,11 +24,14 @@ www.meshiplaw.com/lyra.
 
   onMount(() => {
     previousFocus = document.activeElement;
-    input.focus();
+    // Back to a search keeps its scroll position.
+    input.focus({ preventScroll: true });
   });
 
   $effect(() => {
     const term = query.trim();
+    // A search restored from history is already committed.
+    if (term && term === untrack(() => committedQuery)) return;
     committedQuery = "";
     if (!term || composing) return;
     const timer = setTimeout(() => (committedQuery = term), 250);

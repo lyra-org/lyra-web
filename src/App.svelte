@@ -26,7 +26,7 @@ www.meshiplaw.com/lyra.
   import RemotePanel from "./lib/RemotePanel.svelte";
   import SearchNav from "./lib/SearchNav.svelte";
   import SearchResults from "./lib/SearchResults.svelte";
-  import { onMount } from "svelte";
+  import { onMount, untrack } from "svelte";
   import { getAuth } from "./lib/auth.svelte.ts";
   import { getSetup } from "./lib/setup.svelte.ts";
   import { getPlayer } from "./lib/player.svelte.ts";
@@ -38,6 +38,7 @@ www.meshiplaw.com/lyra.
   import { getRemote } from "./lib/remote.svelte.ts";
   import MixButton from "./lib/MixButton.svelte";
   import { headerMixForRoute } from "./lib/headerMix.svelte.ts";
+  import { pushEntry, replaceEntry, restoreScroll } from "./lib/history.ts";
   import logo from "./assets/logo.svg";
 
   const auth = getAuth();
@@ -56,16 +57,8 @@ www.meshiplaw.com/lyra.
 
   let hash = $state(window.location.hash);
   let settingsOpen = $state(false);
-  let searchOpen = $state(false);
   let searchQuery = $state("");
   let committedSearchQuery = $state("");
-
-  $effect(() => {
-    if (!searchOpen) {
-      searchQuery = "";
-      committedSearchQuery = "";
-    }
-  });
 
   // Server discovery and onboarding.
   let booted = $state(false);
@@ -142,15 +135,21 @@ www.meshiplaw.com/lyra.
   });
 
   function onHashChange() {
-    searchOpen = false;
     hash = window.location.hash;
+    restoreScroll();
   }
 
-  $effect(() => {
-    if (screen !== "app" || settingsOpen || remote.isOpen) {
-      searchOpen = false;
-    }
-  });
+  // Search is its own history entry: opening it pushes one, refining the
+  // query replaces it, so Back from a result returns to the same results.
+  function openSearch() {
+    pushEntry("#/search", { searchOpened: true });
+    onHashChange();
+  }
+
+  function closeSearch() {
+    if (history.state?.searchOpened) history.back();
+    else window.location.hash = "#/";
+  }
 
   type Route =
     | { page: "login" }
@@ -165,7 +164,8 @@ www.meshiplaw.com/lyra.
     | { page: "genre"; id: string }
     | { page: "playlists" }
     | { page: "playlist"; id: string }
-    | { page: "now_playing" };
+    | { page: "now_playing" }
+    | { page: "search"; query: string };
 
   let route = $derived.by((): Route => {
     if (hash === "#/login") return { page: "login" };
@@ -173,6 +173,12 @@ www.meshiplaw.com/lyra.
     if (!auth.isLoggedIn) return { page: "login" };
 
     if (hash === "#/now-playing") return { page: "now_playing" };
+
+    const searchMatch = hash.match(/^#\/search(?:\?(.*))?$/);
+    if (searchMatch) {
+      const query = new URLSearchParams(searchMatch[1] ?? "").get("q") ?? "";
+      return { page: "search", query: query.trim() };
+    }
 
     const libraryArtistsMatch = hash.match(/^#\/libraries\/([^/]+)\/artists$/);
     if (libraryArtistsMatch)
@@ -211,8 +217,39 @@ www.meshiplaw.com/lyra.
 
   $effect(() => {
     if (auth.isLoggedIn && route.page === "login") {
-      window.location.hash = "#/";
+      // Replace the entry so Back doesn't return to the login URL.
+      window.location.replace("#/");
     }
+  });
+
+  let searchOpen = $derived(route.page === "search");
+
+  // Entering a search entry fills the field from its URL; leaving clears it.
+  $effect.pre(() => {
+    const query = route.page === "search" ? route.query : "";
+    untrack(() => {
+      if (query === committedSearchQuery && searchQuery.trim() === query)
+        return;
+      searchQuery = query;
+      committedSearchQuery = query;
+    });
+  });
+
+  // Updating the URL is best-effort: browsers drop history writes past a rate
+  // limit, so results follow the committed query rather than the URL. This
+  // runs before the results render, so a new query never restores a stale page.
+  $effect.pre(() => {
+    if (route.page !== "search") return;
+    const query = route.query;
+    // Wait for the typed query to settle before replacing the entry.
+    if (searchQuery.trim() && !committedSearchQuery) return;
+    if (committedSearchQuery === query) return;
+    replaceEntry(
+      committedSearchQuery
+        ? `#/search?${new URLSearchParams({ q: committedSearchQuery })}`
+        : "#/search",
+    );
+    hash = window.location.hash;
   });
 
   let currentLibraryId = $state<string | null>(null);
@@ -389,7 +426,7 @@ www.meshiplaw.com/lyra.
         <SearchNav
           bind:query={searchQuery}
           bind:committedQuery={committedSearchQuery}
-          onclose={() => (searchOpen = false)}
+          onclose={closeSearch}
         />
       {:else if route.page !== "libraries"}
         <nav
@@ -466,7 +503,7 @@ www.meshiplaw.com/lyra.
           aria-expanded={searchOpen}
           aria-controls={searchOpen ? "search-results" : undefined}
           class="flex h-8 w-8 items-center justify-center rounded-full text-slate-500 hover:bg-slate-100 hover:text-slate-700 dark:text-neutral-400 dark:hover:bg-neutral-700 dark:hover:text-neutral-200"
-          onclick={() => (searchOpen = !searchOpen)}
+          onclick={() => (searchOpen ? closeSearch() : openSearch())}
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -550,7 +587,7 @@ www.meshiplaw.com/lyra.
       </div>
     </header>
     <section class="mx-auto max-w-7xl px-4 py-6 pb-20 sm:px-6">
-      {#if searchOpen}
+      {#if route.page === "search"}
         <div id="search-results">
           {#if !searchQuery.trim()}
             <p

@@ -8,6 +8,7 @@ www.meshiplaw.com/lyra.
 <script lang="ts" generics="T">
   import { tick, untrack, type Snippet } from "svelte";
   import { ApiError } from "./api";
+  import { entryKey, readView, writeView } from "./history";
   import type { Page } from "./types";
 
   interface Props {
@@ -36,13 +37,37 @@ www.meshiplaw.com/lyra.
   let loading = $state(true);
   let error = $state<string | null>(null);
   let expired = $state(false);
+  let cursors: (string | null)[] = [];
   let failedIndex = 0;
   let request = 0;
   let content: HTMLDivElement;
   let page = $derived(pages[index]);
 
-  async function load(target: number, scroll = false) {
+  // The page is kept in the history entry so going back returns to it, while
+  // following a link to the list starts from the first page.
+  function historyKey() {
+    return `pagination:${label}:${scope}:${pageSize}`;
+  }
+
+  function restorePosition() {
+    const saved = readView(historyKey()) as
+      | { index?: unknown; cursors?: unknown }
+      | undefined;
+    if (!Number.isInteger(saved?.index) || !Array.isArray(saved?.cursors))
+      return null;
+    return saved as { index: number; cursors: (string | null)[] };
+  }
+
+  function savePosition(entry: string) {
+    writeView(entry, historyKey(), {
+      index,
+      cursors: cursors.slice(0, index + 1),
+    });
+  }
+
+  async function load(target: number, scroll = false, restoring = false) {
     const currentRequest = ++request;
+    const entry = entryKey();
     error = null;
     expired = false;
     loading = true;
@@ -50,13 +75,18 @@ www.meshiplaw.com/lyra.
       if (!pages[target]) {
         const cursor =
           target === 0
-            ? undefined
-            : (pages[target - 1]?.next_cursor ?? undefined);
-        const result = await loadPage(cursor, pageSize);
+            ? null
+            : (pages[target - 1]?.next_cursor ?? cursors[target] ?? null);
+        const result = await loadPage(cursor ?? undefined, pageSize);
         if (currentRequest !== request) return;
-        pages = [...pages.slice(0, target), result];
+        const nextPages = pages.slice(0, target);
+        nextPages[target] = result;
+        pages = nextPages;
+        cursors = cursors.slice(0, target);
+        cursors[target] = cursor;
       }
       index = target;
+      savePosition(entry);
       if (scroll) {
         await tick();
         if (currentRequest === request)
@@ -65,6 +95,11 @@ www.meshiplaw.com/lyra.
     } catch (e) {
       if (currentRequest !== request) return;
       expired = e instanceof ApiError && e.status === 409;
+      // A saved page whose cursor has expired quietly starts over.
+      if (expired && restoring) {
+        reload();
+        return;
+      }
       error = expired
         ? "This list has changed or expired. Refresh to continue."
         : "Couldn't load this page. Please try again.";
@@ -81,15 +116,26 @@ www.meshiplaw.com/lyra.
 
   export function reload() {
     pages = [];
+    cursors = [];
     index = 0;
     return load(0);
   }
+
+  let restored = false;
 
   $effect(() => {
     scope;
     loadPage;
     pageSize;
-    untrack(reload);
+    untrack(() => {
+      const saved = restored ? null : restorePosition();
+      restored = true;
+      if (!saved) return reload();
+      pages = [];
+      cursors = saved.cursors;
+      index = saved.index;
+      return load(saved.index, false, true);
+    });
     return () => {
       request += 1;
     };
