@@ -6,8 +6,10 @@ www.meshiplaw.com/lyra.
 -->
 
 <script lang="ts">
+  import { untrack } from "svelte";
   import type { TrackResponse } from "./types";
   import SortControls from "./SortControls.svelte";
+  import { savedSort } from "./sort.svelte.ts";
   import PaginatedList from "./PaginatedList.svelte";
   import { fetchTracks } from "./api";
   import { getPlayer } from "./player.svelte.ts";
@@ -50,21 +52,33 @@ www.meshiplaw.com/lyra.
   function openTrack(track: TrackResponse) {
     if (track.id) window.location.hash = `#/tracks/${track.id}`;
   }
-  let sortBy = $state("name");
-  let sortOrder = $state<"ascending" | "descending">("ascending");
+  const sort = savedSort(
+    untrack(() => `library/${libraryId}/tracks`),
+    "tracks",
+  );
 </script>
 
 <div class="mx-auto max-w-4xl">
   <PaginatedList
-    scope={`${libraryId}/${sortBy}/${sortOrder}`}
+    scope={`${libraryId}/${sort.sortBy}/${sort.sortOrder}`}
     label="tracks"
     pageSize={100}
     empty="No tracks in this library."
     loadPage={(cursor, limit) =>
-      fetchTracks({ libraryId, cursor, limit, sortBy, sortOrder })}
+      fetchTracks({
+        libraryId,
+        cursor,
+        limit,
+        sortBy: sort.sortBy,
+        sortOrder: sort.sortOrder,
+      })}
   >
     {#snippet toolbar()}
-      <SortControls kind="tracks" bind:sortBy bind:sortOrder />
+      <SortControls
+        kind="tracks"
+        bind:sortBy={sort.sortBy}
+        bind:sortOrder={sort.sortOrder}
+      />
     {/snippet}
     {#snippet children(tracks)}
       <table class="w-full">

@@ -6,8 +6,10 @@ www.meshiplaw.com/lyra.
 -->
 
 <script lang="ts">
+  import { untrack } from "svelte";
   import { fetchGenres } from "./api";
   import SortControls from "./SortControls.svelte";
+  import { savedSort } from "./sort.svelte.ts";
   import PaginatedList from "./PaginatedList.svelte";
   import GenreCard from "./GenreCard.svelte";
 
@@ -17,12 +19,14 @@ www.meshiplaw.com/lyra.
 
   let { libraryId }: Props = $props();
 
-  let sortBy = $state("name");
-  let sortOrder = $state<"ascending" | "descending">("ascending");
+  const sort = savedSort(
+    untrack(() => `library/${libraryId}/genres`),
+    "genres",
+  );
 </script>
 
 <PaginatedList
-  scope={`${libraryId}/${sortBy}/${sortOrder}`}
+  scope={`${libraryId}/${sort.sortBy}/${sort.sortOrder}`}
   label="genres"
   empty="No genres in this library yet."
   loadPage={(cursor, limit) =>
@@ -30,12 +34,16 @@ www.meshiplaw.com/lyra.
       libraryId,
       cursor,
       limit,
-      sortBy,
-      sortOrder,
+      sortBy: sort.sortBy,
+      sortOrder: sort.sortOrder,
     })}
 >
   {#snippet toolbar()}
-    <SortControls kind="genres" bind:sortBy bind:sortOrder />
+    <SortControls
+      kind="genres"
+      bind:sortBy={sort.sortBy}
+      bind:sortOrder={sort.sortOrder}
+    />
   {/snippet}
   {#snippet children(genres)}
     <div

@@ -11,6 +11,7 @@ www.meshiplaw.com/lyra.
   import { genreGradient, genreCoverObjectPosition } from "./genreStyle";
   import BlurhashCanvas from "./BlurhashCanvas.svelte";
   import SortControls from "./SortControls.svelte";
+  import { savedSort } from "./sort.svelte.ts";
   import PaginatedList from "./PaginatedList.svelte";
   import AlbumCard from "./AlbumCard.svelte";
 
@@ -54,8 +55,10 @@ www.meshiplaw.com/lyra.
       cancelled = true;
     };
   });
-  let sortBy = $state("release_date");
-  let sortOrder = $state<"ascending" | "descending">("descending");
+  const sort = savedSort("genre/albums", "albums", {
+    sortBy: "release_date",
+    sortOrder: "descending",
+  });
 </script>
 
 {#if loading}
@@ -161,7 +164,7 @@ www.meshiplaw.com/lyra.
         Albums
       </h3>
       <PaginatedList
-        scope={`${genreId}/${libraryId ?? ""}/${sortBy}/${sortOrder}`}
+        scope={`${genreId}/${libraryId ?? ""}/${sort.sortBy}/${sort.sortOrder}`}
         label="albums"
         empty="No albums tagged with this genre."
         loadPage={(cursor, limit) =>
@@ -170,12 +173,16 @@ www.meshiplaw.com/lyra.
             libraryId: libraryId ?? undefined,
             cursor,
             limit,
-            sortBy,
-            sortOrder,
+            sortBy: sort.sortBy,
+            sortOrder: sort.sortOrder,
           })}
       >
         {#snippet toolbar()}
-          <SortControls kind="albums" bind:sortBy bind:sortOrder />
+          <SortControls
+            kind="albums"
+            bind:sortBy={sort.sortBy}
+            bind:sortOrder={sort.sortOrder}
+          />
         {/snippet}
         {#snippet children(albums)}
           <div

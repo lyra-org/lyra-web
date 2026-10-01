@@ -6,7 +6,9 @@ www.meshiplaw.com/lyra.
 -->
 
 <script lang="ts">
+  import { untrack } from "svelte";
   import SortControls from "./SortControls.svelte";
+  import { savedSort } from "./sort.svelte.ts";
   import PaginatedList from "./PaginatedList.svelte";
   import { fetchReleases } from "./api";
   import AlbumCard from "./AlbumCard.svelte";
@@ -16,19 +18,31 @@ www.meshiplaw.com/lyra.
   }
 
   let { libraryId }: Props = $props();
-  let sortBy = $state("name");
-  let sortOrder = $state<"ascending" | "descending">("ascending");
+  const sort = savedSort(
+    untrack(() => `library/${libraryId}/albums`),
+    "albums",
+  );
 </script>
 
 <PaginatedList
-  scope={`${libraryId}/${sortBy}/${sortOrder}`}
+  scope={`${libraryId}/${sort.sortBy}/${sort.sortOrder}`}
   label="albums"
   empty="No albums in this library."
   loadPage={(cursor, limit) =>
-    fetchReleases({ libraryId, cursor, limit, sortBy, sortOrder })}
+    fetchReleases({
+      libraryId,
+      cursor,
+      limit,
+      sortBy: sort.sortBy,
+      sortOrder: sort.sortOrder,
+    })}
 >
   {#snippet toolbar()}
-    <SortControls kind="albums" bind:sortBy bind:sortOrder />
+    <SortControls
+      kind="albums"
+      bind:sortBy={sort.sortBy}
+      bind:sortOrder={sort.sortOrder}
+    />
   {/snippet}
   {#snippet children(albums)}
     <div

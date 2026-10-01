@@ -6,55 +6,16 @@ www.meshiplaw.com/lyra.
 -->
 
 <script lang="ts">
+  import { sortFields, type SortKind, type SortOrder } from "./sort.svelte.ts";
+
   interface Props {
-    kind: "albums" | "artists" | "tracks" | "genres" | "playlists";
+    kind: SortKind;
     sortBy: string;
-    sortOrder: "ascending" | "descending";
+    sortOrder: SortOrder;
   }
 
   let { kind, sortBy = $bindable(), sortOrder = $bindable() }: Props = $props();
 
-  const fields = {
-    albums: [
-      "name",
-      "date_created",
-      "release_date",
-      "last_played_at",
-      "listen_count",
-      "total_duration",
-    ],
-    artists: [
-      "name",
-      "date_created",
-      "last_played_at",
-      "listen_count",
-      "release_count",
-      "track_count",
-      "total_duration",
-    ],
-    tracks: [
-      "name",
-      "date_created",
-      "last_played_at",
-      "listen_count",
-      "duration",
-    ],
-    genres: [
-      "name",
-      "last_played_at",
-      "listen_count",
-      "release_count",
-      "track_count",
-      "total_duration",
-    ],
-    playlists: [
-      "name",
-      "created_at",
-      "updated_at",
-      "track_count",
-      "total_duration",
-    ],
-  };
   const labels: Record<string, string> = {
     name: "Name",
     date_created: "Date added",
@@ -101,7 +62,7 @@ www.meshiplaw.com/lyra.
         (sortOrder =
           event.currentTarget.value === "name" ? "ascending" : "descending")}
     >
-      {#each fields[kind] as field}
+      {#each sortFields[kind] as field}
         <option value={field}>{labels[field]}</option>
       {/each}
     </select>
