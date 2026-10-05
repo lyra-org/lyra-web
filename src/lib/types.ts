@@ -124,14 +124,20 @@ export interface EntryResponse {
   artists?: ArtistResponse[];
 }
 
+export type OptionValue = boolean | number | string;
+
+// An option a provider accepts on refresh, as declared by its plugin.
 export interface OptionResponse {
   name: string;
   label: string;
-  type: string;
-  default: boolean;
+  type: "boolean" | "number" | "string";
+  default: OptionValue | null;
   available: boolean;
   unavailable_reason?: string | null;
 }
+
+// Option values by provider ID, then option name.
+export type ProviderOptionValues = Record<string, Record<string, OptionValue>>;
 
 export interface ProviderResponse {
   provider_id: string;

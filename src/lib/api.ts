@@ -17,6 +17,7 @@ import type {
   ActivePlayback,
   RefreshResponse,
   ProviderResponse,
+  ProviderOptionValues,
   SearchResult,
   SearchEntityType,
   ExternalIdResponse,
@@ -484,10 +485,17 @@ export function refreshEntity(
   id: string,
   forceRefresh?: boolean,
   replaceCover?: boolean,
+  providerOptions?: ProviderOptionValues,
 ): Promise<RefreshResponse> {
   const params = new URLSearchParams();
   if (forceRefresh) params.set("force_refresh", "true");
   if (replaceCover) params.set("replace_cover", "true");
+  // Namespaced so each provider receives only its own options.
+  for (const [providerId, values] of Object.entries(providerOptions ?? {})) {
+    for (const [name, value] of Object.entries(values)) {
+      params.set(`${providerId}.${name}`, String(value));
+    }
+  }
   const qs = params.toString();
   return post<RefreshResponse>(
     `/entities/${id}/refresh${qs ? `?${qs}` : ""}`,
