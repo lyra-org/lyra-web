@@ -10,11 +10,13 @@ www.meshiplaw.com/lyra.
   let openMenuId = $state<string | null>(null);
   let searchAlbum = $state<ReleaseResponse | null>(null);
   let optionsAlbum = $state<ReleaseResponse | null>(null);
+  let idsAlbum = $state<ReleaseResponse | null>(null);
 </script>
 
 <script lang="ts">
   import { refreshEntity } from "./api";
   import BlurhashCanvas from "./BlurhashCanvas.svelte";
+  import ExternalIdsModal from "./ExternalIdsModal.svelte";
   import MetadataSearchModal from "./MetadataSearchModal.svelte";
   import RefreshOptionsModal from "./RefreshOptionsModal.svelte";
 
@@ -58,6 +60,13 @@ www.meshiplaw.com/lyra.
     e.stopPropagation();
     openMenuId = null;
     optionsAlbum = album;
+  }
+
+  function handleExternalIds(e: MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    openMenuId = null;
+    idsAlbum = album;
   }
 
   async function handleRefresh(e: MouseEvent) {
@@ -198,6 +207,28 @@ www.meshiplaw.com/lyra.
           type="button"
           role="menuitem"
           class="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm text-slate-700 hover:bg-slate-100 dark:text-neutral-200 dark:hover:bg-neutral-600"
+          onclick={handleExternalIds}
+        >
+          <svg
+            class="h-4 w-4 text-slate-400 dark:text-neutral-500"
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="M7 7h.01M3 11.59V4a1 1 0 011-1h7.59a1 1 0 01.7.29l8.42 8.42a1 1 0 010 1.41l-7.59 7.59a1 1 0 01-1.41 0L3.29 12.3a1 1 0 01-.29-.71z"
+            />
+          </svg>
+          External IDs…
+        </button>
+        <button
+          type="button"
+          role="menuitem"
+          class="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm text-slate-700 hover:bg-slate-100 dark:text-neutral-200 dark:hover:bg-neutral-600"
           onclick={handleRefresh}
         >
           <svg
@@ -265,6 +296,10 @@ www.meshiplaw.com/lyra.
 
 {#if searchAlbum?.id === album.id}
   <MetadataSearchModal {album} onclose={() => (searchAlbum = null)} />
+{/if}
+
+{#if idsAlbum?.id === album.id}
+  <ExternalIdsModal {album} onclose={() => (idsAlbum = null)} />
 {/if}
 
 {#if optionsAlbum?.id === album.id}

@@ -202,7 +202,9 @@ export interface ExternalIdResponse {
   provider_id: string;
   id_type: string;
   id_value: string;
-  source: string;
+  source: "manual" | "resolved";
+  // The provider's value beneath a manual one.
+  resolved_value?: string;
 }
 
 export interface PlaylistTrackResponse {

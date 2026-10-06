@@ -574,6 +574,17 @@ export function setExternalId(
   );
 }
 
+// Removes a manual external ID so the provider's value takes effect again.
+export function inheritExternalId(
+  entityId: string,
+  providerId: string,
+  idType: string,
+): Promise<void> {
+  return del<void>(
+    `/entities/${entityId}/external-ids/${encodeURIComponent(providerId)}/${encodeURIComponent(idType)}`,
+  );
+}
+
 // Libraries
 
 export function fetchLibraries(): Promise<LibraryResponse[]> {
