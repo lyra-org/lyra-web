@@ -19,6 +19,7 @@ www.meshiplaw.com/lyra.
     setExternalId,
     refreshEntity,
   } from "./api";
+  import Modal from "./Modal.svelte";
 
   interface Props {
     album: ReleaseResponse;
@@ -83,14 +84,6 @@ www.meshiplaw.com/lyra.
     }
   }
 
-  function handleKeydown(e: KeyboardEvent) {
-    if (e.key === "Escape") onclose();
-  }
-
-  function handleBackdropClick(e: MouseEvent) {
-    if (e.target === e.currentTarget) onclose();
-  }
-
   function subtitle(result: SearchResult): string | null {
     return (
       result.artist_name ??
@@ -139,56 +132,10 @@ www.meshiplaw.com/lyra.
   }
 </script>
 
-<svelte:window onkeydown={handleKeydown} />
-
-<!-- svelte-ignore a11y_no_static_element_interactions -->
-<div
-  class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-  onclick={handleBackdropClick}
-  onkeydown={handleKeydown}
->
-  <!-- svelte-ignore a11y_no_static_element_interactions -->
-  <div
-    role="dialog"
-    tabindex="-1"
-    aria-label="Search metadata"
-    class="flex max-h-[80vh] w-full max-w-2xl flex-col rounded-lg bg-white shadow-xl dark:bg-[#1b1d1e] dark:shadow-black/50"
-    onclick={(e) => e.stopPropagation()}
-    onkeydown={(e) => e.stopPropagation()}
-  >
-    <!-- Header -->
-    <div
-      class="flex items-center justify-between border-b border-slate-200 px-5 py-3 dark:border-neutral-900"
-    >
-      <h2 class="text-lg font-semibold text-slate-900 dark:text-neutral-100">
-        Search metadata
-      </h2>
-      <button
-        type="button"
-        aria-label="Close"
-        class="flex h-7 w-7 items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:text-neutral-500 dark:hover:bg-neutral-700 dark:hover:text-neutral-300"
-        onclick={onclose}
-      >
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          class="h-5 w-5"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-          stroke-width="2"
-        >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            d="M6 18L18 6M6 6l12 12"
-          />
-        </svg>
-      </button>
-    </div>
-
-    <!-- Search form -->
+<Modal title="Search metadata" width="wide" {onclose}>
+  {#snippet toolbar()}
     <form
-      class="flex flex-wrap gap-2 border-b border-slate-200 px-5 py-3 dark:border-neutral-900"
+      class="flex flex-wrap gap-2"
       onsubmit={(e) => {
         e.preventDefault();
         handleSearch();
@@ -228,221 +175,210 @@ www.meshiplaw.com/lyra.
         Search
       </button>
     </form>
+  {/snippet}
 
-    <!-- Results -->
-    <div class="flex-1 overflow-y-auto px-5 py-3">
-      {#if providersLoading}
-        <div class="flex items-center justify-center py-8">
-          <svg
-            class="h-6 w-6 animate-spin text-slate-400 dark:text-neutral-500"
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-          >
-            <circle
-              class="opacity-25"
-              cx="12"
-              cy="12"
-              r="10"
-              stroke="currentColor"
-              stroke-width="4"
-            ></circle>
-            <path
-              class="opacity-75"
-              fill="currentColor"
-              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-            ></path>
-          </svg>
-        </div>
-      {:else if providersError}
-        <p class="py-4 text-center text-sm text-red-600 dark:text-red-400">
-          {providersError}
-        </p>
-      {:else if searching}
-        <div class="flex items-center justify-center py-8">
-          <svg
-            class="h-6 w-6 animate-spin text-slate-400 dark:text-neutral-500"
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-          >
-            <circle
-              class="opacity-25"
-              cx="12"
-              cy="12"
-              r="10"
-              stroke="currentColor"
-              stroke-width="4"
-            ></circle>
-            <path
-              class="opacity-75"
-              fill="currentColor"
-              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-            ></path>
-          </svg>
-        </div>
-      {:else if searchError}
-        <p class="py-4 text-center text-sm text-red-600 dark:text-red-400">
-          {searchError}
-        </p>
-      {:else if hasSearched && results.length === 0}
-        <p
-          class="py-4 text-center text-sm text-slate-500 dark:text-neutral-400"
-        >
-          No results found.
-        </p>
-      {:else}
-        <div class="space-y-3">
-          {#each results as result}
-            <article
-              class="flex gap-3 overflow-hidden rounded-lg bg-slate-100 shadow-sm transition-shadow hover:shadow-md dark:bg-[#1b1d1e] dark:shadow-black/30"
-            >
-              <!-- Cover thumbnail -->
-              <div
-                class="h-28 w-28 shrink-0 overflow-hidden bg-slate-200 dark:bg-neutral-600"
-              >
-                {#if result.cover_url && !coverErrors.has(result.redirect_url)}
-                  <img
-                    src={result.cover_url}
-                    alt=""
-                    class="h-full w-full object-cover"
-                    onerror={() => {
-                      coverErrors = new Set(coverErrors).add(
-                        result.redirect_url,
-                      );
-                    }}
-                  />
-                {:else}
-                  <div
-                    class="flex h-full w-full items-center justify-center text-slate-400 dark:text-neutral-500"
-                  >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      class="h-10 w-10"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                      stroke-width="1.5"
-                    >
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"
-                      />
-                    </svg>
-                  </div>
-                {/if}
-              </div>
-
-              <!-- Text content -->
-              <div
-                class="flex min-w-0 flex-1 flex-col justify-center py-2 pr-3"
-              >
-                <h3
-                  class="truncate text-sm font-semibold text-slate-900 dark:text-neutral-100"
-                  title={result.title}
-                >
-                  {result.title}
-                </h3>
-                {#if subtitle(result)}
-                  <p
-                    class="truncate text-xs text-slate-500 dark:text-neutral-400"
-                  >
-                    {subtitle(result)}
-                  </p>
-                {/if}
-                {#if meta(result).length > 0}
-                  <p
-                    class="mt-0.5 truncate text-xs text-slate-400 dark:text-neutral-500"
-                  >
-                    {meta(result).join(" \u00b7 ")}
-                  </p>
-                {/if}
-                {#if "description" in result && result.description}
-                  <p
-                    class="mt-1 line-clamp-2 text-xs text-slate-500 dark:text-neutral-400"
-                  >
-                    {result.description}
-                  </p>
-                {/if}
-
-                <div class="mt-1 flex items-center gap-3">
-                  <button
-                    type="button"
-                    disabled={applyingUrl != null ||
-                      !result.ids ||
-                      album.id == null}
-                    class="inline-flex items-center gap-1 text-xs font-medium text-slate-700 hover:text-slate-900 disabled:opacity-40 dark:text-neutral-200 dark:hover:text-white"
-                    onclick={() => handleApply(result)}
-                  >
-                    {#if applyingUrl === result.redirect_url}
-                      <svg
-                        class="h-3 w-3 animate-spin"
-                        xmlns="http://www.w3.org/2000/svg"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                      >
-                        <circle
-                          class="opacity-25"
-                          cx="12"
-                          cy="12"
-                          r="10"
-                          stroke="currentColor"
-                          stroke-width="4"
-                        ></circle>
-                        <path
-                          class="opacity-75"
-                          fill="currentColor"
-                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                        ></path>
-                      </svg>
-                      Applying…
-                    {:else}
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        class="h-3 w-3"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                        stroke-width="2"
-                      >
-                        <path
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          d="M5 13l4 4L19 7"
-                        />
-                      </svg>
-                      Apply
-                    {/if}
-                  </button>
-                  <a
-                    href={result.redirect_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    class="inline-flex items-center gap-1 text-xs text-blue-600 hover:underline dark:text-blue-400"
-                  >
-                    View on provider
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      class="h-3 w-3"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                      stroke-width="2"
-                    >
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        d="M14 5l7 7m0 0l-7 7m7-7H3"
-                      />
-                    </svg>
-                  </a>
-                </div>
-              </div>
-            </article>
-          {/each}
-        </div>
-      {/if}
+  {#if providersLoading}
+    <div class="flex items-center justify-center py-8">
+      <svg
+        class="h-6 w-6 animate-spin text-slate-400 dark:text-neutral-500"
+        xmlns="http://www.w3.org/2000/svg"
+        fill="none"
+        viewBox="0 0 24 24"
+      >
+        <circle
+          class="opacity-25"
+          cx="12"
+          cy="12"
+          r="10"
+          stroke="currentColor"
+          stroke-width="4"
+        ></circle>
+        <path
+          class="opacity-75"
+          fill="currentColor"
+          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+        ></path>
+      </svg>
     </div>
-  </div>
-</div>
+  {:else if providersError}
+    <p class="py-4 text-center text-sm text-red-600 dark:text-red-400">
+      {providersError}
+    </p>
+  {:else if searching}
+    <div class="flex items-center justify-center py-8">
+      <svg
+        class="h-6 w-6 animate-spin text-slate-400 dark:text-neutral-500"
+        xmlns="http://www.w3.org/2000/svg"
+        fill="none"
+        viewBox="0 0 24 24"
+      >
+        <circle
+          class="opacity-25"
+          cx="12"
+          cy="12"
+          r="10"
+          stroke="currentColor"
+          stroke-width="4"
+        ></circle>
+        <path
+          class="opacity-75"
+          fill="currentColor"
+          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+        ></path>
+      </svg>
+    </div>
+  {:else if searchError}
+    <p class="py-4 text-center text-sm text-red-600 dark:text-red-400">
+      {searchError}
+    </p>
+  {:else if hasSearched && results.length === 0}
+    <p class="py-4 text-center text-sm text-slate-500 dark:text-neutral-400">
+      No results found.
+    </p>
+  {:else}
+    <div class="space-y-3">
+      {#each results as result}
+        <article
+          class="flex gap-3 overflow-hidden rounded-lg bg-slate-100 shadow-sm transition-shadow hover:shadow-md dark:bg-[#1b1d1e] dark:shadow-black/30"
+        >
+          <!-- Cover thumbnail -->
+          <div
+            class="h-28 w-28 shrink-0 overflow-hidden bg-slate-200 dark:bg-neutral-600"
+          >
+            {#if result.cover_url && !coverErrors.has(result.redirect_url)}
+              <img
+                src={result.cover_url}
+                alt=""
+                class="h-full w-full object-cover"
+                onerror={() => {
+                  coverErrors = new Set(coverErrors).add(result.redirect_url);
+                }}
+              />
+            {:else}
+              <div
+                class="flex h-full w-full items-center justify-center text-slate-400 dark:text-neutral-500"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  class="h-10 w-10"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  stroke-width="1.5"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"
+                  />
+                </svg>
+              </div>
+            {/if}
+          </div>
+
+          <!-- Text content -->
+          <div class="flex min-w-0 flex-1 flex-col justify-center py-2 pr-3">
+            <h3
+              class="truncate text-sm font-semibold text-slate-900 dark:text-neutral-100"
+              title={result.title}
+            >
+              {result.title}
+            </h3>
+            {#if subtitle(result)}
+              <p class="truncate text-xs text-slate-500 dark:text-neutral-400">
+                {subtitle(result)}
+              </p>
+            {/if}
+            {#if meta(result).length > 0}
+              <p
+                class="mt-0.5 truncate text-xs text-slate-400 dark:text-neutral-500"
+              >
+                {meta(result).join(" \u00b7 ")}
+              </p>
+            {/if}
+            {#if "description" in result && result.description}
+              <p
+                class="mt-1 line-clamp-2 text-xs text-slate-500 dark:text-neutral-400"
+              >
+                {result.description}
+              </p>
+            {/if}
+
+            <div class="mt-1 flex items-center gap-3">
+              <button
+                type="button"
+                disabled={applyingUrl != null ||
+                  !result.ids ||
+                  album.id == null}
+                class="inline-flex items-center gap-1 text-xs font-medium text-slate-700 hover:text-slate-900 disabled:opacity-40 dark:text-neutral-200 dark:hover:text-white"
+                onclick={() => handleApply(result)}
+              >
+                {#if applyingUrl === result.redirect_url}
+                  <svg
+                    class="h-3 w-3 animate-spin"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      class="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      stroke-width="4"
+                    ></circle>
+                    <path
+                      class="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                    ></path>
+                  </svg>
+                  Applying…
+                {:else}
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    class="h-3 w-3"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      d="M5 13l4 4L19 7"
+                    />
+                  </svg>
+                  Apply
+                {/if}
+              </button>
+              <a
+                href={result.redirect_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                class="inline-flex items-center gap-1 text-xs text-blue-600 hover:underline dark:text-blue-400"
+              >
+                View on provider
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  class="h-3 w-3"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    d="M14 5l7 7m0 0l-7 7m7-7H3"
+                  />
+                </svg>
+              </a>
+            </div>
+          </div>
+        </article>
+      {/each}
+    </div>
+  {/if}
+</Modal>

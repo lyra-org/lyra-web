@@ -13,6 +13,7 @@ www.meshiplaw.com/lyra.
     inheritExternalId,
     refreshEntity,
   } from "./api";
+  import Modal from "./Modal.svelte";
 
   interface Props {
     album: ReleaseResponse;
@@ -95,126 +96,88 @@ www.meshiplaw.com/lyra.
       inheritingKey = null;
     }
   }
-
-  function handleKeydown(e: KeyboardEvent) {
-    if (e.key === "Escape") onclose();
-  }
-
-  function handleBackdropClick(e: MouseEvent) {
-    if (e.target === e.currentTarget) onclose();
-  }
 </script>
 
-<svelte:window onkeydown={handleKeydown} />
-
-<!-- svelte-ignore a11y_no_static_element_interactions -->
-<div
-  class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-  onclick={handleBackdropClick}
-  onkeydown={handleKeydown}
->
-  <!-- svelte-ignore a11y_no_static_element_interactions -->
-  <div
-    role="dialog"
-    tabindex="-1"
-    aria-label="External IDs"
-    class="flex max-h-[80vh] w-full max-w-lg flex-col rounded-lg bg-white shadow-xl dark:bg-[#1b1d1e] dark:shadow-black/50"
-    onclick={(e) => e.stopPropagation()}
-    onkeydown={(e) => e.stopPropagation()}
-  >
-    <div class="border-b border-slate-200 px-5 py-3 dark:border-neutral-900">
-      <h2 class="text-lg font-semibold text-slate-900 dark:text-neutral-100">
-        External IDs
-      </h2>
-      <p class="truncate text-sm text-slate-500 dark:text-neutral-400">
-        {album.title}
-      </p>
-    </div>
-
-    <div class="flex-1 space-y-4 overflow-y-auto px-5 py-3">
-      {#if loading && groups.length === 0}
-        <p class="text-sm text-slate-500 dark:text-neutral-400">Loading IDs…</p>
-      {:else if groups.length === 0}
-        <p class="text-sm text-slate-500 dark:text-neutral-400">
-          This album has no external IDs.
-        </p>
-      {:else}
-        {#each groups as group (group.providerId)}
-          <section>
-            <h3
-              class="mb-1.5 text-sm font-medium text-slate-700 dark:text-neutral-200"
-            >
-              {group.displayName}
-            </h3>
-            <ul class="space-y-2">
-              {#each group.ids as id (idKey(id))}
-                <li class="flex items-start justify-between gap-3 text-sm">
-                  <div class="min-w-0">
-                    <div class="flex items-center gap-2">
-                      <span class="text-slate-500 dark:text-neutral-400">
-                        {id.id_type}
-                      </span>
-                      {#if id.source === "manual"}
-                        <span
-                          class="rounded bg-[#E6CEE3] px-1.5 text-xs text-slate-900 dark:bg-[#BB7FB5] dark:text-white"
-                        >
-                          Manual
-                        </span>
-                      {/if}
-                    </div>
-                    <p
-                      class="font-mono text-xs break-all text-slate-900 dark:text-neutral-100"
-                    >
-                      {id.id_value || "Unmatched"}
-                    </p>
-                    {#if id.resolved_value != null}
-                      <p
-                        class="font-mono text-xs break-all text-slate-400 dark:text-neutral-500"
-                      >
-                        Provider: {id.resolved_value || "Unmatched"}
-                      </p>
-                    {/if}
-                  </div>
+<Modal title="External IDs" subtitle={album.title} {onclose}>
+  {#if loading && groups.length === 0}
+    <p class="text-sm text-slate-500 dark:text-neutral-400">Loading IDs…</p>
+  {:else if groups.length === 0}
+    <p class="text-sm text-slate-500 dark:text-neutral-400">
+      This album has no external IDs.
+    </p>
+  {:else}
+    {#each groups as group (group.providerId)}
+      <section>
+        <h3
+          class="mb-1.5 text-sm font-medium text-slate-700 dark:text-neutral-200"
+        >
+          {group.displayName}
+        </h3>
+        <ul class="space-y-2">
+          {#each group.ids as id (idKey(id))}
+            <li class="flex items-start justify-between gap-3 text-sm">
+              <div class="min-w-0">
+                <div class="flex items-center gap-2">
+                  <span class="text-slate-500 dark:text-neutral-400">
+                    {id.id_type}
+                  </span>
                   {#if id.source === "manual"}
-                    <button
-                      type="button"
-                      disabled={inheritingKey != null}
-                      class="shrink-0 rounded-md px-2 py-1 text-xs text-slate-600 hover:bg-slate-100 disabled:opacity-50 dark:text-neutral-300 dark:hover:bg-neutral-700"
-                      title={id.resolved_value != null
-                        ? "Drop the manual ID and use the provider's"
-                        : "Drop the manual ID; the provider has none"}
-                      onclick={() => handleInherit(id)}
+                    <span
+                      class="rounded bg-[#E6CEE3] px-1.5 text-xs text-slate-900 dark:bg-[#BB7FB5] dark:text-white"
                     >
-                      {#if inheritingKey === idKey(id)}
-                        Updating…
-                      {:else if id.resolved_value != null}
-                        Use provider's
-                      {:else}
-                        Remove
-                      {/if}
-                    </button>
+                      Manual
+                    </span>
                   {/if}
-                </li>
-              {/each}
-            </ul>
-          </section>
-        {/each}
-      {/if}
-      {#if error}
-        <p class="text-sm text-red-600 dark:text-red-400">{error}</p>
-      {/if}
-    </div>
+                </div>
+                <p
+                  class="font-mono text-xs break-all text-slate-900 dark:text-neutral-100"
+                >
+                  {id.id_value || "Unmatched"}
+                </p>
+                {#if id.resolved_value != null}
+                  <p
+                    class="font-mono text-xs break-all text-slate-400 dark:text-neutral-500"
+                  >
+                    Provider: {id.resolved_value || "Unmatched"}
+                  </p>
+                {/if}
+              </div>
+              {#if id.source === "manual"}
+                <button
+                  type="button"
+                  disabled={inheritingKey != null}
+                  class="shrink-0 rounded-md px-2 py-1 text-xs text-slate-600 hover:bg-slate-100 disabled:opacity-50 dark:text-neutral-300 dark:hover:bg-neutral-700"
+                  title={id.resolved_value != null
+                    ? "Drop the manual ID and use the provider's"
+                    : "Drop the manual ID; the provider has none"}
+                  onclick={() => handleInherit(id)}
+                >
+                  {#if inheritingKey === idKey(id)}
+                    Updating…
+                  {:else if id.resolved_value != null}
+                    Use provider's
+                  {:else}
+                    Remove
+                  {/if}
+                </button>
+              {/if}
+            </li>
+          {/each}
+        </ul>
+      </section>
+    {/each}
+  {/if}
+  {#if error}
+    <p class="text-sm text-red-600 dark:text-red-400">{error}</p>
+  {/if}
 
-    <div
-      class="flex justify-end border-t border-slate-200 px-5 py-3 dark:border-neutral-900"
+  {#snippet footer()}
+    <button
+      type="button"
+      class="rounded-md px-4 py-1.5 text-sm text-slate-600 hover:bg-slate-100 disabled:opacity-50 dark:text-neutral-300 dark:hover:bg-neutral-700"
+      onclick={onclose}
     >
-      <button
-        type="button"
-        class="rounded-md px-4 py-1.5 text-sm text-slate-600 hover:bg-slate-100 dark:text-neutral-300 dark:hover:bg-neutral-700"
-        onclick={onclose}
-      >
-        Close
-      </button>
-    </div>
-  </div>
-</div>
+      Close
+    </button>
+  {/snippet}
+</Modal>

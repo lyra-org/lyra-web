@@ -11,6 +11,7 @@ www.meshiplaw.com/lyra.
   import { fetchUsers } from "./api";
   import ServerSettings from "./ServerSettings.svelte";
   import ApiKeySettings from "./ApiKeySettings.svelte";
+  import CloseButton from "./CloseButton.svelte";
   import UserSettings from "./UserSettings.svelte";
   import PluginManagement from "./PluginManagement.svelte";
   import ProviderSettings from "./ProviderSettings.svelte";
@@ -540,27 +541,7 @@ www.meshiplaw.com/lyra.
       <h2 class="text-lg font-semibold text-slate-900 dark:text-neutral-100">
         Settings
       </h2>
-      <button
-        type="button"
-        aria-label="Close settings"
-        class="flex h-8 w-8 items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:text-neutral-500 dark:hover:bg-neutral-700 dark:hover:text-neutral-300"
-        onclick={closeSettings}
-      >
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          class="h-5 w-5"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-          stroke-width="2"
-        >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            d="M6 18L18 6M6 6l12 12"
-          />
-        </svg>
-      </button>
+      <CloseButton label="Close settings" onclick={closeSettings} />
     </div>
 
     <div class="flex flex-1 overflow-hidden">

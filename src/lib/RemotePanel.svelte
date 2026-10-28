@@ -16,6 +16,7 @@ www.meshiplaw.com/lyra.
   import { getPlayer } from "./player.svelte.ts";
   import { coverUrl } from "./api";
   import BlurhashCanvas from "./BlurhashCanvas.svelte";
+  import CloseButton from "./CloseButton.svelte";
 
   interface Props {
     onclose: () => void;
@@ -188,7 +189,7 @@ www.meshiplaw.com/lyra.
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div
-  class="fixed inset-0 z-50 flex justify-end bg-black/40 backdrop-blur-[2px]"
+  class="fixed inset-0 z-50 flex justify-end bg-black/50"
   onclick={handleBackdropClick}
   onkeydown={handleKeydown}
 >
@@ -229,11 +230,11 @@ www.meshiplaw.com/lyra.
         </div>
         <div>
           <h2
-            class="text-base font-semibold text-slate-900 dark:text-neutral-100"
+            class="text-lg font-semibold text-slate-900 dark:text-neutral-100"
           >
             Remote control
           </h2>
-          <p class="text-xs text-slate-500 dark:text-neutral-400">
+          <p class="text-sm text-slate-500 dark:text-neutral-400">
             {#if remote.loading && remote.sessions.length === 0}
               Loading…
             {:else if remote.lastRefreshAt > 0}
@@ -269,27 +270,7 @@ www.meshiplaw.com/lyra.
             />
           </svg>
         </button>
-        <button
-          type="button"
-          aria-label="Close"
-          class="flex h-8 w-8 items-center justify-center rounded-full text-slate-500 hover:bg-slate-100 hover:text-slate-700 dark:text-neutral-400 dark:hover:bg-neutral-800 dark:hover:text-neutral-200"
-          onclick={onclose}
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            class="h-5 w-5"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            stroke-width="2"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              d="M6 18L18 6M6 6l12 12"
-            />
-          </svg>
-        </button>
+        <CloseButton onclick={onclose} />
       </div>
     </header>
 
