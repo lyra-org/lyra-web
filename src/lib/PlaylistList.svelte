@@ -58,16 +58,6 @@ www.meshiplaw.com/lyra.
 <svelte:window onclick={handleWindowClick} />
 
 <div class="mx-auto max-w-3xl">
-  <!-- Header with create button -->
-  <div class="mb-4 flex items-center justify-end">
-    <button
-      class="rounded-md bg-[#E6CEE3] px-3 py-1.5 text-sm font-medium text-slate-900 hover:bg-[#d4b5cf] dark:bg-[#BB7FB5] dark:text-white dark:hover:bg-[#cfa2c9]"
-      onclick={() => (showCreate = !showCreate)}
-    >
-      {showCreate ? "Cancel" : "+ New playlist"}
-    </button>
-  </div>
-
   {#if showCreate}
     <form class="mb-4 flex gap-2" onsubmit={handleCreate}>
       <input
@@ -83,7 +73,26 @@ www.meshiplaw.com/lyra.
       >
         {creating ? "Creating..." : "Create"}
       </button>
+      <button
+        type="button"
+        class="rounded-md px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-100 dark:text-neutral-300 dark:hover:bg-neutral-700"
+        onclick={() => {
+          showCreate = false;
+          newName = "";
+        }}
+      >
+        Cancel
+      </button>
     </form>
+  {:else}
+    <div class="mb-4 flex items-center justify-end">
+      <button
+        class="rounded-md bg-[#E6CEE3] px-3 py-1.5 text-sm font-medium text-slate-900 hover:bg-[#d4b5cf] dark:bg-[#BB7FB5] dark:text-white dark:hover:bg-[#cfa2c9]"
+        onclick={() => (showCreate = true)}
+      >
+        + New playlist
+      </button>
+    </div>
   {/if}
 
   <PaginatedList
