@@ -142,7 +142,7 @@ export type ProviderOptionValues = Record<string, Record<string, OptionValue>>;
 export interface ProviderResponse {
   provider_id: string;
   display_name: string;
-  priority: number;
+  position: number;
   enabled: boolean;
   options: OptionResponse[];
 }
@@ -281,7 +281,6 @@ export interface ArtistRelationResponse {
 export interface ArtistResponse {
   id: string;
   name: string;
-  verified: boolean;
   sort_name?: string | null;
   description?: string | null;
   cover?: CoverResponse | null;

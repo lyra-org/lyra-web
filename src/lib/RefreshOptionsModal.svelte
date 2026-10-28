@@ -43,9 +43,9 @@ www.meshiplaw.com/lyra.
     loading = true;
     error = null;
     try {
-      providers = (await fetchProviders())
-        .filter((p) => p.enabled && p.options.length > 0)
-        .sort((a, b) => b.priority - a.priority);
+      providers = (await fetchProviders()).filter(
+        (p) => p.enabled && p.options.length > 0,
+      );
       values = Object.fromEntries(
         providers.map((p) => [
           p.provider_id,

@@ -69,9 +69,6 @@ www.meshiplaw.com/lyra.
       title={artist.name}
     >
       {artist.name}
-      {#if artist.verified}
-        <span class="text-blue-500 dark:text-blue-400" title="Verified">✓</span>
-      {/if}
     </h3>
   </div>
 </a>

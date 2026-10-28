@@ -149,12 +149,6 @@ www.meshiplaw.com/lyra.
           class="flex items-center gap-2 text-3xl font-bold text-slate-900 dark:text-neutral-100"
         >
           {artist.name}
-          {#if artist.verified}
-            <span
-              class="text-blue-500 dark:text-blue-400"
-              title="Verified artist">✓</span
-            >
-          {/if}
           {#if artist.id}
             <FavoriteButton targetId={artist.id} label={artist.name} />
           {/if}

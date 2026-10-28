@@ -50,9 +50,7 @@ www.meshiplaw.com/lyra.
     try {
       const data = await fetchProviders();
       providers = data;
-      const enabled = data
-        .filter((p) => p.enabled)
-        .sort((a, b) => b.priority - a.priority);
+      const enabled = data.filter((p) => p.enabled);
       if (enabled.length > 0) {
         selectedProviderId = enabled[0].provider_id;
       } else if (data.length > 0) {

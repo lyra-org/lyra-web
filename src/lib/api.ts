@@ -517,18 +517,6 @@ export function fetchProviders(): Promise<ProviderResponse[]> {
   return get<ProviderResponse[]>("/providers");
 }
 
-export function updateProviderPriority(
-  id: string,
-  priority: number,
-): Promise<ProviderResponse> {
-  return put<ProviderResponse>(
-    `/providers/${encodeURIComponent(id)}/priority`,
-    {
-      priority,
-    },
-  );
-}
-
 export function searchProvider(
   providerId: string,
   query: string,
@@ -829,11 +817,11 @@ export function removePlaylistTrack(
 export function movePlaylistTrack(
   id: string,
   entryId: string,
-  newPosition: number,
+  position: number,
 ): Promise<PlaylistTrackResponse[]> {
   return patch<PlaylistTrackResponse[]>(
     `/playlists/${id}/tracks/${encodeURIComponent(entryId)}`,
-    { new_position: newPosition },
+    { position },
   );
 }
 

@@ -24,7 +24,7 @@ www.meshiplaw.com/lyra.
   interface ProviderGroup {
     providerId: string;
     displayName: string;
-    priority: number;
+    position: number;
     ids: ExternalIdResponse[];
   }
 
@@ -62,7 +62,7 @@ www.meshiplaw.com/lyra.
           group = {
             providerId: id.provider_id,
             displayName: provider?.display_name ?? id.provider_id,
-            priority: provider?.priority ?? -1,
+            position: provider?.position ?? Infinity,
             ids: [],
           };
           byProvider.set(id.provider_id, group);
@@ -71,7 +71,7 @@ www.meshiplaw.com/lyra.
       }
       groups = [...byProvider.values()].sort(
         (a, b) =>
-          b.priority - a.priority || a.displayName.localeCompare(b.displayName),
+          a.position - b.position || a.displayName.localeCompare(b.displayName),
       );
     } catch (err) {
       error = err instanceof Error ? err.message : "Failed to load IDs";
