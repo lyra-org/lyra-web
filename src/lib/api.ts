@@ -22,6 +22,7 @@ import type {
   SearchEntityType,
   ExternalIdResponse,
   EntryResponse,
+  LibraryAccessResponse,
   LibraryResponse,
   LibrarySyncStatus,
   LibrarySyncStartResponse,
@@ -617,6 +618,21 @@ export function updateLibrary(
   },
 ): Promise<LibraryResponse> {
   return patch<LibraryResponse>(`/libraries/${id}`, data);
+}
+
+export function fetchLibraryAccess(
+  id: string,
+): Promise<LibraryAccessResponse[]> {
+  return get<LibraryAccessResponse[]>(`/libraries/${id}/access`);
+}
+
+// The server accepts either a user ID or a username.
+export function grantLibraryAccess(id: string, user: string): Promise<void> {
+  return post<void>(`/libraries/${id}/access`, { user_id: user });
+}
+
+export function revokeLibraryAccess(id: string, userId: string): Promise<void> {
+  return del<void>(`/libraries/${id}/access/${encodeURIComponent(userId)}`);
 }
 
 export function refreshLibrary(

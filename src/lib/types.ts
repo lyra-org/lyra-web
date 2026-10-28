@@ -223,6 +223,12 @@ export interface LibraryResponse {
   country?: string | null;
 }
 
+export interface LibraryAccessResponse {
+  id: string;
+  username: string;
+  role?: string | null;
+}
+
 export interface PlaylistResponse {
   id: string;
   name: string;

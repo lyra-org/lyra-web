@@ -9,6 +9,7 @@ www.meshiplaw.com/lyra.
   import { untrack } from "svelte";
   import type { LibraryResponse } from "./types";
   import { createLibrary, updateLibrary } from "./api";
+  import LibraryAccess from "./LibraryAccess.svelte";
   import Modal from "./Modal.svelte";
 
   interface Props {
@@ -133,6 +134,10 @@ www.meshiplaw.com/lyra.
       <p class="text-sm text-red-600 dark:text-red-400">{error}</p>
     {/if}
   </form>
+
+  {#if library?.id != null}
+    <LibraryAccess libraryId={library.id} />
+  {/if}
 
   {#snippet footer()}
     <button
