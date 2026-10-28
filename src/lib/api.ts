@@ -436,7 +436,7 @@ export function startPlayback(
   positionMs?: number | null,
   state?: PlaybackState | null,
 ): Promise<PlaybackResponse> {
-  return post<PlaybackResponse>("/playbacks", {
+  return post<PlaybackResponse>("/me/playbacks", {
     track_ids: [trackId],
     current_index: 0,
     repeat_mode: "none",
@@ -457,7 +457,7 @@ export function fetchPlaybacks(
   if (active != null) params.set("active", String(active));
   if (cursor) params.set("cursor", cursor);
   if (includeController) params.set("inc", "controller");
-  return get<Page<PlaybackResponse>>(`/playbacks?${params}`);
+  return get<Page<PlaybackResponse>>(`/me/playbacks?${params}`);
 }
 
 export function reportPlaybackProgress(
@@ -468,7 +468,7 @@ export function reportPlaybackProgress(
   durationMs?: number | null,
 ): Promise<PlaybackResponse> {
   return post<PlaybackResponse>(
-    `/playbacks/${encodeURIComponent(playbackId)}/progress`,
+    `/me/playbacks/${encodeURIComponent(playbackId)}/progress`,
     {
       queue_revision: queueRevision,
       connection_session_key: CONNECTION_SESSION_KEY,
@@ -847,11 +847,11 @@ export function fetchTags(
   if (cursor) params.set("cursor", cursor);
   if (limit != null) params.set("limit", String(limit));
   const qs = params.toString();
-  return get<TagListResponse>(`/tags${qs ? `?${qs}` : ""}`);
+  return get<TagListResponse>(`/me/tags${qs ? `?${qs}` : ""}`);
 }
 
 export function fetchTag(id: string): Promise<TagResponse> {
-  return get<TagResponse>(`/tags/${id}`);
+  return get<TagResponse>(`/me/tags/${id}`);
 }
 
 export function attachTag(
@@ -859,7 +859,7 @@ export function attachTag(
   color: TagColor,
   targetId: string,
 ): Promise<void> {
-  return post<void>("/tags", {
+  return post<void>("/me/tags", {
     tag,
     color,
     target_id: targetId,
@@ -870,11 +870,11 @@ export function updateTag(
   id: string,
   data: { tag?: string; color?: TagColor },
 ): Promise<TagResponse> {
-  return patch<TagResponse>(`/tags/${id}`, data);
+  return patch<TagResponse>(`/me/tags/${id}`, data);
 }
 
 export function deleteTag(id: string): Promise<void> {
-  return del<void>(`/tags/${id}`);
+  return del<void>(`/me/tags/${id}`);
 }
 
 export function fetchTagTargets(
@@ -886,7 +886,7 @@ export function fetchTagTargets(
   if (cursor) params.set("cursor", cursor);
   if (limit != null) params.set("limit", String(limit));
   const qs = params.toString();
-  return get<TargetListResponse>(`/tags/${id}/targets${qs ? `?${qs}` : ""}`);
+  return get<TargetListResponse>(`/me/tags/${id}/targets${qs ? `?${qs}` : ""}`);
 }
 
 export function checkTagTarget(
@@ -894,12 +894,12 @@ export function checkTagTarget(
   targetId: string,
 ): Promise<TargetStateResponse> {
   return get<TargetStateResponse>(
-    `/tags/${tagId}/targets/${encodeURIComponent(targetId)}`,
+    `/me/tags/${tagId}/targets/${encodeURIComponent(targetId)}`,
   );
 }
 
 export function detachTag(tagId: string, targetId: string): Promise<void> {
-  return del<void>(`/tags/${tagId}/targets/${encodeURIComponent(targetId)}`);
+  return del<void>(`/me/tags/${tagId}/targets/${encodeURIComponent(targetId)}`);
 }
 
 // Favorites
@@ -912,27 +912,27 @@ export function fetchFavorites(
   const params = new URLSearchParams({ entity });
   if (cursor) params.set("cursor", cursor);
   if (limit != null) params.set("limit", String(limit));
-  return get<FavoriteListResponse>(`/favorites?${params}`);
+  return get<FavoriteListResponse>(`/me/favorites?${params}`);
 }
 
 export function checkFavorite(
   targetId: string,
 ): Promise<FavoriteStateResponse> {
   return get<FavoriteStateResponse>(
-    `/favorites/${encodeURIComponent(targetId)}`,
+    `/me/favorites/${encodeURIComponent(targetId)}`,
   );
 }
 
 export function checkFavorites(targetIds: string[]): Promise<CheckResponse> {
-  return post<CheckResponse>("/favorites/check", { target_ids: targetIds });
+  return post<CheckResponse>("/me/favorites/check", { target_ids: targetIds });
 }
 
 export function addFavorite(targetId: string): Promise<void> {
-  return put<void>(`/favorites/${encodeURIComponent(targetId)}`);
+  return put<void>(`/me/favorites/${encodeURIComponent(targetId)}`);
 }
 
 export function removeFavorite(targetId: string): Promise<void> {
-  return del<void>(`/favorites/${encodeURIComponent(targetId)}`);
+  return del<void>(`/me/favorites/${encodeURIComponent(targetId)}`);
 }
 
 // Tracks
