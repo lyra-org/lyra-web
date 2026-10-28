@@ -1166,6 +1166,28 @@ export function resetServerSettings(): Promise<ServerSettingsResponse> {
   return del<ServerSettingsResponse>("/server/settings");
 }
 
+// A wrong current password answers 401, which would normally sign the user
+// out. Sign out only if the session itself is no longer valid.
+export async function changePassword(
+  currentPassword: string,
+  newPassword: string,
+): Promise<void> {
+  const path = "/me";
+  const res = await fetch(`${BASE}${path}`, {
+    method: "PATCH",
+    headers: authHeaders({ "Content-Type": "application/json" }),
+    body: JSON.stringify({
+      current_password: currentPassword,
+      new_password: newPassword,
+    }),
+  });
+  if (res.status === 401) {
+    await fetchMe();
+    throw new ApiError(401, "PATCH", path, "Incorrect current password");
+  }
+  await handleResponse(res, "PATCH", path);
+}
+
 export function fetchApiKeys(): Promise<ApiKeyResponse[]> {
   return get<ApiKeyResponse[]>("/me/api-keys");
 }

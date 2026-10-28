@@ -11,6 +11,7 @@ www.meshiplaw.com/lyra.
   import { fetchUsers } from "./api";
   import ServerSettings from "./ServerSettings.svelte";
   import ApiKeySettings from "./ApiKeySettings.svelte";
+  import PasswordSettings from "./PasswordSettings.svelte";
   import CloseButton from "./CloseButton.svelte";
   import UserSettings from "./UserSettings.svelte";
   import PluginManagement from "./PluginManagement.svelte";
@@ -50,24 +51,34 @@ www.meshiplaw.com/lyra.
   const auth = getAuth();
   const setup = getSetup();
   let section = $state<
-    "server" | "providers" | "plugins" | "users" | "api-keys"
+    "server" | "providers" | "plugins" | "users" | "password" | "api-keys"
   >(
     untrack(() =>
       auth.hasPermission("manage_server")
         ? "server"
         : auth.hasPermission("manage_users")
           ? "users"
-          : "plugins",
+          : auth.hasPermission("manage_plugins")
+            ? "plugins"
+            : "password",
     ),
   );
   let apiKeysBusy = $state(false);
+  let passwordBusy = $state(false);
   let pluginsBusy = $state(false);
   let providersBusy = $state(false);
   let serverDirty = $state(false);
   let serverBusy = $state(false);
 
   function closeSettings() {
-    if (serverBusy || apiKeysBusy || pluginsBusy || providersBusy) return;
+    if (
+      serverBusy ||
+      apiKeysBusy ||
+      passwordBusy ||
+      pluginsBusy ||
+      providersBusy
+    )
+      return;
     if (serverDirty && !confirm("Discard unsaved server settings?")) return;
     onclose();
   }
@@ -547,7 +558,7 @@ www.meshiplaw.com/lyra.
     <div class="flex flex-1 overflow-hidden">
       <!-- Left sidebar -->
       <aside
-        inert={apiKeysBusy}
+        inert={apiKeysBusy || passwordBusy}
         class="flex w-40 shrink-0 flex-col overflow-y-auto border-r border-slate-200 bg-slate-50 sm:w-64 dark:border-neutral-800 dark:bg-[#181a1b]"
       >
         {#if auth.hasPermission("manage_server")}
@@ -721,6 +732,14 @@ www.meshiplaw.com/lyra.
           </h3>
           <button
             type="button"
+            onclick={() => (section = "password")}
+            aria-current={section === "password" ? "page" : undefined}
+            class="w-full rounded-md px-2 py-2 text-left text-sm font-medium text-slate-700 hover:bg-slate-200 dark:text-neutral-200 dark:hover:bg-neutral-800"
+            class:bg-slate-200={section === "password"}
+            class:dark:bg-neutral-800={section === "password"}>Password</button
+          >
+          <button
+            type="button"
             onclick={() => (section = "api-keys")}
             aria-current={section === "api-keys" ? "page" : undefined}
             class="w-full rounded-md px-2 py-2 text-left text-sm font-medium text-slate-700 hover:bg-slate-200 dark:text-neutral-200 dark:hover:bg-neutral-800"
@@ -744,6 +763,8 @@ www.meshiplaw.com/lyra.
           <!-- Server settings stay mounted to preserve drafts when switching sections. -->
         {:else if section === "providers" && auth.hasPermission("manage_providers")}
           <ProviderSettings bind:busy={providersBusy} />
+        {:else if section === "password"}
+          <PasswordSettings bind:busy={passwordBusy} />
         {:else if section === "api-keys"}
           <ApiKeySettings bind:busy={apiKeysBusy} />
         {:else if section === "users" && auth.hasPermission("manage_users")}
