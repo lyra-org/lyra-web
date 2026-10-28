@@ -200,6 +200,18 @@ export function loginUser(
   return post<LoginResponse>("/users/login", { username, password });
 }
 
+// Revokes the current session on the server. Failures are ignored so that
+// signing out still works when the server is unreachable.
+export async function endSession(): Promise<void> {
+  const token = getAuth().token;
+  if (token == null) return;
+  await fetch(`${BASE}/users/logout`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}` },
+    signal: AbortSignal.timeout(5000),
+  }).catch(() => {});
+}
+
 export function fetchMe(): Promise<MeResponse> {
   return get<MeResponse>("/me?inc=permissions");
 }

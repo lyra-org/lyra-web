@@ -22,11 +22,17 @@ function login(s: Session) {
   session = s;
 }
 
+// Clears the local session. The reload drops per-user state kept outside
+// components (player, favorites, tags) so none of it carries over to the next
+// account. Without a session there is nothing to clear, which also keeps a
+// failed sign-in from reloading the login page.
 function logout() {
+  if (session === null) return;
   localStorage.removeItem(TOKEN_KEY);
   session = null;
   me = null;
-  window.location.hash = "#/login";
+  history.replaceState(history.state, "", "#/login");
+  window.location.reload();
 }
 
 function setMe(m: MeResponse | null) {

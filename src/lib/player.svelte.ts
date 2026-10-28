@@ -112,17 +112,20 @@ const PAUSED_REPORT_MS = 30_000;
 
 const audio = new Audio();
 
-function reportProgress(state: string) {
-  if (playbackId == null) return;
+function reportProgress(state: string): Promise<void> {
+  if (playbackId == null) return Promise.resolve();
   const posMs = Math.round(audio.currentTime * 1000);
   const durMs = audio.duration ? Math.round(audio.duration * 1000) : undefined;
-  reportPlaybackProgress(
+  return reportPlaybackProgress(
     playbackId,
     playbackQueueRevision,
     posMs,
     state,
     durMs,
-  ).catch(() => {});
+  ).then(
+    () => {},
+    () => {},
+  );
 }
 
 function startReportInterval() {
@@ -337,13 +340,15 @@ function prevTrack() {
   playTrackInternal(playbackContext.tracks[idx - 1], playbackContext);
 }
 
-function stop() {
+// Resolves once the server has the final "stopped" report.
+function stop(): Promise<void> {
   audio.pause();
   audio.removeAttribute("src");
   audio.load();
+  let report = Promise.resolve();
   if (playbackId != null) {
     stopReportInterval();
-    reportProgress("stopped");
+    report = reportProgress("stopped");
     playbackId = null;
   }
   currentTrack = null;
@@ -354,6 +359,7 @@ function stop() {
   shuffledIds = [];
   queue = [];
   skippedUpNextIds = new Set();
+  return report;
 }
 
 function seek(time: number) {

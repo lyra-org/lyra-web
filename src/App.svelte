@@ -36,6 +36,7 @@ www.meshiplaw.com/lyra.
     disconnect as wsDisconnect,
   } from "./lib/ws.svelte.ts";
   import { getRemote } from "./lib/remote.svelte.ts";
+  import { endSession } from "./lib/api";
   import MixButton from "./lib/MixButton.svelte";
   import { headerMixForRoute } from "./lib/headerMix.svelte.ts";
   import { pushEntry, replaceEntry, restoreScroll } from "./lib/history.ts";
@@ -46,6 +47,21 @@ www.meshiplaw.com/lyra.
   const theme = getTheme();
   const remote = getRemote();
   const player = getPlayer();
+
+  let loggingOut = $state(false);
+
+  async function logOut() {
+    if (loggingOut) return;
+    loggingOut = true;
+    // Send the final playback report while the session is still valid, but
+    // don't let a slow server hold up signing out.
+    await Promise.race([
+      player.stop(),
+      new Promise((resolve) => setTimeout(resolve, 2000)),
+    ]);
+    await endSession();
+    auth.logout();
+  }
 
   $effect(() => {
     if (auth.isLoggedIn) {
@@ -362,7 +378,8 @@ www.meshiplaw.com/lyra.
       {#if auth.isLoggedIn}
         <button
           class="text-sm text-slate-500 hover:text-slate-700 dark:text-neutral-400 dark:hover:text-neutral-200"
-          onclick={() => auth.logout()}
+          disabled={loggingOut}
+          onclick={logOut}
         >
           Log out
         </button>
@@ -580,7 +597,8 @@ www.meshiplaw.com/lyra.
         </button>
         <button
           class="text-sm text-slate-500 hover:text-slate-700 dark:text-neutral-400 dark:hover:text-neutral-200"
-          onclick={() => auth.logout()}
+          disabled={loggingOut}
+          onclick={logOut}
         >
           Log out
         </button>
