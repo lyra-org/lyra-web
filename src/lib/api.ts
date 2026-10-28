@@ -517,6 +517,17 @@ export function fetchProviders(): Promise<ProviderResponse[]> {
   return get<ProviderResponse[]>("/providers");
 }
 
+// Returns every provider in priority order after the update.
+export function updateProvider(
+  providerId: string,
+  update: { position?: number; enabled?: boolean },
+): Promise<ProviderResponse[]> {
+  return patch<ProviderResponse[]>(
+    `/providers/${encodeURIComponent(providerId)}`,
+    update,
+  );
+}
+
 export function searchProvider(
   providerId: string,
   query: string,

@@ -13,6 +13,7 @@ www.meshiplaw.com/lyra.
   import ApiKeySettings from "./ApiKeySettings.svelte";
   import UserSettings from "./UserSettings.svelte";
   import PluginManagement from "./PluginManagement.svelte";
+  import ProviderSettings from "./ProviderSettings.svelte";
   import { getAuth } from "./auth.svelte.ts";
   import type {
     PluginManifestResponse,
@@ -47,7 +48,9 @@ www.meshiplaw.com/lyra.
   let { onclose }: Props = $props();
   const auth = getAuth();
   const setup = getSetup();
-  let section = $state<"server" | "plugins" | "users" | "api-keys">(
+  let section = $state<
+    "server" | "providers" | "plugins" | "users" | "api-keys"
+  >(
     untrack(() =>
       auth.hasPermission("manage_server")
         ? "server"
@@ -58,11 +61,12 @@ www.meshiplaw.com/lyra.
   );
   let apiKeysBusy = $state(false);
   let pluginsBusy = $state(false);
+  let providersBusy = $state(false);
   let serverDirty = $state(false);
   let serverBusy = $state(false);
 
   function closeSettings() {
-    if (serverBusy || apiKeysBusy || pluginsBusy) return;
+    if (serverBusy || apiKeysBusy || pluginsBusy || providersBusy) return;
     if (serverDirty && !confirm("Discard unsaved server settings?")) return;
     onclose();
   }
@@ -577,6 +581,19 @@ www.meshiplaw.com/lyra.
             >
           </div>
         {/if}
+        {#if auth.hasPermission("manage_providers")}
+          <div class="px-2 pt-2">
+            <button
+              type="button"
+              onclick={() => (section = "providers")}
+              aria-current={section === "providers" ? "page" : undefined}
+              class="w-full rounded-md px-2 py-2 text-left text-sm font-medium text-slate-700 hover:bg-slate-200 dark:text-neutral-200 dark:hover:bg-neutral-800"
+              class:bg-slate-200={section === "providers"}
+              class:dark:bg-neutral-800={section === "providers"}
+              >Providers</button
+            >
+          </div>
+        {/if}
         {#if auth.hasPermission("manage_users")}
           <div class="px-2 pt-2">
             {@render groupHeader({
@@ -744,6 +761,8 @@ www.meshiplaw.com/lyra.
         {/if}
         {#if section === "server"}
           <!-- Server settings stay mounted to preserve drafts when switching sections. -->
+        {:else if section === "providers" && auth.hasPermission("manage_providers")}
+          <ProviderSettings bind:busy={providersBusy} />
         {:else if section === "api-keys"}
           <ApiKeySettings bind:busy={apiKeysBusy} />
         {:else if section === "users" && auth.hasPermission("manage_users")}
