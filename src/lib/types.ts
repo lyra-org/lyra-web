@@ -588,10 +588,12 @@ export type PluginHold =
   | { reason: "unmet_dependencies"; dependencies: PluginRequirement[] }
   | { reason: "dependency_cycle"; plugins: string[] };
 
-// What one plugin would newly reach.
+// What one plugin would newly reach. `risk` judges everything it would reach
+// then, `previous_risk` everything it reaches as installed.
 export interface ScopeGainResponse {
   plugin: string;
   risk: PluginRisk;
+  previous_risk: PluginRiskLevel;
   effects: PluginEffect[];
   scopes: string[];
   // Dependencies whose scopes are unknown because they are not installed.
@@ -603,10 +605,22 @@ export interface PluginRequirement {
   requires: string;
 }
 
-// `high`: adds endpoints or handles credentials. `elevated`: can send data off
-// the server and touch personal or library data.
-export type PluginRisk = "standard" | "elevated" | "high";
+// `high`: adds endpoints, handles credentials, or can send data off the server
+// and touch every user's personal data. `elevated`: can send data off the
+// server and touch personal or library data.
+export type PluginRiskLevel = "standard" | "elevated" | "high";
 
+export interface PluginRisk {
+  level: PluginRiskLevel;
+  // What sets `level`; empty at `standard`.
+  reasons: PluginRiskReason[];
+}
+
+// `users`: `acting` for the users the plugin acts for, `all` for every user.
+export type PluginUsers = "acting" | "all";
+
+// `kind`, `data` and `users` are for logic; `description` is an English list
+// item for display.
 export interface PluginEffect {
   kind:
     | "egress"
@@ -615,10 +629,28 @@ export interface PluginEffect {
     | "reads_personal"
     | "writes_personal"
     | "writes_library";
-  // The data concerned, for the personal and library kinds.
+  // A stable data id, such as `listening_history`, for the personal and
+  // library kinds.
   data?: string | null;
-  // The plugins whose scopes give the effect.
-  via?: string[];
+  // Whose personal data it reaches, for the personal kinds.
+  users?: PluginUsers | null;
+  // The scopes giving the effect, each with the plugin declaring it.
+  via: { plugin: string; scope: string }[];
+  description: string;
+}
+
+// An effect, combined with sending data off the server where it needs it,
+// that raises a plugin's risk.
+export interface PluginRiskReason {
+  kind:
+    | "exposes"
+    | "authority"
+    | "sends_personal"
+    | "changes_personal"
+    | "changes_library";
+  data?: string | null;
+  users?: PluginUsers | null;
+  description: string;
 }
 
 export interface ChoiceOptionResponse {
@@ -868,7 +900,8 @@ export type PluginPreviewResponse = {
 export interface PluginAccessResponse {
   risk: PluginRisk;
   effects: PluginEffect[];
-  scopes: { scope: string; via: string[] }[];
+  // Each scope reached, with the plugins declaring it.
+  reached_scopes: { scope: string; via: string[] }[];
   unresolved_dependencies: string[];
   // Installed plugins that would reach more once this one is installed.
   widens: ScopeGainResponse[];

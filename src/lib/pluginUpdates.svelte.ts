@@ -4,7 +4,6 @@
 // www.meshiplaw.com/lyra.
 
 import type {
-  PluginEffect,
   PluginHold,
   PluginManifestResponse,
   PluginSourceResponse,
@@ -73,22 +72,15 @@ export function getPluginUpdates() {
   };
 }
 
-const effectText: Record<PluginEffect["kind"], (data: string) => string> = {
-  egress: () => "send data off the server",
-  exposes: () => "add endpoints to the server",
-  authority: () => "handle credentials and sign-ins",
-  reads_personal: (data) => `read users’ ${data}`,
-  writes_personal: (data) => `change users’ ${data}`,
-  writes_library: (data) => `change the library’s ${data}`,
-};
-
-export function describeEffect(effect: PluginEffect): string {
-  return effectText[effect.kind](effect.data ?? "data");
-}
-
 export function describeGain(gain: ScopeGainResponse): string {
   const reached = [...gain.scopes, ...gain.unresolved_dependencies];
-  const risk = gain.risk === "standard" ? "" : ` (${gain.risk} risk)`;
+  const { level } = gain.risk;
+  const risk =
+    level !== gain.previous_risk
+      ? ` (risk rises from ${gain.previous_risk} to ${level})`
+      : level === "standard"
+        ? ""
+        : ` (${level} risk)`;
   return `${gain.plugin} would newly reach ${reached.join(", ")}${risk}`;
 }
 

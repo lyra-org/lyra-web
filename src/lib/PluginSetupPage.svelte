@@ -15,6 +15,8 @@ www.meshiplaw.com/lyra.
   } from "./types";
   import { installRepositoryPlugins, updateServerSetup } from "./api";
   import { getSetup } from "./setup.svelte.ts";
+  import PluginAccess from "./PluginAccess.svelte";
+  import PluginRiskBadge from "./PluginRiskBadge.svelte";
   import logo from "../assets/logo.svg";
 
   interface Props {
@@ -263,6 +265,8 @@ www.meshiplaw.com/lyra.
                           class="text-xs text-slate-500 dark:text-neutral-400"
                           >Installed</span
                         >
+                      {:else if plugin.access}
+                        <PluginRiskBadge risk={plugin.access.risk} />
                       {/if}
                     </div>
                     {#if plugin.description}
@@ -277,20 +281,7 @@ www.meshiplaw.com/lyra.
                         {plugin.error}
                       </p>
                     {/if}
-                    {#if plugin.scopes.length > 0}
-                      <div class="mt-2 flex flex-wrap gap-1">
-                        <span
-                          class="text-xs text-slate-400 dark:text-neutral-500"
-                          >Requests:</span
-                        >
-                        {#each plugin.scopes as scope (scope)}
-                          <span
-                            class="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-xs text-slate-600 dark:bg-neutral-800 dark:text-neutral-300"
-                            >{scope}</span
-                          >
-                        {/each}
-                      </div>
-                    {/if}
+                    <PluginAccess {plugin} />
                   </div>
                 </label>
               </li>

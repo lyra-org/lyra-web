@@ -28,6 +28,8 @@ www.meshiplaw.com/lyra.
     updateOutcome,
   } from "./pluginUpdates.svelte.ts";
   import PluginHoldNotice from "./PluginHoldNotice.svelte";
+  import PluginAccess from "./PluginAccess.svelte";
+  import PluginRiskBadge from "./PluginRiskBadge.svelte";
 
   interface Props {
     plugins: PluginManifestResponse[];
@@ -215,21 +217,6 @@ www.meshiplaw.com/lyra.
   const mutedClass = "text-sm text-slate-500 dark:text-neutral-400";
 </script>
 
-{#snippet scopes(list: string[])}
-  {#if list.length > 0}
-    <div class="mt-2 flex flex-wrap gap-1">
-      <span class="text-xs text-slate-400 dark:text-neutral-500">Requests:</span
-      >
-      {#each list as scope (scope)}
-        <span
-          class="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-xs text-slate-600 dark:bg-neutral-800 dark:text-neutral-300"
-          >{scope}</span
-        >
-      {/each}
-    </div>
-  {/if}
-{/snippet}
-
 <div class="flex flex-wrap items-center justify-between gap-3 px-6 pt-5 pb-1">
   <h3 class="text-base font-semibold text-slate-900 dark:text-neutral-100">
     Plugins
@@ -339,6 +326,9 @@ www.meshiplaw.com/lyra.
                       >v{plugin.version}</span
                     >
                   {/if}
+                  {#if plugin.access}
+                    <PluginRiskBadge risk={plugin.access.risk} />
+                  {/if}
                 </div>
                 {#if plugin.description}
                   <p class="mt-1 text-sm text-slate-600 dark:text-neutral-400">
@@ -350,7 +340,7 @@ www.meshiplaw.com/lyra.
                     {plugin.error}
                   </p>
                 {/if}
-                {@render scopes(plugin.scopes)}
+                <PluginAccess {plugin} />
               </div>
               {#if plugin.commit && !plugin.error}
                 <button
@@ -465,6 +455,9 @@ www.meshiplaw.com/lyra.
                   <span class="text-xs text-slate-400 dark:text-neutral-500"
                     >v{plugin.version}</span
                   >
+                  {#if plugin.access}
+                    <PluginRiskBadge risk={plugin.access.risk} />
+                  {/if}
                 </li>
               {/each}
             </ul>

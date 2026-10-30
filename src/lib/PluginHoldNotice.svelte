@@ -7,11 +7,7 @@ www.meshiplaw.com/lyra.
 
 <script lang="ts">
   import type { PluginHold } from "./types";
-  import {
-    describeEffect,
-    describeGain,
-    describeHold,
-  } from "./pluginUpdates.svelte.ts";
+  import { describeGain, describeHold } from "./pluginUpdates.svelte.ts";
 
   interface Props {
     hold: PluginHold;
@@ -27,9 +23,14 @@ www.meshiplaw.com/lyra.
     <ul class="list-disc space-y-1 pl-5">
       {#each hold.gains as gain (gain.plugin)}
         <li>
-          {describeGain(gain)}{#if gain.effects.length > 0}, letting it {gain.effects
-              .map(describeEffect)
-              .join(", ")}{/if}.
+          {describeGain(gain)}.
+          {#if gain.effects.length > 0}
+            <ul class="list-[circle] pl-5">
+              {#each gain.effects as effect, i (i)}
+                <li>{effect.description}</li>
+              {/each}
+            </ul>
+          {/if}
         </li>
       {/each}
     </ul>
