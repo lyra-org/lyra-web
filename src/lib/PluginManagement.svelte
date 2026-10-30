@@ -8,9 +8,10 @@ www.meshiplaw.com/lyra.
 <script lang="ts">
   import { onMount } from "svelte";
   import type {
+    CatalogRepository,
     PluginManifestResponse,
     PluginPreviewResponse,
-    ResolvedRepositoryResponse,
+    RepositoryPreview,
   } from "./types";
   import {
     addPluginRepository,
@@ -53,7 +54,7 @@ www.meshiplaw.com/lyra.
 
   let repositoryUrl = $state("");
   let repositoryRef = $state("");
-  let repositoryPreview = $state<ResolvedRepositoryResponse | null>(null);
+  let repositoryPreview = $state<RepositoryPreview | null>(null);
 
   $effect(() => {
     busy = pending != null;
@@ -62,7 +63,7 @@ www.meshiplaw.com/lyra.
   let disabled = $derived(pending != null || setup.catalogLoading);
 
   interface CatalogEntry {
-    repo: ResolvedRepositoryResponse;
+    repo: CatalogRepository;
     plugin: PluginPreviewResponse;
   }
 
@@ -107,7 +108,12 @@ www.meshiplaw.com/lyra.
   // is what the plugin statuses are derived from. A check changes no
   // settings, so only the plugin list is reloaded.
   async function checkForUpdates() {
-    await setup.loadCatalog();
+    error = "";
+    message = "";
+    const failed = await setup.refreshCatalog();
+    error = failed
+      .map((failure) => `Couldn’t check ${failure.name}: ${failure.error}`)
+      .join(" ");
     await onrefresh();
   }
 
@@ -136,7 +142,7 @@ www.meshiplaw.com/lyra.
 
   function install(entry: CatalogEntry) {
     return run(`install:${entry.plugin.id}`, async () => {
-      const result = await installRepositoryPlugins(entry.repo.id!, [
+      const result = await installRepositoryPlugins(entry.repo.id, [
         { id: entry.plugin.id, commit: entry.plugin.commit! },
       ]);
       await onchange();
@@ -183,14 +189,14 @@ www.meshiplaw.com/lyra.
     });
   }
 
-  function removeRepository(repo: ResolvedRepositoryResponse) {
+  function removeRepository(repo: CatalogRepository) {
     if (
       !confirm(`Remove ${repo.name}? Plugins installed from it stay installed.`)
     ) {
       return;
     }
     return run(`remove-repository:${repo.id}`, async () => {
-      await removePluginRepository(repo.id!);
+      await removePluginRepository(repo.id);
       await setup.loadCatalog();
       return `Removed ${repo.name}.`;
     });
@@ -382,11 +388,13 @@ www.meshiplaw.com/lyra.
                   {repo.origin}
                 </p>
                 <p class="text-xs text-slate-500 dark:text-neutral-400">
-                  <span class="font-mono">{repo.resolved_ref}</span>
-                  {#if repo.commit}
-                    · <span class="font-mono">{repo.commit.slice(0, 7)}</span>
+                  {#if repo.resolved_ref}
+                    <span class="font-mono">{repo.resolved_ref}</span> ·
                   {/if}
-                  · {repo.plugins.length} plugin{repo.plugins.length === 1
+                  {#if repo.commit}
+                    <span class="font-mono">{repo.commit.slice(0, 7)}</span> ·
+                  {/if}
+                  {repo.plugins.length} plugin{repo.plugins.length === 1
                     ? ""
                     : "s"}
                 </p>

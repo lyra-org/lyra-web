@@ -50,9 +50,11 @@ import type {
   PluginSettingsResponse,
   PluginSettingsEntry,
   PluginSettingValue,
-  PluginRepositoryResponse,
+  CatalogRepository,
+  PluginRepository,
   PreviewedPlugin,
-  ResolvedRepositoryResponse,
+  RefreshPluginRepositoriesResponse,
+  RepositoryPreview,
   InstallPluginsResponse,
   UpdatePluginsResponse,
   Page,
@@ -1120,15 +1122,22 @@ export function deleteUserPluginSettings(pluginId: string): Promise<void> {
 
 // Plugin repositories
 
-export function fetchPluginRepositories(): Promise<PluginRepositoryResponse[]> {
-  return get<PluginRepositoryResponse[]>("/plugins/repositories");
+export function fetchPluginRepositories(opts?: {
+  inc?: "plugins"[];
+}): Promise<PluginRepository[]> {
+  const params = new URLSearchParams();
+  if (opts?.inc?.length) params.set("inc", opts.inc.join(","));
+  const query = params.toString();
+  return get<PluginRepository[]>(
+    `/plugins/repositories${query ? `?${query}` : ""}`,
+  );
 }
 
 export function resolvePluginRepository(opts: {
   url: string;
   ref?: string | null;
-}): Promise<ResolvedRepositoryResponse> {
-  return post<ResolvedRepositoryResponse>("/plugins/resolve", {
+}): Promise<RepositoryPreview> {
+  return post<RepositoryPreview>("/plugins/resolve", {
     url: opts.url,
     ref: opts.ref ?? undefined,
   });
@@ -1137,8 +1146,8 @@ export function resolvePluginRepository(opts: {
 export function addPluginRepository(opts: {
   url: string;
   ref?: string | null;
-}): Promise<ResolvedRepositoryResponse> {
-  return post<ResolvedRepositoryResponse>("/plugins/repositories", {
+}): Promise<CatalogRepository> {
+  return post<CatalogRepository>("/plugins/repositories", {
     url: opts.url,
     ref: opts.ref ?? undefined,
   });
@@ -1150,9 +1159,16 @@ export function removePluginRepository(repositoryId: string): Promise<void> {
 
 export function refreshPluginRepository(
   repositoryId: string,
-): Promise<ResolvedRepositoryResponse> {
-  return post<ResolvedRepositoryResponse>(
+): Promise<CatalogRepository> {
+  return post<CatalogRepository>(
     `/plugins/repositories/${encodeURIComponent(repositoryId)}/refresh`,
+    {},
+  );
+}
+
+export function refreshPluginRepositories(): Promise<RefreshPluginRepositoriesResponse> {
+  return post<RefreshPluginRepositoriesResponse>(
+    "/plugins/repositories/refresh",
     {},
   );
 }

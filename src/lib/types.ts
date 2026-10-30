@@ -566,12 +566,12 @@ export interface RepositorySourceResponse {
 // made. Pinned plugins are always `up_to_date`. `incompatible`: no release
 // runs on this server, and `requires` names the requirement excluding it.
 // `unknown`: no subscription with the same origin and ref lists the plugin, or
-// its repository has no offer for it.
+// its repository has no offer for it, and `reason` says which.
 export type UpdateStatus =
   | { status: "up_to_date" }
   | { status: "update_available" }
   | { status: "incompatible"; requires: string }
-  | { status: "unknown" };
+  | { status: "unknown"; reason: string };
 
 export interface OfferedReleaseResponse {
   version: string;
@@ -806,16 +806,36 @@ export interface ActivePlayback {
 
 // Plugin repositories
 
-// A subscription as remembered by the server, without resolving it.
-export interface PluginRepositoryResponse {
+// A subscription as the server stored it at its last refresh, update check or
+// daily check.
+export interface PluginRepository {
   id: string;
   origin: string;
   name: string;
   description: string;
   ref?: string | null;
+  // `resolved_ref`, `commit` and `refreshed_at` are absent until the first
+  // refresh.
+  resolved_ref?: string | null;
   commit?: string | null;
-  // Absent until the first refresh.
   refreshed_at?: string | null;
+  // What it offered at that refresh, with statuses against the plugins
+  // installed now. Requested with `inc=plugins`; always set on add and
+  // refresh.
+  plugins?: PluginPreviewResponse[] | null;
+}
+
+// A subscription with its `plugins`, as add, refresh and `inc=plugins` return
+// it.
+export type CatalogRepository = PluginRepository & {
+  plugins: PluginPreviewResponse[];
+};
+
+// Every subscription, as stored after refreshing them all. A failed one keeps
+// what it stored before.
+export interface RefreshPluginRepositoriesResponse {
+  repositories: CatalogRepository[];
+  failed: { id: string; error: string }[];
 }
 
 // `unknown`: the source record cannot be read, or the repository has no offer
@@ -838,7 +858,8 @@ export type PluginPreviewResponse = {
   // Present only when the repository index points at another repository.
   source?: { origin: string } | null;
   // Why the plugin has no installable release; `name`, `version`,
-  // `description` and `scopes` are then empty.
+  // `description` and `scopes` are then empty. An `unknown` status's `reason`
+  // can repeat it.
   error?: string | null;
 } & CatalogStatus;
 
@@ -853,17 +874,14 @@ export interface PluginAccessResponse {
   widens: ScopeGainResponse[];
 }
 
-// `id` is present only for subscribed repositories, `refreshed_at` only once
-// one has been refreshed.
-export interface ResolvedRepositoryResponse {
-  id?: string | null;
+// A repository URL as resolved now, before subscribing to it.
+export interface RepositoryPreview {
   origin: string;
   name: string;
   description: string;
   ref?: string | null;
   resolved_ref: string;
   commit?: string | null;
-  refreshed_at?: string | null;
   plugins: PluginPreviewResponse[];
 }
 

@@ -8,10 +8,10 @@ www.meshiplaw.com/lyra.
 <script lang="ts">
   import { onMount } from "svelte";
   import type {
+    CatalogRepository,
     FailedInstallResponse,
     InstalledPluginResponse,
     PreviewedPlugin,
-    ResolvedRepositoryResponse,
   } from "./types";
   import { installRepositoryPlugins, updateServerSetup } from "./api";
   import { getSetup } from "./setup.svelte.ts";
@@ -35,7 +35,7 @@ www.meshiplaw.com/lyra.
   let failed = $state<FailedInstallResponse[]>([]);
   let hasResult = $state(false);
 
-  function key(repo: ResolvedRepositoryResponse, pluginId: string): string {
+  function key(repo: CatalogRepository, pluginId: string): string {
     return `${repo.id}/${pluginId}`;
   }
 
@@ -60,7 +60,7 @@ www.meshiplaw.com/lyra.
   }
 
   function selectionsByRepository(): {
-    repo: ResolvedRepositoryResponse;
+    repo: CatalogRepository;
     plugins: PreviewedPlugin[];
   }[] {
     return (setup.catalog ?? [])
@@ -84,7 +84,7 @@ www.meshiplaw.com/lyra.
     const nextFailed: FailedInstallResponse[] = [];
     try {
       for (const { repo, plugins } of groups) {
-        const result = await installRepositoryPlugins(repo.id!, plugins);
+        const result = await installRepositoryPlugins(repo.id, plugins);
         nextInstalled.push(...result.installed);
         nextFailed.push(...result.failed);
       }

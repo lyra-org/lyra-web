@@ -4,15 +4,16 @@
 // www.meshiplaw.com/lyra.
 
 import type {
+  CatalogRepository,
   CatalogStatus,
   PluginPreviewResponse,
-  ResolvedRepositoryResponse,
   ServerInfoResponse,
 } from "./types";
 import {
   fetchMe,
   fetchPluginRepositories,
   fetchServerInfo,
+  refreshPluginRepositories,
   refreshPluginRepository,
 } from "./api";
 import { getAuth } from "./auth.svelte.ts";
@@ -31,7 +32,7 @@ let meLoadedFor = $state<string | null>(null);
 let meRequestedFor = $state<string | null>(null);
 let meRequest = 0;
 
-let catalog = $state<ResolvedRepositoryResponse[] | null>(null);
+let catalog = $state<CatalogRepository[] | null>(null);
 let catalogLoading = $state(false);
 let catalogError = $state<string | null>(null);
 
@@ -89,13 +90,42 @@ async function loadCatalog(): Promise<void> {
   catalogLoading = true;
   catalogError = null;
   try {
-    const repositories = await fetchPluginRepositories();
+    const repositories = await fetchPluginRepositories({ inc: ["plugins"] });
+    // A subscription never refreshed, such as the official catalog on
+    // first-run setup, has stored no plugins yet. One stored before the
+    // server kept the listing lacks `resolved_ref` and the plugin names until
+    // it is refreshed again.
     catalog = await Promise.all(
-      repositories.map((repo) => refreshPluginRepository(repo.id)),
+      repositories.map((repo) =>
+        repo.refreshed_at == null || repo.resolved_ref == null
+          ? refreshPluginRepository(repo.id)
+          : { ...repo, plugins: repo.plugins ?? [] },
+      ),
     );
   } catch (e) {
     catalogError =
       e instanceof Error ? e.message : "Failed to load plugin catalog";
+  } finally {
+    catalogLoading = false;
+  }
+}
+
+// Refreshes every subscription in one request and returns the ones that
+// failed, which keep the plugins they offered before.
+async function refreshCatalog(): Promise<{ name: string; error: string }[]> {
+  catalogLoading = true;
+  catalogError = null;
+  try {
+    const result = await refreshPluginRepositories();
+    catalog = result.repositories;
+    return result.failed.map(({ id, error }) => ({
+      name: result.repositories.find((repo) => repo.id === id)?.name ?? id,
+      error,
+    }));
+  } catch (e) {
+    catalogError =
+      e instanceof Error ? e.message : "Failed to refresh plugin catalog";
+    return [];
   } finally {
     catalogLoading = false;
   }
@@ -126,12 +156,13 @@ function withStatus(
   plugin: PluginPreviewResponse,
   status: CatalogStatus,
 ): PluginPreviewResponse {
-  // Drop the fields of the previous status, such as `requires`.
+  // Drop the fields of the previous status, such as `requires` or `reason`.
   const {
     status: _status,
     requires: _requires,
+    reason: _reason,
     ...preview
-  } = plugin as PluginPreviewResponse & { requires?: string };
+  } = plugin as PluginPreviewResponse & { requires?: string; reason?: string };
   return { ...preview, ...status };
 }
 
@@ -182,6 +213,7 @@ export function getSetup() {
     refresh,
     loadMe,
     loadCatalog,
+    refreshCatalog,
     invalidateCatalog,
     setCatalogStatus,
     clearSession: clearServerScopedState,

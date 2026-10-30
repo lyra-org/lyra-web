@@ -360,7 +360,7 @@ www.meshiplaw.com/lyra.
       case "incompatible":
         return `${text}. No release runs on this server; the latest requires Lyra ${source.requires}.`;
       case "unknown":
-        return `${text}. Its update status is unknown.`;
+        return `${text}. Its update status is unknown: ${source.reason}.`;
     }
   });
 
