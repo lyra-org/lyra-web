@@ -7,14 +7,13 @@ www.meshiplaw.com/lyra.
 
 <script lang="ts">
   import type {
-    OptionResponse,
-    OptionValue,
     ProviderOptionValues,
     ProviderResponse,
     ReleaseResponse,
   } from "./types";
   import { fetchProviders, refreshEntity } from "./api";
   import Modal from "./Modal.svelte";
+  import OptionField, { defaultOptionValue } from "./OptionField.svelte";
 
   interface Props {
     album: ReleaseResponse;
@@ -33,13 +32,6 @@ www.meshiplaw.com/lyra.
     loadProviders();
   });
 
-  function initialValue(option: OptionResponse): OptionValue {
-    if (option.default != null) return option.default;
-    if (option.type === "boolean") return false;
-    if (option.type === "number") return 0;
-    return "";
-  }
-
   async function loadProviders() {
     loading = true;
     error = null;
@@ -50,7 +42,9 @@ www.meshiplaw.com/lyra.
       values = Object.fromEntries(
         providers.map((p) => [
           p.provider_id,
-          Object.fromEntries(p.options.map((o) => [o.name, initialValue(o)])),
+          Object.fromEntries(
+            p.options.map((o) => [o.name, defaultOptionValue(o)]),
+          ),
         ]),
       );
     } catch (err) {
@@ -66,7 +60,7 @@ www.meshiplaw.com/lyra.
     for (const provider of providers) {
       for (const option of provider.options) {
         const value = values[provider.provider_id][option.name];
-        if (option.available && value !== initialValue(option)) {
+        if (option.available && value !== defaultOptionValue(option)) {
           changed[provider.provider_id] ??= {};
           changed[provider.provider_id][option.name] = value;
         }
@@ -88,9 +82,6 @@ www.meshiplaw.com/lyra.
       refreshing = false;
     }
   }
-
-  const inputClass =
-    "w-32 rounded-md border border-slate-300 bg-white px-2 py-1 text-sm text-slate-900 focus:border-slate-500 focus:ring-1 focus:ring-slate-500 focus:outline-none disabled:opacity-50 dark:border-neutral-600 dark:bg-[#1b1d1e] dark:text-neutral-100 dark:focus:border-neutral-400 dark:focus:ring-neutral-400";
 </script>
 
 <Modal title="Refresh with options" subtitle={album.title} {onclose}>
@@ -111,52 +102,10 @@ www.meshiplaw.com/lyra.
           {provider.display_name}
         </h3>
         {#each provider.options as option (option.name)}
-          <label
-            class="flex items-center justify-between gap-3 py-1 text-sm text-slate-700 dark:text-neutral-300"
-            title={option.available
-              ? undefined
-              : (option.unavailable_reason ?? undefined)}
-          >
-            <span class:opacity-50={!option.available}>
-              {option.label}
-              {#if !option.available && option.unavailable_reason}
-                <span class="block text-xs text-slate-400">
-                  {option.unavailable_reason}
-                </span>
-              {/if}
-            </span>
-            {#if option.type === "boolean"}
-              <input
-                type="checkbox"
-                disabled={!option.available}
-                bind:checked={
-                  () => values[provider.provider_id][option.name] === true,
-                  (checked) =>
-                    (values[provider.provider_id][option.name] = checked)
-                }
-              />
-            {:else if option.type === "number"}
-              <input
-                type="number"
-                class={inputClass}
-                disabled={!option.available}
-                bind:value={
-                  () => Number(values[provider.provider_id][option.name]),
-                  (value) => (values[provider.provider_id][option.name] = value)
-                }
-              />
-            {:else}
-              <input
-                type="text"
-                class={inputClass}
-                disabled={!option.available}
-                bind:value={
-                  () => String(values[provider.provider_id][option.name]),
-                  (value) => (values[provider.provider_id][option.name] = value)
-                }
-              />
-            {/if}
-          </label>
+          <OptionField
+            {option}
+            bind:value={values[provider.provider_id][option.name]}
+          />
         {/each}
       </section>
     {/each}

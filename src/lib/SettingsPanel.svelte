@@ -12,6 +12,7 @@ www.meshiplaw.com/lyra.
   import ServerSettings from "./ServerSettings.svelte";
   import ApiKeySettings from "./ApiKeySettings.svelte";
   import PasswordSettings from "./PasswordSettings.svelte";
+  import MixSettings from "./MixSettings.svelte";
   import CloseButton from "./CloseButton.svelte";
   import UserSettings from "./UserSettings.svelte";
   import PluginManagement from "./PluginManagement.svelte";
@@ -57,7 +58,13 @@ www.meshiplaw.com/lyra.
   const auth = getAuth();
   const setup = getSetup();
   let section = $state<
-    "server" | "providers" | "plugins" | "users" | "password" | "api-keys"
+    | "server"
+    | "providers"
+    | "plugins"
+    | "users"
+    | "password"
+    | "api-keys"
+    | "mixing"
   >(
     untrack(() =>
       auth.hasPermission("manage_server")
@@ -766,6 +773,14 @@ www.meshiplaw.com/lyra.
             class:bg-slate-200={section === "api-keys"}
             class:dark:bg-neutral-800={section === "api-keys"}>API keys</button
           >
+          <button
+            type="button"
+            onclick={() => (section = "mixing")}
+            aria-current={section === "mixing" ? "page" : undefined}
+            class="w-full rounded-md px-2 py-2 text-left text-sm font-medium text-slate-700 hover:bg-slate-200 dark:text-neutral-200 dark:hover:bg-neutral-800"
+            class:bg-slate-200={section === "mixing"}
+            class:dark:bg-neutral-800={section === "mixing"}>Mixing</button
+          >
         </nav>
       </aside>
 
@@ -787,6 +802,8 @@ www.meshiplaw.com/lyra.
           <PasswordSettings bind:busy={passwordBusy} />
         {:else if section === "api-keys"}
           <ApiKeySettings bind:busy={apiKeysBusy} />
+        {:else if section === "mixing"}
+          <MixSettings />
         {:else if section === "users" && auth.hasPermission("manage_users")}
           {#key selectedUserId}
             <UserSettings

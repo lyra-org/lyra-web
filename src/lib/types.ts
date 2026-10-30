@@ -126,7 +126,8 @@ export interface EntryResponse {
 
 export type OptionValue = boolean | number | string;
 
-// An option a provider accepts on refresh, as declared by its plugin.
+// An option a provider accepts on refresh, or a mixer on a mix, as declared by
+// its plugin.
 export interface OptionResponse {
   name: string;
   label: string;
@@ -145,6 +146,42 @@ export interface ProviderResponse {
   position: number;
   enabled: boolean;
   options: OptionResponse[];
+}
+
+export type MixSeedType = "track" | "release" | "artist" | "genre" | "playlist";
+
+// What one of a mixer's handlers takes.
+export interface MixHandlerResponse {
+  seeds: MixSeedType[];
+  max_seeds: number;
+  exclude: boolean;
+  query: boolean;
+}
+
+export interface MixerResponse {
+  mixer_id: string;
+  display_name: string;
+  position: number;
+  enabled: boolean;
+  options: OptionResponse[];
+  blend: MixHandlerResponse | null;
+  path: MixHandlerResponse | null;
+}
+
+export interface MixersResponse {
+  builtin: { blend: MixHandlerResponse };
+  mixers: MixerResponse[];
+}
+
+export interface MixRequest {
+  // Public IDs of tracks, releases, artists, genres or playlists.
+  seeds?: string[];
+  from_history?: boolean;
+  // Leads the mix with its single track seed.
+  pin_seed?: boolean;
+  limit?: number;
+  // Option values keyed `<mixer_id>.<name>`.
+  options?: Record<string, OptionValue>;
 }
 
 export type SearchEntityType = "release" | "artist" | "track";

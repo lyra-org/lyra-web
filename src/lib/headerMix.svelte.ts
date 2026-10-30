@@ -5,14 +5,7 @@
 
 import type { TrackResponse } from "./types";
 import type { PlaybackContext } from "./player.svelte.ts";
-import {
-  fetchArtistMix,
-  fetchGenreMix,
-  fetchMeMix,
-  fetchPlaylistMix,
-  fetchReleaseMix,
-  fetchTrackMix,
-} from "./api";
+import { mix } from "./mixOptions";
 
 export type AppRoute =
   | { page: "login" }
@@ -56,37 +49,37 @@ export function headerMixForRoute(
       return {
         label: "Mix from recent",
         title: "Mix from recent listens",
-        load: () => fetchMeMix(),
+        load: () => mix({ from_history: true }),
       };
     case "album":
       return {
         label: "Mix album",
         title: "Album mix",
-        load: () => fetchReleaseMix(route.id),
+        load: () => mix({ seeds: [route.id] }),
       };
     case "artist":
       return {
         label: "Mix artist",
         title: "Artist mix",
-        load: () => fetchArtistMix(route.id),
+        load: () => mix({ seeds: [route.id] }),
       };
     case "genre":
       return {
         label: "Mix genre",
         title: "Genre mix",
-        load: () => fetchGenreMix(route.id),
+        load: () => mix({ seeds: [route.id] }),
       };
     case "playlist":
       return {
         label: "Mix playlist",
         title: "Playlist mix",
-        load: () => fetchPlaylistMix(route.id),
+        load: () => mix({ seeds: [route.id] }),
       };
     case "track":
       return {
         label: "Mix from track",
         title: "Similar tracks",
-        load: () => fetchTrackMix(route.id, { instant: true }),
+        load: () => mix({ seeds: [route.id], pin_seed: true }),
       };
     case "now_playing":
       if (!currentTrack?.id) return null;
@@ -95,7 +88,7 @@ export function headerMixForRoute(
         title: playbackContext?.title
           ? `Similar to ${playbackContext.title}`
           : "Similar tracks",
-        load: () => fetchTrackMix(currentTrack.id!, { instant: true }),
+        load: () => mix({ seeds: [currentTrack.id!], pin_seed: true }),
         startTrack: currentTrack,
         cover: {
           url: playbackContext?.coverUrl ?? null,

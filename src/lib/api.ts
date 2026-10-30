@@ -60,6 +60,8 @@ import type {
   Page,
   PlaybackUrlResponse,
   LyricsResponse,
+  MixRequest,
+  MixersResponse,
 } from "./types";
 import { getAuth } from "./auth.svelte.ts";
 
@@ -301,58 +303,12 @@ export function fetchTrackWithArtists(id: string): Promise<TrackResponse> {
 
 const MIX_INC = "releases,artists,release_covers";
 
-function mixQueryString(opts?: { limit?: number; instant?: boolean }): string {
-  const params = new URLSearchParams({ inc: MIX_INC });
-  if (opts?.limit != null) params.set("limit", String(opts.limit));
-  if (opts?.instant != null) params.set("instant", String(opts.instant));
-  return params.toString();
+export function fetchMix(request: MixRequest): Promise<TrackResponse[]> {
+  return post<TrackResponse[]>(`/mix?inc=${MIX_INC}`, request);
 }
 
-export function fetchMeMix(opts?: {
-  limit?: number;
-}): Promise<TrackResponse[]> {
-  const qs = mixQueryString(opts);
-  return get<TrackResponse[]>(`/me/mix?${qs}`);
-}
-
-export function fetchTrackMix(
-  trackId: string,
-  opts?: { limit?: number; instant?: boolean },
-): Promise<TrackResponse[]> {
-  const qs = mixQueryString(opts);
-  return get<TrackResponse[]>(`/tracks/${trackId}/mix?${qs}`);
-}
-
-export function fetchReleaseMix(
-  releaseId: string,
-  opts?: { limit?: number },
-): Promise<TrackResponse[]> {
-  const qs = mixQueryString(opts);
-  return get<TrackResponse[]>(`/releases/${releaseId}/mix?${qs}`);
-}
-
-export function fetchArtistMix(
-  artistId: string,
-  opts?: { limit?: number },
-): Promise<TrackResponse[]> {
-  const qs = mixQueryString(opts);
-  return get<TrackResponse[]>(`/artists/${artistId}/mix?${qs}`);
-}
-
-export function fetchGenreMix(
-  genreId: string,
-  opts?: { limit?: number },
-): Promise<TrackResponse[]> {
-  const qs = mixQueryString(opts);
-  return get<TrackResponse[]>(`/genres/${genreId}/mix?${qs}`);
-}
-
-export function fetchPlaylistMix(
-  playlistId: string,
-  opts?: { limit?: number },
-): Promise<TrackResponse[]> {
-  const qs = mixQueryString(opts);
-  return get<TrackResponse[]>(`/playlists/${playlistId}/mix?${qs}`);
+export function fetchMixers(): Promise<MixersResponse> {
+  return get<MixersResponse>("/mixers");
 }
 
 export async function fetchTrackForRemote(id: string): Promise<TrackResponse> {
