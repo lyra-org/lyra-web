@@ -33,9 +33,16 @@ www.meshiplaw.com/lyra.
     busy?: boolean;
     // Called after the installed set changed; the parent reloads its list.
     onchange: () => Promise<void> | void;
+    // Called after a check for updates; the parent reloads only its list.
+    onrefresh: () => Promise<void> | void;
   }
 
-  let { plugins, busy = $bindable(false), onchange }: Props = $props();
+  let {
+    plugins,
+    busy = $bindable(false),
+    onchange,
+    onrefresh,
+  }: Props = $props();
 
   const setup = getSetup();
 
@@ -96,24 +103,22 @@ www.meshiplaw.com/lyra.
     }
   }
 
-  async function reloadAfterChange() {
-    await onchange();
-    await setup.loadCatalog();
-  }
-
   // Refreshing the catalog stores the release each repository offers, which
-  // is what the plugin statuses are derived from.
+  // is what the plugin statuses are derived from. A check changes no
+  // settings, so only the plugin list is reloaded.
   async function checkForUpdates() {
     await setup.loadCatalog();
-    await onchange();
+    await onrefresh();
   }
 
   // Without a list the server updates every plugin whose update is not held,
-  // so this never approves scopes.
+  // so this never approves scopes. The server stores the listing it updated
+  // from, and an updated plugin stays installed, so the catalog is not
+  // refreshed.
   function updateAll() {
     return run("update-all", async () => {
       const result = await updatePlugins();
-      await reloadAfterChange();
+      await onchange();
       return updateOutcome(result);
     });
   }
@@ -124,7 +129,7 @@ www.meshiplaw.com/lyra.
     if (release == null) return;
     return run(`approve:${plugin.id}`, async () => {
       const result = await updatePlugins([release]);
-      await reloadAfterChange();
+      await onchange();
       return updateOutcome(result);
     });
   }
@@ -134,7 +139,13 @@ www.meshiplaw.com/lyra.
       const result = await installRepositoryPlugins(entry.repo.id!, [
         { id: entry.plugin.id, commit: entry.plugin.commit! },
       ]);
-      await reloadAfterChange();
+      await onchange();
+      // `up_to_date` is what this repository now reports. Other repositories
+      // listing the plugin compare against their own offer, but the catalog
+      // only needs to know the plugin is no longer available.
+      for (const installed of result.installed) {
+        setup.setCatalogStatus(installed.id, { status: "up_to_date" });
+      }
       const failure = result.failed[0];
       if (failure) throw new Error(`${failure.id}: ${failure.error}`);
       const hold = result.held[0];

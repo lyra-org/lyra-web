@@ -3,7 +3,12 @@
 // You can obtain one here:
 // www.meshiplaw.com/lyra.
 
-import type { ResolvedRepositoryResponse, ServerInfoResponse } from "./types";
+import type {
+  CatalogStatus,
+  PluginPreviewResponse,
+  ResolvedRepositoryResponse,
+  ServerInfoResponse,
+} from "./types";
 import {
   fetchMe,
   fetchPluginRepositories,
@@ -103,6 +108,33 @@ function invalidateCatalog() {
   catalogError = null;
 }
 
+// The server derives a catalog status from whether a plugin with that id is
+// installed, so an install or uninstall changes it in every repository that
+// lists the plugin. Callers apply the change here instead of refreshing every
+// repository.
+function setCatalogStatus(pluginId: string, status: CatalogStatus) {
+  if (catalog == null) return;
+  catalog = catalog.map((repo) => ({
+    ...repo,
+    plugins: repo.plugins.map((plugin) =>
+      plugin.id === pluginId ? withStatus(plugin, status) : plugin,
+    ),
+  }));
+}
+
+function withStatus(
+  plugin: PluginPreviewResponse,
+  status: CatalogStatus,
+): PluginPreviewResponse {
+  // Drop the fields of the previous status, such as `requires`.
+  const {
+    status: _status,
+    requires: _requires,
+    ...preview
+  } = plugin as PluginPreviewResponse & { requires?: string };
+  return { ...preview, ...status };
+}
+
 function reset() {
   info = null;
   infoError = null;
@@ -151,6 +183,7 @@ export function getSetup() {
     loadMe,
     loadCatalog,
     invalidateCatalog,
+    setCatalogStatus,
     clearSession: clearServerScopedState,
     reset,
   };

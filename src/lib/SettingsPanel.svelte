@@ -381,8 +381,8 @@ www.meshiplaw.com/lyra.
       await pluginsChanged();
       // Uninstalling moves the plugin into the catalog's available list;
       // an update only changes the status reported by the plugin list.
-      if (action === "uninstall" && setup.catalog != null) {
-        void setup.loadCatalog();
+      if (action === "uninstall") {
+        setup.setCatalogStatus(plugin.id, { status: "available" });
       }
     } catch (err) {
       lifecycleError =
@@ -800,6 +800,7 @@ www.meshiplaw.com/lyra.
             plugins={managedPlugins}
             bind:busy={pluginsBusy}
             onchange={pluginsChanged}
+            onrefresh={loadPlugins}
           />
         {:else if selectedPlugin == null}
           <div
