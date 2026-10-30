@@ -51,6 +51,7 @@ import type {
   PluginSettingsEntry,
   PluginSettingValue,
   PluginRepositoryResponse,
+  PreviewedPlugin,
   ResolvedRepositoryResponse,
   InstallPluginsResponse,
   UpdatePluginsResponse,
@@ -1086,9 +1087,13 @@ export function restartPlugin(pluginId: string): Promise<void> {
   return post<void>(`/plugins/${encodeURIComponent(pluginId)}/restart`, {});
 }
 
-// Omitting `ids` sends `{}`, which updates every repository-managed plugin.
-export function updatePlugins(ids?: string[]): Promise<UpdatePluginsResponse> {
-  return post<UpdatePluginsResponse>("/plugins/update", { plugins: ids });
+// Each plugin names the release its status offered, which approves the scopes
+// that release adds. Omitting `plugins` sends `{}`, which updates every
+// repository-managed plugin whose update is not held.
+export function updatePlugins(
+  plugins?: PreviewedPlugin[],
+): Promise<UpdatePluginsResponse> {
+  return post<UpdatePluginsResponse>("/plugins/update", { plugins });
 }
 
 export function uninstallPlugin(pluginId: string): Promise<void> {
@@ -1156,7 +1161,7 @@ export function refreshPluginRepository(
 // repository provides.
 export function installRepositoryPlugins(
   repositoryId: string,
-  plugins: string[],
+  plugins: PreviewedPlugin[],
 ): Promise<InstallPluginsResponse> {
   return post<InstallPluginsResponse>(
     `/plugins/repositories/${encodeURIComponent(repositoryId)}/install`,

@@ -10,6 +10,7 @@ www.meshiplaw.com/lyra.
   import type {
     FailedInstallResponse,
     InstalledPluginResponse,
+    PreviewedPlugin,
     ResolvedRepositoryResponse,
   } from "./types";
   import { installRepositoryPlugins, updateServerSetup } from "./api";
@@ -60,14 +61,16 @@ www.meshiplaw.com/lyra.
 
   function selectionsByRepository(): {
     repo: ResolvedRepositoryResponse;
-    plugins: string[];
+    plugins: PreviewedPlugin[];
   }[] {
     return (setup.catalog ?? [])
       .map((repo) => ({
         repo,
-        plugins: repo.plugins
-          .filter((p) => selected[key(repo, p.id)])
-          .map((p) => p.id),
+        plugins: repo.plugins.flatMap((p) =>
+          selected[key(repo, p.id)] && p.commit
+            ? [{ id: p.id, commit: p.commit }]
+            : [],
+        ),
       }))
       .filter((s) => s.plugins.length > 0);
   }
@@ -229,27 +232,32 @@ www.meshiplaw.com/lyra.
             {#each repo.plugins as plugin (plugin.id)}
               {@const k = key(repo, plugin.id)}
               {@const installed = plugin.status !== "available"}
+              {@const unavailable =
+                !installed && (!plugin.commit || !!plugin.error)}
               <li>
                 <label
                   class="flex cursor-pointer gap-3 rounded-lg bg-white p-4 shadow-sm transition-shadow hover:shadow-md dark:bg-[#1b1d1e] dark:shadow-black/30"
-                  class:opacity-60={installed}
+                  class:opacity-60={installed || unavailable}
                 >
                   <input
                     type="checkbox"
                     class="mt-1 h-4 w-4 shrink-0 accent-[#BB7FB5]"
                     checked={installed || !!selected[k]}
-                    disabled={installed || busy}
+                    disabled={installed || unavailable || busy}
                     onchange={(e) => toggle(k, e.currentTarget.checked)}
                   />
                   <div class="min-w-0 flex-1">
                     <div class="flex flex-wrap items-baseline gap-x-2">
                       <span
                         class="font-medium text-slate-900 dark:text-neutral-100"
-                        >{plugin.name}</span
+                        >{plugin.name || plugin.id}</span
                       >
-                      <span class="text-xs text-slate-400 dark:text-neutral-500"
-                        >v{plugin.version}</span
-                      >
+                      {#if plugin.version}
+                        <span
+                          class="text-xs text-slate-400 dark:text-neutral-500"
+                          >v{plugin.version}</span
+                        >
+                      {/if}
                       {#if installed}
                         <span
                           class="text-xs text-slate-500 dark:text-neutral-400"
@@ -262,6 +270,11 @@ www.meshiplaw.com/lyra.
                         class="mt-1 text-sm text-slate-600 dark:text-neutral-400"
                       >
                         {plugin.description}
+                      </p>
+                    {/if}
+                    {#if plugin.error}
+                      <p class="mt-1 text-sm text-red-600 dark:text-red-400">
+                        {plugin.error}
                       </p>
                     {/if}
                     {#if plugin.scopes.length > 0}

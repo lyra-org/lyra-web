@@ -20,6 +20,13 @@ www.meshiplaw.com/lyra.
     updatePlugins,
   } from "./api";
   import { getSetup } from "./setup.svelte.ts";
+  import {
+    describeHold,
+    isAwaitingApproval,
+    offeredRelease,
+    updateOutcome,
+  } from "./pluginUpdates.svelte.ts";
+  import PluginHoldNotice from "./PluginHoldNotice.svelte";
 
   interface Props {
     plugins: PluginManifestResponse[];
@@ -63,11 +70,11 @@ www.meshiplaw.com/lyra.
 
   let outdated = $derived(
     plugins.filter(
-      (plugin) =>
-        plugin.source.kind === "repository" &&
-        plugin.source.status === "update_available",
+      (plugin) => offeredRelease(plugin) != null && !isAwaitingApproval(plugin),
     ),
   );
+
+  let held = $derived(plugins.filter(isAwaitingApproval));
 
   onMount(() => {
     if (setup.catalog == null && !setup.catalogLoading) {
@@ -94,36 +101,48 @@ www.meshiplaw.com/lyra.
     await setup.loadCatalog();
   }
 
-  // Refreshing the catalog stores each repository's latest commit, which
+  // Refreshing the catalog stores the release each repository offers, which
   // is what the plugin statuses are derived from.
   async function checkForUpdates() {
     await setup.loadCatalog();
     await onchange();
   }
 
+  // Without a list the server updates every plugin whose update is not held,
+  // so this never approves scopes.
   function updateAll() {
-    const targets = outdated;
     return run("update-all", async () => {
-      const result = await updatePlugins(targets.map((plugin) => plugin.id));
+      const result = await updatePlugins();
       await reloadAfterChange();
-      const count = result.updated.length;
-      const summary = `Updated ${count} plugin${count === 1 ? "" : "s"}.`;
-      const failure = result.failed[0];
-      if (failure) {
-        throw new Error(`${summary} ${failure.id}: ${failure.error}`);
-      }
-      return summary;
+      return updateOutcome(result);
+    });
+  }
+
+  // Naming the held release in the request grants the scopes it adds.
+  function approve(plugin: PluginManifestResponse) {
+    const release = offeredRelease(plugin);
+    if (release == null) return;
+    return run(`approve:${plugin.id}`, async () => {
+      const result = await updatePlugins([release]);
+      await reloadAfterChange();
+      return updateOutcome(result);
     });
   }
 
   function install(entry: CatalogEntry) {
     return run(`install:${entry.plugin.id}`, async () => {
       const result = await installRepositoryPlugins(entry.repo.id!, [
-        entry.plugin.id,
+        { id: entry.plugin.id, commit: entry.plugin.commit! },
       ]);
       await reloadAfterChange();
       const failure = result.failed[0];
       if (failure) throw new Error(`${failure.id}: ${failure.error}`);
+      const hold = result.held[0];
+      if (hold) {
+        throw new Error(
+          `${hold.id}: ${describeHold(hold.hold, hold.release.version)}`,
+        );
+      }
       return `Installed ${entry.plugin.name}.`;
     });
   }
@@ -232,6 +251,45 @@ www.meshiplaw.com/lyra.
     </p>
   {/if}
 
+  {#if held.length > 0}
+    <section class="space-y-2">
+      <h4 class={headingClass}>Waiting for approval</h4>
+      <p class={mutedClass}>These updates were not installed automatically.</p>
+      <ul class="divide-y divide-slate-200 dark:divide-neutral-800">
+        {#each held as plugin (plugin.id)}
+          {#if plugin.source.kind === "repository" && plugin.source.hold && plugin.source.offered}
+            <li class="flex flex-wrap items-start justify-between gap-3 py-4">
+              <div class="min-w-0 flex-1 space-y-1">
+                <div class="flex flex-wrap items-baseline gap-x-2">
+                  <span class="text-sm font-medium">{plugin.name}</span>
+                  <span class="text-xs text-slate-400 dark:text-neutral-500"
+                    >v{plugin.version} → v{plugin.source.offered.version}</span
+                  >
+                </div>
+                <PluginHoldNotice
+                  hold={plugin.source.hold}
+                  version={plugin.source.offered.version}
+                />
+              </div>
+              {#if plugin.source.hold.reason === "adds_scopes"}
+                <button
+                  type="button"
+                  class={primaryClass}
+                  {disabled}
+                  onclick={() => approve(plugin)}
+                >
+                  {pending === `approve:${plugin.id}`
+                    ? "Updating…"
+                    : "Approve and update"}
+                </button>
+              {/if}
+            </li>
+          {/if}
+        {/each}
+      </ul>
+    </section>
+  {/if}
+
   <section class="space-y-2">
     <h4 class={headingClass}>Available</h4>
     {#if setup.catalog == null}
@@ -256,26 +314,39 @@ www.meshiplaw.com/lyra.
             <li class="flex flex-wrap items-start justify-between gap-3 py-4">
               <div class="min-w-0 flex-1">
                 <div class="flex flex-wrap items-baseline gap-x-2">
-                  <span class="text-sm font-medium">{plugin.name}</span>
-                  <span class="text-xs text-slate-400 dark:text-neutral-500"
-                    >v{plugin.version}</span
+                  <span class="text-sm font-medium"
+                    >{plugin.name || plugin.id}</span
                   >
+                  {#if plugin.version}
+                    <span class="text-xs text-slate-400 dark:text-neutral-500"
+                      >v{plugin.version}</span
+                    >
+                  {/if}
                 </div>
                 {#if plugin.description}
                   <p class="mt-1 text-sm text-slate-600 dark:text-neutral-400">
                     {plugin.description}
                   </p>
                 {/if}
+                {#if plugin.error}
+                  <p class="mt-1 text-sm text-red-600 dark:text-red-400">
+                    {plugin.error}
+                  </p>
+                {/if}
                 {@render scopes(plugin.scopes)}
               </div>
-              <button
-                type="button"
-                class={primaryClass}
-                {disabled}
-                onclick={() => install({ repo: group.repo, plugin })}
-              >
-                {pending === `install:${plugin.id}` ? "Installing…" : "Install"}
-              </button>
+              {#if plugin.commit && !plugin.error}
+                <button
+                  type="button"
+                  class={primaryClass}
+                  {disabled}
+                  onclick={() => install({ repo: group.repo, plugin })}
+                >
+                  {pending === `install:${plugin.id}`
+                    ? "Installing…"
+                    : "Install"}
+                </button>
+              {/if}
             </li>
           {/each}
         </ul>

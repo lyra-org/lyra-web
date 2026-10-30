@@ -39,6 +39,12 @@ www.meshiplaw.com/lyra.
     updatePlugins,
   } from "./api";
   import { getSetup } from "./setup.svelte.ts";
+  import {
+    getPluginUpdates,
+    offeredRelease,
+    updateOutcome,
+  } from "./pluginUpdates.svelte.ts";
+  import PluginHoldNotice from "./PluginHoldNotice.svelte";
 
   interface Props {
     onclose: () => void;
@@ -121,6 +127,7 @@ www.meshiplaw.com/lyra.
   });
   let pluginsExpanded = $state(false);
   const canManagePlugins = $derived(auth.hasPermission("manage_plugins"));
+  const pluginUpdates = getPluginUpdates();
   let loadingPlugins = $state(true);
   let pluginsError = $state<string | null>(null);
 
@@ -185,6 +192,7 @@ www.meshiplaw.com/lyra.
     try {
       if (canManagePlugins) {
         managedPlugins = await fetchPlugins();
+        pluginUpdates.track(managedPlugins);
       } else {
         await loadEntries("user", true);
         pluginsError = errorByScope.user;
@@ -337,12 +345,23 @@ www.meshiplaw.com/lyra.
     }
     const source = selectedPluginSource;
     if (source == null) return null;
-    let text = `Installed from ${source.origin.replace(/^https?:\/\//, "")}, ${source.pinned ? "pinned to" : "tracking"} ${source.ref ?? "the default branch"}`;
-    if (source.commit) text += ` (${source.commit.slice(0, 7)})`;
-    if (source.status === "update_available")
-      return `${text}. An update is available.`;
-    if (source.status === "up_to_date") return `${text}. Up to date.`;
-    return `${text}.`;
+    let text = `Installed from ${source.origin.replace(/^https?:\/\//, "")}, ${source.pinned ? "pinned to" : "tracking"} ${source.ref ?? "the default branch"} (${source.commit.slice(0, 7)})`;
+    if (source.installed_automatically && source.installed_at) {
+      text += `. Updated automatically on ${new Date(source.installed_at).toLocaleDateString()}`;
+    }
+    switch (source.status) {
+      case "update_available":
+        if (source.hold) return `${text}.`;
+        return source.offered
+          ? `${text}. Version ${source.offered.version} is available.`
+          : `${text}. An update is available.`;
+      case "up_to_date":
+        return `${text}. Up to date.`;
+      case "incompatible":
+        return `${text}. No release runs on this server; the latest requires Lyra ${source.requires}.`;
+      case "unknown":
+        return `${text}. Its update status is unknown.`;
+    }
   });
 
   async function runLifecycle(
@@ -376,13 +395,14 @@ www.meshiplaw.com/lyra.
 
   function update() {
     return runLifecycle("update", async (plugin) => {
-      const result = await updatePlugins([plugin.id]);
-      const failure = result.failed[0];
-      if (failure) throw new Error(failure.error);
+      const release = offeredRelease(plugin);
+      if (release == null) return "Already up to date.";
+      const result = await updatePlugins([release]);
       const updated = result.updated[0];
-      return updated
-        ? `Updated to v${updated.version}.`
-        : "Already up to date.";
+      if (updated && result.failed.length === 0) {
+        return `Updated to v${updated.version}.`;
+      }
+      return updateOutcome(result);
     });
   }
 
@@ -905,18 +925,24 @@ www.meshiplaw.com/lyra.
                     {sourceDescription}
                   </p>
                 {/if}
+                {#if selectedPluginSource?.hold && selectedPluginSource.offered}
+                  <PluginHoldNotice
+                    hold={selectedPluginSource.hold}
+                    version={selectedPluginSource.offered.version}
+                  />
+                {/if}
                 <div class="flex flex-wrap gap-2">
-                  {#if selectedPluginSource && !selectedPluginSource.pinned}
+                  {#if selectedPluginSource?.status === "update_available" && selectedPluginSource.offered && (selectedPluginSource.hold == null || selectedPluginSource.hold.reason === "adds_scopes")}
                     <button
                       type="button"
                       onclick={update}
                       disabled={saving}
-                      class={selectedPluginSource.status === "update_available"
-                        ? "rounded-md bg-[#E6CEE3] px-4 py-2 text-sm font-medium text-slate-900 hover:bg-[#d4b5cf] disabled:opacity-50 dark:bg-[#BB7FB5] dark:text-white dark:hover:bg-[#cfa2c9]"
-                        : "rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 disabled:opacity-50 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-800"}
+                      class="rounded-md bg-[#E6CEE3] px-4 py-2 text-sm font-medium text-slate-900 hover:bg-[#d4b5cf] disabled:opacity-50 dark:bg-[#BB7FB5] dark:text-white dark:hover:bg-[#cfa2c9]"
                       >{lifecycleAction === "update"
                         ? "Updating…"
-                        : "Update plugin"}</button
+                        : selectedPluginSource.hold
+                          ? `Approve and update to v${selectedPluginSource.offered.version}`
+                          : `Update to v${selectedPluginSource.offered.version}`}</button
                     >
                   {/if}
                   <button

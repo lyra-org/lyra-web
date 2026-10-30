@@ -29,6 +29,7 @@ www.meshiplaw.com/lyra.
   import { onMount, untrack } from "svelte";
   import { getAuth } from "./lib/auth.svelte.ts";
   import { getSetup } from "./lib/setup.svelte.ts";
+  import { getPluginUpdates } from "./lib/pluginUpdates.svelte.ts";
   import { getPlayer } from "./lib/player.svelte.ts";
   import { getTheme } from "./lib/theme.svelte.ts";
   import {
@@ -44,6 +45,7 @@ www.meshiplaw.com/lyra.
 
   const auth = getAuth();
   const setup = getSetup();
+  const pluginUpdates = getPluginUpdates();
   const theme = getTheme();
   const remote = getRemote();
   const player = getPlayer();
@@ -91,6 +93,7 @@ www.meshiplaw.com/lyra.
     const token = auth.token;
     if (token == null) {
       setup.clearSession();
+      pluginUpdates.clear();
       return;
     }
     if (
@@ -98,6 +101,14 @@ www.meshiplaw.com/lyra.
       (setup.meLoadedFor !== token && !setup.meLoading && setup.meError == null)
     ) {
       setup.loadMe();
+    }
+  });
+
+  // Count the updates the server's daily check held for an admin once the
+  // account's permissions are known.
+  $effect(() => {
+    if (auth.token != null && setup.meLoadedFor === auth.token) {
+      void pluginUpdates.load();
     }
   });
 
@@ -574,9 +585,11 @@ www.meshiplaw.com/lyra.
         </button>
         <button
           type="button"
-          aria-label="Open settings"
+          aria-label={pluginUpdates.awaitingApproval > 0
+            ? `Open settings (${pluginUpdates.awaitingApproval} plugin update${pluginUpdates.awaitingApproval === 1 ? "" : "s"} waiting for approval)`
+            : "Open settings"}
           title="Settings"
-          class="flex h-8 w-8 items-center justify-center rounded-full text-slate-500 hover:bg-slate-100 hover:text-slate-700 dark:text-neutral-400 dark:hover:bg-neutral-700 dark:hover:text-neutral-200"
+          class="relative flex h-8 w-8 items-center justify-center rounded-full text-slate-500 hover:bg-slate-100 hover:text-slate-700 dark:text-neutral-400 dark:hover:bg-neutral-700 dark:hover:text-neutral-200"
           onclick={() => (settingsOpen = true)}
         >
           <svg
@@ -594,6 +607,12 @@ www.meshiplaw.com/lyra.
               d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09a1.65 1.65 0 00-1.08-1.51 1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 110-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 114 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51 1z"
             />
           </svg>
+          {#if pluginUpdates.awaitingApproval > 0}
+            <span
+              class="absolute -top-0.5 -right-0.5 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-[#E6CEE3] px-1 text-[9px] font-semibold text-slate-900 dark:bg-[#BB7FB5] dark:text-white"
+              >{pluginUpdates.awaitingApproval}</span
+            >
+          {/if}
         </button>
         <button
           class="text-sm text-slate-500 hover:text-slate-700 dark:text-neutral-400 dark:hover:text-neutral-200"

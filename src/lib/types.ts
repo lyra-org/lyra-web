@@ -543,21 +543,83 @@ export interface PluginManifestResponse {
 export type PluginSourceResponse =
   | { kind: "local" }
   | { kind: "invalid"; error: string }
-  | {
-      kind: "repository";
-      origin: string;
-      ref?: string | null;
-      commit?: string | null;
-      // Tag and commit installs never move; branch installs track new commits.
-      pinned: boolean;
-      // Installed commit compared with the commit stored for the subscribed
-      // repository of the same origin and ref; no forge call is made.
-      status: Extract<
-        CatalogStatus,
-        "up_to_date" | "update_available" | "unknown"
-      >;
-      installed_at?: string | null;
-    };
+  | ({ kind: "repository" } & RepositorySourceResponse & UpdateStatus);
+
+export interface RepositorySourceResponse {
+  origin: string;
+  ref?: string | null;
+  version: string;
+  commit: string;
+  // Tag and commit installs never move; branch installs track new releases.
+  pinned: boolean;
+  // The release the subscribed repository offered at its last refresh or
+  // daily check.
+  offered?: OfferedReleaseResponse | null;
+  // Why an available update waits for an admin.
+  hold?: PluginHold | null;
+  installed_at?: string | null;
+  // Set when the daily check, not a person, installed the release.
+  installed_automatically: boolean;
+}
+
+// Compares the installed version with the offered release; no forge call is
+// made. Pinned plugins are always `up_to_date`. `incompatible`: no release
+// runs on this server, and `requires` names the requirement excluding it.
+// `unknown`: no subscription with the same origin and ref lists the plugin, or
+// its repository has no offer for it.
+export type UpdateStatus =
+  | { status: "up_to_date" }
+  | { status: "update_available" }
+  | { status: "incompatible"; requires: string }
+  | { status: "unknown" };
+
+export interface OfferedReleaseResponse {
+  version: string;
+  // An update request names this commit to approve the release.
+  commit: string;
+  scopes: string[];
+}
+
+// An update request naming the release approves an `adds_scopes` hold. The
+// other holds apply no update until the plugins involved change.
+export type PluginHold =
+  | { reason: "adds_scopes"; gains: ScopeGainResponse[] }
+  | { reason: "breaks_dependents"; dependents: PluginRequirement[] }
+  | { reason: "unmet_dependencies"; dependencies: PluginRequirement[] }
+  | { reason: "dependency_cycle"; plugins: string[] };
+
+// What one plugin would newly reach.
+export interface ScopeGainResponse {
+  plugin: string;
+  risk: PluginRisk;
+  effects: PluginEffect[];
+  scopes: string[];
+  // Dependencies whose scopes are unknown because they are not installed.
+  unresolved_dependencies: string[];
+}
+
+export interface PluginRequirement {
+  id: string;
+  requires: string;
+}
+
+// `high`: adds endpoints or handles credentials. `elevated`: can send data off
+// the server and touch personal or library data.
+export type PluginRisk = "standard" | "elevated" | "high";
+
+export interface PluginEffect {
+  kind:
+    | "egress"
+    | "exposes"
+    | "authority"
+    | "reads_personal"
+    | "writes_personal"
+    | "writes_library";
+  // The data concerned, for the personal and library kinds.
+  data?: string | null;
+  // The plugins whose scopes give the effect.
+  via?: string[];
+}
 
 export interface ChoiceOptionResponse {
   value: string;
@@ -756,26 +818,39 @@ export interface PluginRepositoryResponse {
   refreshed_at?: string | null;
 }
 
-// `unknown`: installed from a repository but no commit is recorded on one
-// side. `local`: installed without a source record.
+// `unknown`: the source record cannot be read, or the repository has no offer
+// for the plugin. `local`: installed without a source record.
 export type CatalogStatus =
-  | "available"
-  | "up_to_date"
-  | "update_available"
-  | "unknown"
-  | "local";
+  | { status: "available" }
+  | UpdateStatus
+  | { status: "local" };
 
-export interface PluginPreviewResponse {
+export type PluginPreviewResponse = {
   id: string;
   name: string;
   version: string;
   description: string;
-  // Capability scopes the plugin will be granted when installed.
+  // Capability scopes the release declares, which installing it grants.
   scopes: string[];
+  access?: PluginAccessResponse | null;
+  // The release an install takes; requests name it with the plugin id.
   commit?: string | null;
-  status: CatalogStatus;
   // Present only when the repository index points at another repository.
   source?: { origin: string } | null;
+  // Why the plugin has no installable release; `name`, `version`,
+  // `description` and `scopes` are then empty.
+  error?: string | null;
+} & CatalogStatus;
+
+// What a plugin could do once installed, through its own scopes and those of
+// every plugin it depends on.
+export interface PluginAccessResponse {
+  risk: PluginRisk;
+  effects: PluginEffect[];
+  scopes: { scope: string; via: string[] }[];
+  unresolved_dependencies: string[];
+  // Installed plugins that would reach more once this one is installed.
+  widens: ScopeGainResponse[];
 }
 
 // `id` is present only for subscribed repositories, `refreshed_at` only once
@@ -792,10 +867,16 @@ export interface ResolvedRepositoryResponse {
   plugins: PluginPreviewResponse[];
 }
 
+// A plugin bound to the release its preview or status showed.
+export interface PreviewedPlugin {
+  id: string;
+  commit: string;
+}
+
 export interface InstalledPluginResponse {
   id: string;
   version: string;
-  commit?: string | null;
+  commit: string;
 }
 
 export interface FailedInstallResponse {
@@ -803,20 +884,24 @@ export interface FailedInstallResponse {
   error: string;
 }
 
+export interface HeldPluginResponse {
+  id: string;
+  release: OfferedReleaseResponse;
+  hold: PluginHold;
+}
+
 export interface InstallPluginsResponse {
   installed: InstalledPluginResponse[];
+  // Reinstalls that would leave a plugin unable to load.
+  held: HeldPluginResponse[];
   failed: FailedInstallResponse[];
 }
 
-export interface UpdatedPluginResponse {
-  id: string;
-  version: string;
-  commit?: string | null;
-}
-
 export interface UpdatePluginsResponse {
-  updated: UpdatedPluginResponse[];
+  updated: InstalledPluginResponse[];
   up_to_date: string[];
+  incompatible: PluginRequirement[];
+  held: HeldPluginResponse[];
   failed: FailedInstallResponse[];
 }
 
