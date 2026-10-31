@@ -12,6 +12,7 @@ www.meshiplaw.com/lyra.
     createUser,
     deleteUser,
     fetchRoles,
+    setUserPassword,
     updateUserRole,
     fetchMe,
   } from "./api";
@@ -45,7 +46,12 @@ www.meshiplaw.com/lyra.
   let confirmation = $state("");
   let creating = $state(false);
   let deletingId = $state<string | null>(null);
-  let busy = $derived(creating || deletingId !== null || savingRole);
+  let newPassword = $state("");
+  let newConfirmation = $state("");
+  let settingPassword = $state(false);
+  let busy = $derived(
+    creating || deletingId !== null || savingRole || settingPassword,
+  );
 
   const inputClass =
     "w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:ring-2 focus:ring-[#BB7FB5] focus:outline-none dark:border-neutral-600 dark:bg-[#1b1d1e] dark:text-neutral-100";
@@ -133,6 +139,48 @@ www.meshiplaw.com/lyra.
           : "Unable to add user. Check your connection and permissions, then try again.";
     } finally {
       creating = false;
+    }
+  }
+
+  async function setPasswordFor(e: SubmitEvent) {
+    e.preventDefault();
+    if (
+      !user ||
+      busy ||
+      user.id === auth.me?.id ||
+      !auth.hasPermission("manage_users")
+    )
+      return;
+    error = null;
+    message = null;
+    if (newPassword.length < 8 || /[^\x00-\x7F]/.test(newPassword)) {
+      error = "Use a password with at least 8 ASCII characters.";
+      return;
+    }
+    if (newPassword !== newConfirmation) {
+      error = "Passwords do not match.";
+      return;
+    }
+    const target = user;
+    if (
+      !window.confirm(
+        `Set ${target.username}’s password? They will be signed out everywhere and all of their API keys will be revoked.`,
+      )
+    )
+      return;
+    settingPassword = true;
+    try {
+      await setUserPassword(target.id, newPassword);
+      newPassword = "";
+      newConfirmation = "";
+      message = `Set ${target.username}’s password. Their sessions were signed out and API keys were revoked.`;
+    } catch (err) {
+      error =
+        err instanceof ApiError && err.status === 403
+          ? "Unable to set this password. Only administrators can set another administrator’s password."
+          : "Unable to set password. Check your connection and try again.";
+    } finally {
+      settingPassword = false;
     }
   }
 
@@ -228,6 +276,59 @@ www.meshiplaw.com/lyra.
         >
       {/if}
     </form>
+    {#if auth.hasPermission("manage_users")}
+      {#if user.id === auth.me?.id}
+        <p class="text-sm text-slate-600 dark:text-neutral-300">
+          Change your own password in Account › Password.
+        </p>
+      {:else}
+        <form class="max-w-md space-y-4" onsubmit={setPasswordFor}>
+          <fieldset disabled={busy} class="space-y-4 disabled:opacity-60">
+            <div>
+              <label
+                for="set-password"
+                class="mb-1 block text-sm font-medium text-slate-700 dark:text-neutral-300"
+                >New password</label
+              >
+              <input
+                id="set-password"
+                type="password"
+                bind:value={newPassword}
+                required
+                minlength={8}
+                autocomplete="new-password"
+                class={inputClass}
+              />
+            </div>
+            <div>
+              <label
+                for="set-password-confirmation"
+                class="mb-1 block text-sm font-medium text-slate-700 dark:text-neutral-300"
+                >Confirm new password</label
+              >
+              <input
+                id="set-password-confirmation"
+                type="password"
+                bind:value={newConfirmation}
+                required
+                minlength={8}
+                autocomplete="new-password"
+                class={inputClass}
+              />
+            </div>
+            <p class="text-sm text-slate-600 dark:text-neutral-300">
+              Setting a password signs this user out everywhere and revokes all
+              of their API keys.
+            </p>
+            <button
+              type="submit"
+              class="rounded-md bg-[#E6CEE3] px-4 py-2 text-sm font-medium text-slate-900 hover:bg-[#d4b5cf] dark:bg-[#BB7FB5] dark:text-white dark:hover:bg-[#cfa2c9]"
+              >{settingPassword ? "Setting…" : "Set password"}</button
+            >
+          </fieldset>
+        </form>
+      {/if}
+    {/if}
     <div class="space-y-3">
       <p class="text-sm text-slate-600 dark:text-neutral-300">
         {user.id === auth.me?.id

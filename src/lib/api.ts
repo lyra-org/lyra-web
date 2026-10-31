@@ -1024,6 +1024,15 @@ export function updateUserRole(userId: string, role: string): Promise<void> {
   return put<void>(`/users/${encodeURIComponent(userId)}/role`, { role });
 }
 
+export function setUserPassword(
+  userId: string,
+  password: string,
+): Promise<void> {
+  return put<void>(`/users/${encodeURIComponent(userId)}/password`, {
+    password,
+  });
+}
+
 export function fetchUsers(): Promise<PublicUser[]> {
   return get<PublicUser[]>("/users");
 }
