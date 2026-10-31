@@ -28,6 +28,7 @@ www.meshiplaw.com/lyra.
     track_count: "Track count",
     total_duration: "Total duration",
     duration: "Duration",
+    favorited_at: "Date favorited",
   };
 
   let directionLabels = $derived(
@@ -39,6 +40,7 @@ www.meshiplaw.com/lyra.
             "updated_at",
             "release_date",
             "last_played_at",
+            "favorited_at",
           ].includes(sortBy)
         ? ["Oldest first", "Newest first"]
         : ["duration", "total_duration"].includes(sortBy)

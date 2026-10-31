@@ -546,18 +546,6 @@ export interface PlaybackUrlResponse {
   idle_expires_after_seconds: number;
 }
 
-export type EntityParam = "track" | "release" | "artist" | "playlist";
-
-export interface FavoriteItem {
-  target_id: string;
-  entity: string;
-  // RFC 3339 timestamps.
-  first_favorited_at: string;
-  last_refreshed_at: string;
-}
-
-export type FavoriteListResponse = Page<FavoriteItem>;
-
 export interface FavoriteStateResponse {
   favorited: boolean;
 }

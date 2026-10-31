@@ -11,7 +11,13 @@ www.meshiplaw.com/lyra.
   import { genreGradient, genreCoverObjectPosition } from "./genreStyle";
   import BlurhashCanvas from "./BlurhashCanvas.svelte";
   import SortControls from "./SortControls.svelte";
-  import { savedSort } from "./sort.svelte.ts";
+  import FilterControl from "./FilterControl.svelte";
+  import {
+    listFilterOptions,
+    listFilters,
+    savedFilter,
+    savedSort,
+  } from "./sort.svelte.ts";
   import PaginatedList from "./PaginatedList.svelte";
   import AlbumCard from "./AlbumCard.svelte";
 
@@ -59,6 +65,10 @@ www.meshiplaw.com/lyra.
     sortBy: "release_date",
     sortOrder: "descending",
   });
+  const filter = savedFilter(
+    "genre/albums",
+    listFilterOptions.map((option) => option.value),
+  );
 </script>
 
 {#if loading}
@@ -164,9 +174,11 @@ www.meshiplaw.com/lyra.
         Albums
       </h3>
       <PaginatedList
-        scope={`${genreId}/${libraryId ?? ""}/${sort.sortBy}/${sort.sortOrder}`}
+        scope={`${genreId}/${libraryId ?? ""}/${sort.sortBy}/${sort.sortOrder}/${filter.value}`}
         label="albums"
-        empty="No albums tagged with this genre."
+        empty={filter.value === "all"
+          ? "No albums tagged with this genre."
+          : "No matching albums."}
         loadPage={(cursor, limit) =>
           fetchReleases({
             genreId,
@@ -175,14 +187,21 @@ www.meshiplaw.com/lyra.
             limit,
             sortBy: sort.sortBy,
             sortOrder: sort.sortOrder,
+            filter: listFilters[filter.value],
           })}
       >
         {#snippet toolbar()}
-          <SortControls
-            kind="albums"
-            bind:sortBy={sort.sortBy}
-            bind:sortOrder={sort.sortOrder}
-          />
+          <div class="flex flex-wrap items-center gap-2">
+            <SortControls
+              kind="albums"
+              bind:sortBy={sort.sortBy}
+              bind:sortOrder={sort.sortOrder}
+            />
+            <FilterControl
+              options={listFilterOptions}
+              bind:value={filter.value}
+            />
+          </div>
         {/snippet}
         {#snippet children(albums)}
           <div

@@ -8,7 +8,13 @@ www.meshiplaw.com/lyra.
 <script lang="ts">
   import { untrack } from "svelte";
   import SortControls from "./SortControls.svelte";
-  import { savedSort } from "./sort.svelte.ts";
+  import FilterControl from "./FilterControl.svelte";
+  import {
+    listFilterOptions,
+    listFilters,
+    savedFilter,
+    savedSort,
+  } from "./sort.svelte.ts";
   import PaginatedList from "./PaginatedList.svelte";
   import { fetchArtists } from "./api";
   import ArtistCard from "./ArtistCard.svelte";
@@ -22,12 +28,18 @@ www.meshiplaw.com/lyra.
     untrack(() => `library/${libraryId}/artists`),
     "artists",
   );
+  const filter = savedFilter(
+    untrack(() => `library/${libraryId}/artists`),
+    listFilterOptions.map((option) => option.value),
+  );
 </script>
 
 <PaginatedList
-  scope={`${libraryId}/${sort.sortBy}/${sort.sortOrder}`}
+  scope={`${libraryId}/${sort.sortBy}/${sort.sortOrder}/${filter.value}`}
   label="artists"
-  empty="No artists in this library."
+  empty={filter.value === "all"
+    ? "No artists in this library."
+    : "No matching artists."}
   loadPage={(cursor, limit) =>
     fetchArtists({
       libraryId,
@@ -35,14 +47,18 @@ www.meshiplaw.com/lyra.
       limit,
       sortBy: sort.sortBy,
       sortOrder: sort.sortOrder,
+      filter: listFilters[filter.value],
     })}
 >
   {#snippet toolbar()}
-    <SortControls
-      kind="artists"
-      bind:sortBy={sort.sortBy}
-      bind:sortOrder={sort.sortOrder}
-    />
+    <div class="flex flex-wrap items-center gap-2">
+      <SortControls
+        kind="artists"
+        bind:sortBy={sort.sortBy}
+        bind:sortOrder={sort.sortOrder}
+      />
+      <FilterControl options={listFilterOptions} bind:value={filter.value} />
+    </div>
   {/snippet}
   {#snippet children(artists)}
     <div

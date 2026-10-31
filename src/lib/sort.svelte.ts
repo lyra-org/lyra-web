@@ -3,6 +3,7 @@
 // You can obtain one here:
 // www.meshiplaw.com/lyra.
 
+import type { ListFilter } from "./api";
 import { getAuth } from "./auth.svelte.ts";
 
 export type SortKind = "albums" | "artists" | "tracks" | "genres" | "playlists";
@@ -21,6 +22,7 @@ export const sortFields: Record<SortKind, string[]> = {
     "last_played_at",
     "listen_count",
     "total_duration",
+    "favorited_at",
   ],
   artists: [
     "name",
@@ -30,6 +32,7 @@ export const sortFields: Record<SortKind, string[]> = {
     "release_count",
     "track_count",
     "total_duration",
+    "favorited_at",
   ],
   tracks: [
     "name",
@@ -37,6 +40,7 @@ export const sortFields: Record<SortKind, string[]> = {
     "last_played_at",
     "listen_count",
     "duration",
+    "favorited_at",
   ],
   genres: [
     "name",
@@ -52,10 +56,28 @@ export const sortFields: Record<SortKind, string[]> = {
     "updated_at",
     "track_count",
     "total_duration",
+    "favorited_at",
   ],
 };
 
+export const listFilters = {
+  all: {},
+  favorites: { favorite: true },
+  played: { listened: true },
+  unplayed: { listened: false },
+} satisfies Record<string, ListFilter>;
+
+export type ListFilterKey = keyof typeof listFilters;
+
+export const listFilterOptions: { value: ListFilterKey; label: string }[] = [
+  { value: "all", label: "All" },
+  { value: "favorites", label: "Favorites" },
+  { value: "played", label: "Played" },
+  { value: "unplayed", label: "Not played" },
+];
+
 const STORAGE_PREFIX = "lyra-sort";
+const FILTER_STORAGE_PREFIX = "lyra-filter";
 
 function readSort(key: string, kind: SortKind): Sort | null {
   try {
@@ -106,4 +128,34 @@ export function savedSort(
     ),
   );
   return sort;
+}
+
+/**
+ * A view's filter choice, remembered like {@link savedSort}. `choices[0]` is
+ * the default.
+ */
+export function savedFilter<K extends string>(
+  view: string,
+  choices: readonly K[],
+): { value: K } {
+  const key = `${FILTER_STORAGE_PREFIX}:${getAuth().me?.id ?? ""}:${view}`;
+  let stored: string | null = null;
+  try {
+    stored = localStorage.getItem(key);
+  } catch {
+    // Unreadable or unavailable storage falls back to the default.
+  }
+  const filter = $state({
+    value: choices.find((choice) => choice === stored) ?? choices[0],
+  });
+  $effect(() => {
+    const value = filter.value;
+    try {
+      if (value === choices[0]) localStorage.removeItem(key);
+      else localStorage.setItem(key, value);
+    } catch {
+      // The choice still applies for this visit when storage is unavailable.
+    }
+  });
+  return filter;
 }

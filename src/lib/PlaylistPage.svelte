@@ -16,8 +16,10 @@ www.meshiplaw.com/lyra.
   } from "./api";
   import { getPlayer } from "./player.svelte.ts";
   import FavoriteButton from "./FavoriteButton.svelte";
+  import { getAuth } from "./auth.svelte.ts";
 
   const player = getPlayer();
+  const auth = getAuth();
 
   interface Props {
     playlistId: string;
@@ -33,6 +35,10 @@ www.meshiplaw.com/lyra.
   let editName = $state("");
   let editDescription = $state("");
   let saving = $state(false);
+
+  // Only the owner changes a playlist; an admin may also delete it.
+  let isOwner = $derived(playlist != null && playlist.owner_id === auth.me?.id);
+  let canDelete = $derived(isOwner || auth.hasPermission("admin"));
 
   let sortedItems = $derived(
     [...(playlist?.tracks ?? [])].sort((a, b) => a.position - b.position),
@@ -238,20 +244,24 @@ www.meshiplaw.com/lyra.
           {#if playlist.id}
             <FavoriteButton targetId={playlist.id} label={playlist.name} />
           {/if}
-          <button
-            type="button"
-            class="rounded-md px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-100 dark:text-neutral-300 dark:hover:bg-neutral-700"
-            onclick={startEdit}
-          >
-            Edit
-          </button>
-          <button
-            type="button"
-            class="rounded-md px-3 py-1.5 text-sm text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/40"
-            onclick={handleDelete}
-          >
-            Delete
-          </button>
+          {#if isOwner}
+            <button
+              type="button"
+              class="rounded-md px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-100 dark:text-neutral-300 dark:hover:bg-neutral-700"
+              onclick={startEdit}
+            >
+              Edit
+            </button>
+          {/if}
+          {#if canDelete}
+            <button
+              type="button"
+              class="rounded-md px-3 py-1.5 text-sm text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/40"
+              onclick={handleDelete}
+            >
+              Delete
+            </button>
+          {/if}
         </div>
       {/if}
     </div>
@@ -340,99 +350,101 @@ www.meshiplaw.com/lyra.
                     : ""}
                 </td>
 
-                <!-- Reorder + remove actions -->
-                <td class="w-24 py-2 pr-3 text-right">
-                  <div
-                    class="flex items-center justify-end gap-0.5 opacity-0 group-hover:opacity-100"
-                  >
-                    {#if idx > 0}
-                      <button
-                        type="button"
-                        class="rounded p-0.5 text-slate-400 hover:bg-slate-200 hover:text-slate-600 dark:text-neutral-500 dark:hover:bg-neutral-600 dark:hover:text-neutral-300"
-                        title="Move up"
-                        onclick={(e) => {
-                          e.stopPropagation();
-                          handleMove(
-                            item.entry_id,
-                            sortedItems[idx - 1].position,
-                          );
-                        }}
-                      >
-                        <svg
-                          class="h-4 w-4"
-                          xmlns="http://www.w3.org/2000/svg"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                          stroke-width="2"
-                        >
-                          <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            d="M5 15l7-7 7 7"
-                          />
-                        </svg>
-                      </button>
-                    {:else}
-                      <div class="h-5 w-5"></div>
-                    {/if}
-                    {#if idx < sortedItems.length - 1}
-                      <button
-                        type="button"
-                        class="rounded p-0.5 text-slate-400 hover:bg-slate-200 hover:text-slate-600 dark:text-neutral-500 dark:hover:bg-neutral-600 dark:hover:text-neutral-300"
-                        title="Move down"
-                        onclick={(e) => {
-                          e.stopPropagation();
-                          handleMove(
-                            item.entry_id,
-                            sortedItems[idx + 1].position,
-                          );
-                        }}
-                      >
-                        <svg
-                          class="h-4 w-4"
-                          xmlns="http://www.w3.org/2000/svg"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                          stroke-width="2"
-                        >
-                          <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            d="M19 9l-7 7-7-7"
-                          />
-                        </svg>
-                      </button>
-                    {:else}
-                      <div class="h-5 w-5"></div>
-                    {/if}
-                    <button
-                      type="button"
-                      class="rounded p-0.5 text-slate-400 hover:bg-red-100 hover:text-red-500 dark:text-neutral-500 dark:hover:bg-red-950/40 dark:hover:text-red-400"
-                      title="Remove from playlist"
-                      onclick={(e) => {
-                        e.stopPropagation();
-                        handleRemoveTrack(item.entry_id);
-                      }}
+                {#if isOwner}
+                  <!-- Reorder + remove actions -->
+                  <td class="w-24 py-2 pr-3 text-right">
+                    <div
+                      class="flex items-center justify-end gap-0.5 opacity-0 group-hover:opacity-100"
                     >
-                      <svg
-                        class="h-4 w-4"
-                        xmlns="http://www.w3.org/2000/svg"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                        stroke-width="2"
+                      {#if idx > 0}
+                        <button
+                          type="button"
+                          class="rounded p-0.5 text-slate-400 hover:bg-slate-200 hover:text-slate-600 dark:text-neutral-500 dark:hover:bg-neutral-600 dark:hover:text-neutral-300"
+                          title="Move up"
+                          onclick={(e) => {
+                            e.stopPropagation();
+                            handleMove(
+                              item.entry_id,
+                              sortedItems[idx - 1].position,
+                            );
+                          }}
+                        >
+                          <svg
+                            class="h-4 w-4"
+                            xmlns="http://www.w3.org/2000/svg"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                            stroke-width="2"
+                          >
+                            <path
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                              d="M5 15l7-7 7 7"
+                            />
+                          </svg>
+                        </button>
+                      {:else}
+                        <div class="h-5 w-5"></div>
+                      {/if}
+                      {#if idx < sortedItems.length - 1}
+                        <button
+                          type="button"
+                          class="rounded p-0.5 text-slate-400 hover:bg-slate-200 hover:text-slate-600 dark:text-neutral-500 dark:hover:bg-neutral-600 dark:hover:text-neutral-300"
+                          title="Move down"
+                          onclick={(e) => {
+                            e.stopPropagation();
+                            handleMove(
+                              item.entry_id,
+                              sortedItems[idx + 1].position,
+                            );
+                          }}
+                        >
+                          <svg
+                            class="h-4 w-4"
+                            xmlns="http://www.w3.org/2000/svg"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                            stroke-width="2"
+                          >
+                            <path
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                              d="M19 9l-7 7-7-7"
+                            />
+                          </svg>
+                        </button>
+                      {:else}
+                        <div class="h-5 w-5"></div>
+                      {/if}
+                      <button
+                        type="button"
+                        class="rounded p-0.5 text-slate-400 hover:bg-red-100 hover:text-red-500 dark:text-neutral-500 dark:hover:bg-red-950/40 dark:hover:text-red-400"
+                        title="Remove from playlist"
+                        onclick={(e) => {
+                          e.stopPropagation();
+                          handleRemoveTrack(item.entry_id);
+                        }}
                       >
-                        <path
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          d="M6 18L18 6M6 6l12 12"
-                        />
-                      </svg>
-                    </button>
-                  </div>
-                </td>
+                        <svg
+                          class="h-4 w-4"
+                          xmlns="http://www.w3.org/2000/svg"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                          stroke-width="2"
+                        >
+                          <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            d="M6 18L18 6M6 6l12 12"
+                          />
+                        </svg>
+                      </button>
+                    </div>
+                  </td>
+                {/if}
               </tr>
             {/each}
           </tbody>

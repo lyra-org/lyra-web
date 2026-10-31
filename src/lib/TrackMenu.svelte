@@ -15,6 +15,7 @@ www.meshiplaw.com/lyra.
   import type { PlaybackContext } from "./player.svelte.ts";
   import { addPlaylistTracks, fetchPlaylists, fetchAllPages } from "./api";
   import { getPlayer } from "./player.svelte.ts";
+  import { getAuth } from "./auth.svelte.ts";
   import { TAG_COLORS, getTags, tagSwatchClass } from "./tags.svelte.ts";
 
   interface Props {
@@ -45,7 +46,10 @@ www.meshiplaw.com/lyra.
   async function loadPlaylists() {
     if (playlistsLoaded) return;
     try {
-      playlists = await fetchAllPages(fetchPlaylists);
+      const ownerId = getAuth().me?.id;
+      playlists = await fetchAllPages((cursor) =>
+        fetchPlaylists({ cursor, ownerId }),
+      );
     } catch {
       // ignore
     } finally {

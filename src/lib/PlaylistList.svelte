@@ -7,9 +7,14 @@ www.meshiplaw.com/lyra.
 
 <script lang="ts">
   import SortControls from "./SortControls.svelte";
-  import { savedSort } from "./sort.svelte.ts";
+  import FilterControl from "./FilterControl.svelte";
+  import { savedFilter, savedSort } from "./sort.svelte.ts";
   import PaginatedList from "./PaginatedList.svelte";
   import { fetchPlaylists, createPlaylist, deletePlaylist } from "./api";
+  import { getAuth } from "./auth.svelte.ts";
+  import type { PlaylistResponse } from "./types";
+
+  const auth = getAuth();
 
   let list: { reload: () => Promise<void> } | undefined = $state();
 
@@ -53,6 +58,24 @@ www.meshiplaw.com/lyra.
     if (menuOpenId != null) menuOpenId = null;
   }
   const sort = savedSort("playlists", "playlists");
+
+  const filterOptions = [
+    { value: "mine", label: "Yours" },
+    { value: "all", label: "All" },
+    { value: "favorites", label: "Favorites" },
+  ] as const;
+  const filter = savedFilter(
+    "playlists",
+    filterOptions.map((option) => option.value),
+  );
+
+  function isOwn(playlist: PlaylistResponse) {
+    return playlist.owner_id === auth.me?.id;
+  }
+
+  function canDelete(playlist: PlaylistResponse) {
+    return isOwn(playlist) || auth.hasPermission("admin");
+  }
 </script>
 
 <svelte:window onclick={handleWindowClick} />
@@ -96,23 +119,32 @@ www.meshiplaw.com/lyra.
   {/if}
 
   <PaginatedList
-    scope={`${sort.sortBy}/${sort.sortOrder}`}
+    scope={`${sort.sortBy}/${sort.sortOrder}/${filter.value}`}
     bind:this={list}
     label="playlists"
     pageSize={100}
-    empty="No playlists yet."
+    empty={filter.value === "favorites"
+      ? "No favorite playlists yet."
+      : "No playlists yet."}
     loadPage={(cursor, limit) =>
-      fetchPlaylists(cursor, limit, {
+      fetchPlaylists({
+        cursor,
+        limit,
         sortBy: sort.sortBy,
         sortOrder: sort.sortOrder,
+        ownerId: filter.value === "mine" ? auth.me?.id : undefined,
+        favorite: filter.value === "favorites" ? true : undefined,
       })}
   >
     {#snippet toolbar()}
-      <SortControls
-        kind="playlists"
-        bind:sortBy={sort.sortBy}
-        bind:sortOrder={sort.sortOrder}
-      />
+      <div class="flex flex-wrap items-center gap-2">
+        <SortControls
+          kind="playlists"
+          bind:sortBy={sort.sortBy}
+          bind:sortOrder={sort.sortOrder}
+        />
+        <FilterControl options={[...filterOptions]} bind:value={filter.value} />
+      </div>
     {/snippet}
     {#snippet children(playlists)}
       <div class="space-y-2">
@@ -138,6 +170,12 @@ www.meshiplaw.com/lyra.
                     {playlist.track_count} track{playlist.track_count !== 1
                       ? "s"
                       : ""}
+                    {#if !isOwn(playlist)}
+                      <span class="text-slate-300 dark:text-neutral-600"
+                        >&middot;</span
+                      >
+                      From another user
+                    {/if}
                     {#if playlist.description}
                       <span class="text-slate-300 dark:text-neutral-600"
                         >&middot;</span
@@ -146,28 +184,30 @@ www.meshiplaw.com/lyra.
                     {/if}
                   </p>
                 </div>
-                <button
-                  type="button"
-                  aria-label="Playlist options"
-                  class="ml-3 flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:text-neutral-500 dark:hover:bg-neutral-700 dark:hover:text-neutral-300"
-                  onclick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    menuOpenId =
-                      menuOpenId === playlist.id ? null : playlist.id;
-                  }}
-                >
-                  <svg
-                    class="h-4 w-4"
-                    xmlns="http://www.w3.org/2000/svg"
-                    viewBox="0 0 24 24"
-                    fill="currentColor"
+                {#if canDelete(playlist)}
+                  <button
+                    type="button"
+                    aria-label="Playlist options"
+                    class="ml-3 flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:text-neutral-500 dark:hover:bg-neutral-700 dark:hover:text-neutral-300"
+                    onclick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      menuOpenId =
+                        menuOpenId === playlist.id ? null : playlist.id;
+                    }}
                   >
-                    <circle cx="12" cy="5" r="2" />
-                    <circle cx="12" cy="12" r="2" />
-                    <circle cx="12" cy="19" r="2" />
-                  </svg>
-                </button>
+                    <svg
+                      class="h-4 w-4"
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 24 24"
+                      fill="currentColor"
+                    >
+                      <circle cx="12" cy="5" r="2" />
+                      <circle cx="12" cy="12" r="2" />
+                      <circle cx="12" cy="19" r="2" />
+                    </svg>
+                  </button>
+                {/if}
               </div>
             </a>
 

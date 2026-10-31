@@ -41,10 +41,8 @@ import type {
   ServerInfoResponse,
   ServerSettingsResponse,
   ServerSettingValue,
-  FavoriteListResponse,
   FavoriteStateResponse,
   CheckResponse,
-  EntityParam,
   TargetListResponse,
   TargetStateResponse,
   PluginManifestResponse,
@@ -239,6 +237,17 @@ const RELEASE_LIST_INC = "artists,covers";
 const ARTIST_LIST_INC = "covers";
 const TRACK_LIST_INC = "releases,artists,release_covers";
 
+// Narrows a track, release or artist list to the user's favorites or listens.
+export interface ListFilter {
+  favorite?: boolean;
+  listened?: boolean;
+}
+
+function setListFilter(params: URLSearchParams, filter?: ListFilter) {
+  if (filter?.favorite != null) params.set("favorite", String(filter.favorite));
+  if (filter?.listened != null) params.set("listened", String(filter.listened));
+}
+
 export function fetchReleases(opts?: {
   libraryId?: string;
   query?: string;
@@ -247,6 +256,7 @@ export function fetchReleases(opts?: {
   cursor?: string;
   sortBy?: string;
   sortOrder?: "ascending" | "descending";
+  filter?: ListFilter;
   limit?: number;
 }): Promise<Page<ReleaseResponse>> {
   const params = new URLSearchParams({ inc: RELEASE_LIST_INC });
@@ -257,6 +267,7 @@ export function fetchReleases(opts?: {
   if (opts?.sortOrder) params.set("sort_order", opts.sortOrder);
   if (opts?.cursor) params.set("cursor", opts.cursor);
   if (opts?.limit != null) params.set("limit", String(opts.limit));
+  setListFilter(params, opts?.filter);
   return get<Page<ReleaseResponse>>(`/releases?${params}`, opts?.signal);
 }
 
@@ -365,6 +376,7 @@ export function fetchArtists(opts?: {
   sortBy?: string;
   sortOrder?: "ascending" | "descending";
   cursor?: string;
+  filter?: ListFilter;
   limit?: number;
 }): Promise<Page<ArtistResponse>> {
   const params = new URLSearchParams({ inc: ARTIST_LIST_INC });
@@ -374,6 +386,7 @@ export function fetchArtists(opts?: {
   if (opts?.query != null) params.set("query", opts.query);
   if (opts?.libraryId) params.set("library_id", opts.libraryId);
   if (opts?.cursor) params.set("cursor", opts.cursor);
+  setListFilter(params, opts?.filter);
   return get<Page<ArtistResponse>>(`/artists?${params}`, opts?.signal);
 }
 
@@ -745,18 +758,21 @@ export async function streamSyncRun(
 
 // Playlists
 
-export function fetchPlaylists(
-  cursor?: string,
-  limit?: number,
-  sort?: { sortBy: string; sortOrder: "ascending" | "descending" },
-): Promise<Page<PlaylistResponse>> {
+export function fetchPlaylists(opts?: {
+  cursor?: string;
+  limit?: number;
+  sortBy?: string;
+  sortOrder?: "ascending" | "descending";
+  ownerId?: string;
+  favorite?: boolean;
+}): Promise<Page<PlaylistResponse>> {
   const params = new URLSearchParams();
-  if (sort) {
-    params.set("sort_by", sort.sortBy);
-    params.set("sort_order", sort.sortOrder);
-  }
-  if (limit != null) params.set("limit", String(limit));
-  if (cursor) params.set("cursor", cursor);
+  if (opts?.sortBy) params.set("sort_by", opts.sortBy);
+  if (opts?.sortOrder) params.set("sort_order", opts.sortOrder);
+  if (opts?.ownerId) params.set("owner_id", opts.ownerId);
+  if (opts?.favorite != null) params.set("favorite", String(opts.favorite));
+  if (opts?.limit != null) params.set("limit", String(opts.limit));
+  if (opts?.cursor) params.set("cursor", opts.cursor);
   return get<Page<PlaylistResponse>>(`/playlists?${params}`);
 }
 
@@ -896,17 +912,6 @@ export function detachTag(tagId: string, targetId: string): Promise<void> {
 
 // Favorites
 
-export function fetchFavorites(
-  entity: EntityParam,
-  cursor?: string,
-  limit?: number,
-): Promise<FavoriteListResponse> {
-  const params = new URLSearchParams({ entity });
-  if (cursor) params.set("cursor", cursor);
-  if (limit != null) params.set("limit", String(limit));
-  return get<FavoriteListResponse>(`/me/favorites?${params}`);
-}
-
 export function checkFavorite(
   targetId: string,
 ): Promise<FavoriteStateResponse> {
@@ -936,6 +941,7 @@ export function fetchTracks(opts?: {
   sortBy?: string;
   sortOrder?: "ascending" | "descending";
   cursor?: string;
+  filter?: ListFilter;
   limit?: number;
 }): Promise<Page<TrackResponse>> {
   const params = new URLSearchParams({ inc: TRACK_LIST_INC });
@@ -945,6 +951,7 @@ export function fetchTracks(opts?: {
   if (opts?.libraryId) params.set("library_id", opts.libraryId);
   if (opts?.cursor) params.set("cursor", opts.cursor);
   if (opts?.limit != null) params.set("limit", String(opts.limit));
+  setListFilter(params, opts?.filter);
   return get<Page<TrackResponse>>(`/tracks?${params}`, opts?.signal);
 }
 

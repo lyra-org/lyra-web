@@ -9,7 +9,13 @@ www.meshiplaw.com/lyra.
   import { untrack } from "svelte";
   import type { TrackResponse } from "./types";
   import SortControls from "./SortControls.svelte";
-  import { savedSort } from "./sort.svelte.ts";
+  import FilterControl from "./FilterControl.svelte";
+  import {
+    listFilterOptions,
+    listFilters,
+    savedFilter,
+    savedSort,
+  } from "./sort.svelte.ts";
   import PaginatedList from "./PaginatedList.svelte";
   import { fetchTracks } from "./api";
   import { getPlayer } from "./player.svelte.ts";
@@ -56,14 +62,20 @@ www.meshiplaw.com/lyra.
     untrack(() => `library/${libraryId}/tracks`),
     "tracks",
   );
+  const filter = savedFilter(
+    untrack(() => `library/${libraryId}/tracks`),
+    listFilterOptions.map((option) => option.value),
+  );
 </script>
 
 <div class="mx-auto max-w-4xl">
   <PaginatedList
-    scope={`${libraryId}/${sort.sortBy}/${sort.sortOrder}`}
+    scope={`${libraryId}/${sort.sortBy}/${sort.sortOrder}/${filter.value}`}
     label="tracks"
     pageSize={100}
-    empty="No tracks in this library."
+    empty={filter.value === "all"
+      ? "No tracks in this library."
+      : "No matching tracks."}
     loadPage={(cursor, limit) =>
       fetchTracks({
         libraryId,
@@ -71,14 +83,18 @@ www.meshiplaw.com/lyra.
         limit,
         sortBy: sort.sortBy,
         sortOrder: sort.sortOrder,
+        filter: listFilters[filter.value],
       })}
   >
     {#snippet toolbar()}
-      <SortControls
-        kind="tracks"
-        bind:sortBy={sort.sortBy}
-        bind:sortOrder={sort.sortOrder}
-      />
+      <div class="flex flex-wrap items-center gap-2">
+        <SortControls
+          kind="tracks"
+          bind:sortBy={sort.sortBy}
+          bind:sortOrder={sort.sortOrder}
+        />
+        <FilterControl options={listFilterOptions} bind:value={filter.value} />
+      </div>
     {/snippet}
     {#snippet children(tracks)}
       <table class="w-full">
