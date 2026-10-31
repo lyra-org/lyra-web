@@ -18,6 +18,12 @@ export interface Page<T> {
   next_cursor?: string | null;
 }
 
+export interface LibrarySearchResponse {
+  tracks: Page<TrackResponse>;
+  artists: Page<ArtistResponse>;
+  releases: Page<ReleaseResponse>;
+}
+
 export interface TrackResponse {
   id: string;
   title: string;

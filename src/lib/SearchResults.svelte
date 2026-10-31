@@ -7,14 +7,28 @@ www.meshiplaw.com/lyra.
 
 <script lang="ts">
   import { onDestroy } from "svelte";
-  import { fetchReleases, fetchArtists, fetchTracks } from "./api";
+  import {
+    fetchReleases,
+    fetchArtists,
+    fetchTracks,
+    searchLibrary,
+  } from "./api";
   import AlbumCard from "./AlbumCard.svelte";
   import ArtistCard from "./ArtistCard.svelte";
   import BlurhashCanvas from "./BlurhashCanvas.svelte";
   import PaginatedList from "./PaginatedList.svelte";
+  import type { LibrarySearchResponse } from "./types";
+
+  type Section = keyof LibrarySearchResponse;
 
   let { query }: { query: string } = $props();
   const controllers = new Map<string, AbortController>();
+  let search: {
+    key: string;
+    response: Promise<LibrarySearchResponse>;
+    controller: AbortController;
+    served: Set<Section>;
+  } | null = null;
 
   function nextSignal(category: string) {
     controllers.get(category)?.abort();
@@ -23,7 +37,28 @@ www.meshiplaw.com/lyra.
     return controller.signal;
   }
 
+  // One search request fills every section's first page. A section loading its
+  // first page again, to retry or after its cursor expired, asks its list
+  // endpoint instead of reusing that response.
+  function firstPage<S extends Section>(section: S, limit: number) {
+    const key = `${limit}:${query}`;
+    if (search?.key !== key) {
+      search?.controller.abort();
+      const controller = new AbortController();
+      search = {
+        key,
+        response: searchLibrary({ query, limit, signal: controller.signal }),
+        controller,
+        served: new Set(),
+      };
+    }
+    if (search.served.has(section)) return null;
+    search.served.add(section);
+    return search.response.then((response) => response[section]);
+  }
+
   onDestroy(() => {
+    search?.controller.abort();
     for (const controller of controllers.values()) controller.abort();
   });
 </script>
@@ -48,6 +83,7 @@ www.meshiplaw.com/lyra.
     pageSize={12}
     empty={`No albums match “${query}”.`}
     loadPage={(cursor, limit) =>
+      (!cursor && firstPage("releases", limit)) ||
       fetchReleases({ query, cursor, limit, signal: nextSignal("albums") })}
   >
     {#snippet children(albums)}
@@ -75,6 +111,7 @@ www.meshiplaw.com/lyra.
     pageSize={12}
     empty={`No artists match “${query}”.`}
     loadPage={(cursor, limit) =>
+      (!cursor && firstPage("artists", limit)) ||
       fetchArtists({ query, cursor, limit, signal: nextSignal("artists") })}
   >
     {#snippet children(artists)}
@@ -102,6 +139,7 @@ www.meshiplaw.com/lyra.
     pageSize={12}
     empty={`No tracks match “${query}”.`}
     loadPage={(cursor, limit) =>
+      (!cursor && firstPage("tracks", limit)) ||
       fetchTracks({ query, cursor, limit, signal: nextSignal("tracks") })}
   >
     {#snippet children(tracks)}

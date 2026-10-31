@@ -20,6 +20,7 @@ import type {
   ProviderOptionValues,
   SearchResult,
   SearchEntityType,
+  LibrarySearchResponse,
   ExternalIdResponse,
   EntryResponse,
   LibraryAccessResponse,
@@ -233,6 +234,11 @@ export function updateServerSetup(opts: {
 
 // Releases (formerly "albums" in this UI)
 
+// Search returns these list shapes, so its pages continue on the list endpoints.
+const RELEASE_LIST_INC = "artists,covers";
+const ARTIST_LIST_INC = "covers";
+const TRACK_LIST_INC = "releases,artists,release_covers";
+
 export function fetchReleases(opts?: {
   libraryId?: string;
   query?: string;
@@ -243,7 +249,7 @@ export function fetchReleases(opts?: {
   sortOrder?: "ascending" | "descending";
   limit?: number;
 }): Promise<Page<ReleaseResponse>> {
-  const params = new URLSearchParams({ inc: "artists,covers" });
+  const params = new URLSearchParams({ inc: RELEASE_LIST_INC });
   if (opts?.query != null) params.set("query", opts.query);
   if (opts?.libraryId) params.set("library_id", opts.libraryId);
   if (opts?.genreId) params.set("genre_id", opts.genreId);
@@ -361,7 +367,7 @@ export function fetchArtists(opts?: {
   cursor?: string;
   limit?: number;
 }): Promise<Page<ArtistResponse>> {
-  const params = new URLSearchParams({ inc: "covers" });
+  const params = new URLSearchParams({ inc: ARTIST_LIST_INC });
   if (opts?.limit != null) params.set("limit", String(opts.limit));
   if (opts?.sortBy) params.set("sort_by", opts.sortBy);
   if (opts?.sortOrder) params.set("sort_order", opts.sortOrder);
@@ -932,9 +938,7 @@ export function fetchTracks(opts?: {
   cursor?: string;
   limit?: number;
 }): Promise<Page<TrackResponse>> {
-  const params = new URLSearchParams({
-    inc: "releases,artists,release_covers",
-  });
+  const params = new URLSearchParams({ inc: TRACK_LIST_INC });
   if (opts?.sortBy) params.set("sort_by", opts.sortBy);
   if (opts?.sortOrder) params.set("sort_order", opts.sortOrder);
   if (opts?.query != null) params.set("query", opts.query);
@@ -942,6 +946,24 @@ export function fetchTracks(opts?: {
   if (opts?.cursor) params.set("cursor", opts.cursor);
   if (opts?.limit != null) params.set("limit", String(opts.limit));
   return get<Page<TrackResponse>>(`/tracks?${params}`, opts?.signal);
+}
+
+// The first page of each list for `query`. Each `next_cursor` continues on
+// that type's list endpoint with the same query.
+export function searchLibrary(opts: {
+  query: string;
+  limit: number;
+  signal?: AbortSignal;
+}): Promise<LibrarySearchResponse> {
+  const params = new URLSearchParams({
+    query: opts.query,
+    limit: String(opts.limit),
+    paginate: "true",
+    track_inc: TRACK_LIST_INC,
+    artist_inc: ARTIST_LIST_INC,
+    release_inc: RELEASE_LIST_INC,
+  });
+  return get<LibrarySearchResponse>(`/search?${params}`, opts.signal);
 }
 
 export async function fetchLyrics(
