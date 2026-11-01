@@ -14,6 +14,7 @@ www.meshiplaw.com/lyra.
     type MenuAnchor,
   } from "./ContextMenu.svelte";
   import ExternalIdsModal from "./ExternalIdsModal.svelte";
+  import MetadataEditModal from "./MetadataEditModal.svelte";
 
   interface Props {
     artistId: string;
@@ -28,6 +29,7 @@ www.meshiplaw.com/lyra.
 
   let anchor = $state<MenuAnchor | null>(null);
   let showIds = $state(false);
+  let showEdit = $state(false);
 
   // The card's contextmenu handler. Without any permitted item, the browser's
   // own menu shows instead.
@@ -55,6 +57,31 @@ www.meshiplaw.com/lyra.
 {#if anchor}
   <ContextMenu {anchor} onclose={() => (anchor = null)}>
     {#if canManage}
+      <button
+        type="button"
+        role="menuitem"
+        class={menuItemClass}
+        onclick={() => {
+          anchor = null;
+          showEdit = true;
+        }}
+      >
+        <svg
+          class="h-4 w-4 text-slate-400 dark:text-neutral-500"
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          stroke-width="2"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
+          />
+        </svg>
+        Edit metadata…
+      </button>
       <button
         type="button"
         role="menuitem"
@@ -111,4 +138,8 @@ www.meshiplaw.com/lyra.
     noun="artist"
     onclose={() => (showIds = false)}
   />
+{/if}
+
+{#if showEdit}
+  <MetadataEditModal entityId={artistId} onclose={() => (showEdit = false)} />
 {/if}

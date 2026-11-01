@@ -25,6 +25,10 @@ import type {
   SearchEntityType,
   LibrarySearchResponse,
   ExternalIdResponse,
+  LabelResponse,
+  MetadataChange,
+  MetadataFieldDiff,
+  MetadataSnapshot,
   EntryResponse,
   LibraryAccessResponse,
   LibraryResponse,
@@ -643,6 +647,44 @@ export function inheritExternalId(
   return del<void>(
     `/entities/${entityId}/external-ids/${encodeURIComponent(providerId)}/${encodeURIComponent(idType)}`,
   );
+}
+
+// Metadata editing
+
+export function fetchEntityMetadata(
+  entityId: string,
+): Promise<MetadataSnapshot> {
+  return get<MetadataSnapshot>(`/entities/${entityId}/metadata`);
+}
+
+export function previewEntityMetadata(
+  entityId: string,
+  changes: MetadataChange[],
+): Promise<MetadataFieldDiff[]> {
+  return post<MetadataFieldDiff[]>(`/entities/${entityId}/metadata/preview`, {
+    changes,
+  });
+}
+
+// Fails with 409 when the metadata no longer matches `expected`, the diff a
+// preview returned.
+export function applyEntityMetadata(
+  entityId: string,
+  changes: MetadataChange[],
+  expected: MetadataFieldDiff[],
+): Promise<MetadataSnapshot> {
+  return patch<MetadataSnapshot>(`/entities/${entityId}/metadata`, {
+    changes,
+    expected,
+  });
+}
+
+export function fetchArtistSummary(id: string): Promise<ArtistResponse> {
+  return get<ArtistResponse>(`/artists/${id}`);
+}
+
+export function fetchLabels(): Promise<LabelResponse[]> {
+  return get<LabelResponse[]>("/labels");
 }
 
 // Libraries

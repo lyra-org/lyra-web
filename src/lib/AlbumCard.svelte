@@ -10,6 +10,7 @@ www.meshiplaw.com/lyra.
   let searchAlbum = $state<ReleaseResponse | null>(null);
   let optionsAlbum = $state<ReleaseResponse | null>(null);
   let idsAlbum = $state<ReleaseResponse | null>(null);
+  let editAlbum = $state<ReleaseResponse | null>(null);
 </script>
 
 <script lang="ts">
@@ -23,6 +24,7 @@ www.meshiplaw.com/lyra.
     type MenuAnchor,
   } from "./ContextMenu.svelte";
   import ExternalIdsModal from "./ExternalIdsModal.svelte";
+  import MetadataEditModal from "./MetadataEditModal.svelte";
   import MetadataSearchModal from "./MetadataSearchModal.svelte";
   import RefreshOptionsModal from "./RefreshOptionsModal.svelte";
 
@@ -204,6 +206,28 @@ www.meshiplaw.com/lyra.
         type="button"
         role="menuitem"
         class={menuItemClass}
+        onclick={() => openModal(() => (editAlbum = album))}
+      >
+        <svg
+          class="h-4 w-4 text-slate-400 dark:text-neutral-500"
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          stroke-width="2"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
+          />
+        </svg>
+        Edit metadata…
+      </button>
+      <button
+        type="button"
+        role="menuitem"
+        class={menuItemClass}
         onclick={() => openModal(() => (searchAlbum = album))}
       >
         <svg
@@ -308,4 +332,8 @@ www.meshiplaw.com/lyra.
 
 {#if optionsAlbum?.id === album.id}
   <RefreshOptionsModal {album} onclose={() => (optionsAlbum = null)} />
+{/if}
+
+{#if editAlbum?.id === album.id && album.id != null}
+  <MetadataEditModal entityId={album.id} onclose={() => (editAlbum = null)} />
 {/if}

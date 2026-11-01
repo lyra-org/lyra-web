@@ -271,6 +271,89 @@ export interface ExternalIdResponse {
   resolved_value?: string;
 }
 
+// Editable metadata of a release, track or artist, as returned by
+// GET /entities/:id/metadata. `fields` lists exactly the fields the entity
+// supports.
+export type MetadataEntityType = "release" | "track" | "artist";
+
+export type MetadataFieldName =
+  | "release_title"
+  | "track_title"
+  | "artist_name"
+  | "sort_title"
+  | "sort_name"
+  | "release_type"
+  | "release_date"
+  | "genres"
+  | "labels"
+  | "credits"
+  | "year"
+  | "disc"
+  | "disc_total"
+  | "track"
+  | "track_total"
+  | "artist_type"
+  | "description"
+  | "relations";
+
+export interface MetadataFieldState {
+  value: unknown;
+  source: "manual" | "resolved";
+}
+
+export interface MetadataSnapshot {
+  entity_id: string;
+  entity_type: MetadataEntityType;
+  fields: Partial<Record<MetadataFieldName, MetadataFieldState>>;
+}
+
+export type MetadataChange =
+  | { field: MetadataFieldName; operation: "set"; value: unknown }
+  | { field: MetadataFieldName; operation: "inherit" };
+
+export interface MetadataFieldDiff {
+  field: MetadataFieldName;
+  before: MetadataFieldState;
+  after: MetadataFieldState;
+}
+
+export type ReleaseType =
+  | "album"
+  | "single"
+  | "ep"
+  | "compilation"
+  | "soundtrack"
+  | "live"
+  | "remix"
+  | "broadcast"
+  | "other"
+  | "unknown";
+
+export interface MetadataCreditValue {
+  artist_id: string;
+  type: CreditType;
+  detail: string | null;
+}
+
+export interface MetadataLabelValue {
+  id: string;
+  name: string;
+  catalog_number: string | null;
+}
+
+// A relation into the edited artist from `artist_id`, such as a band's member
+// or a character's voice actor.
+export interface MetadataRelationValue {
+  artist_id: string;
+  type: ArtistRelationType;
+  attributes: string | null;
+}
+
+export interface LabelResponse {
+  id: string;
+  name: string;
+}
+
 export interface PlaylistTrackResponse {
   entry_id: string;
   track: TrackResponse;
@@ -332,7 +415,12 @@ export interface ArtistCreditResponse {
 export type ArtistRelationType = "voice_actor" | "member_of";
 export type RelationDirectionResponse = "incoming" | "outgoing";
 
-export type ArtistType = string;
+export type ArtistType =
+  | "person"
+  | "group"
+  | "character"
+  | "orchestra"
+  | "choir";
 
 export interface RelatedArtistResponse {
   id: string;

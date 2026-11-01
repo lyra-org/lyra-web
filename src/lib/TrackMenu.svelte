@@ -39,6 +39,7 @@ www.meshiplaw.com/lyra.
 <script lang="ts">
   import ContextMenu from "./ContextMenu.svelte";
   import ExternalIdsModal from "./ExternalIdsModal.svelte";
+  import MetadataEditModal from "./MetadataEditModal.svelte";
   import TrackMenuItems from "./TrackMenuItems.svelte";
 
   // One instance serves a whole list; the target says which track and where.
@@ -51,6 +52,7 @@ www.meshiplaw.com/lyra.
 
   // Outlives the menu, which closes when the modal opens.
   let idsTrack = $state<TrackResponse | null>(null);
+  let editTrack = $state<TrackResponse | null>(null);
 </script>
 
 {#if target}
@@ -65,6 +67,10 @@ www.meshiplaw.com/lyra.
           idsTrack = track;
           onclose();
         }}
+        onedit={() => {
+          editTrack = track;
+          onclose();
+        }}
       />
     </ContextMenu>
   {/key}
@@ -75,5 +81,12 @@ www.meshiplaw.com/lyra.
     entityId={idsTrack.id}
     noun="track"
     onclose={() => (idsTrack = null)}
+  />
+{/if}
+
+{#if editTrack}
+  <MetadataEditModal
+    entityId={editTrack.id}
+    onclose={() => (editTrack = null)}
   />
 {/if}
