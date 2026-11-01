@@ -16,8 +16,10 @@ www.meshiplaw.com/lyra.
   import AlbumCard from "./AlbumCard.svelte";
   import ArtistCard from "./ArtistCard.svelte";
   import BlurhashCanvas from "./BlurhashCanvas.svelte";
+  import { anchorAtPointer } from "./ContextMenu.svelte";
+  import TrackMenu, { type TrackMenuTarget } from "./TrackMenu.svelte";
   import PaginatedList from "./PaginatedList.svelte";
-  import type { LibrarySearchResponse } from "./types";
+  import type { LibrarySearchResponse, TrackResponse } from "./types";
 
   type Section = keyof LibrarySearchResponse;
 
@@ -55,6 +57,13 @@ www.meshiplaw.com/lyra.
     if (search.served.has(section)) return null;
     search.served.add(section);
     return search.response.then((response) => response[section]);
+  }
+
+  let trackMenu = $state<TrackMenuTarget | null>(null);
+
+  function openTrackMenu(e: MouseEvent, track: TrackResponse) {
+    e.preventDefault();
+    trackMenu = { track, anchor: anchorAtPointer(e) };
   }
 
   onDestroy(() => {
@@ -157,6 +166,7 @@ www.meshiplaw.com/lyra.
               href={track.id
                 ? `#/tracks/${encodeURIComponent(track.id)}`
                 : undefined}
+              oncontextmenu={(e) => openTrackMenu(e, track)}
               class="flex items-center gap-3 rounded px-3 py-2 hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-[#BB7FB5] dark:hover:bg-neutral-700/50"
             >
               <div
@@ -217,3 +227,5 @@ www.meshiplaw.com/lyra.
     {/snippet}
   </PaginatedList>
 </section>
+
+<TrackMenu target={trackMenu} onclose={() => (trackMenu = null)} />

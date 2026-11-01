@@ -7,7 +7,6 @@ www.meshiplaw.com/lyra.
 
 <script module lang="ts">
   import type { ReleaseResponse } from "./types";
-  let openMenuId = $state<string | null>(null);
   let searchAlbum = $state<ReleaseResponse | null>(null);
   let optionsAlbum = $state<ReleaseResponse | null>(null);
   let idsAlbum = $state<ReleaseResponse | null>(null);
@@ -15,7 +14,14 @@ www.meshiplaw.com/lyra.
 
 <script lang="ts">
   import { refreshEntity } from "./api";
+  import { getAuth } from "./auth.svelte.ts";
   import BlurhashCanvas from "./BlurhashCanvas.svelte";
+  import ContextMenu, {
+    anchorAtPointer,
+    anchorBelow,
+    menuItemClass,
+    type MenuAnchor,
+  } from "./ContextMenu.svelte";
   import ExternalIdsModal from "./ExternalIdsModal.svelte";
   import MetadataSearchModal from "./MetadataSearchModal.svelte";
   import RefreshOptionsModal from "./RefreshOptionsModal.svelte";
@@ -26,6 +32,8 @@ www.meshiplaw.com/lyra.
 
   let { album }: Props = $props();
 
+  const auth = getAuth();
+
   let coverFailed = $state(false);
   let coverSrc = $derived(album.cover && !coverFailed ? album.cover.url : null);
   let artistNames = $derived(
@@ -35,44 +43,34 @@ www.meshiplaw.com/lyra.
     album.release_date ? album.release_date.slice(0, 4) : null,
   );
 
-  let menuOpen = $derived(openMenuId === album.id);
+  let canManage = $derived(auth.hasPermission("manage_metadata"));
+  let canSync = $derived(auth.hasPermission("sync_metadata"));
+  let hasMenu = $derived(album.id != null && (canManage || canSync));
+
+  let menuAnchor = $state<MenuAnchor | null>(null);
   let refreshing = $state(false);
 
   function toggleMenu(e: MouseEvent) {
     e.preventDefault();
     e.stopPropagation();
-    openMenuId = menuOpen ? null : album.id;
+    menuAnchor = menuAnchor
+      ? null
+      : anchorBelow(e.currentTarget as HTMLElement);
   }
 
-  function handleWindowClick() {
-    if (openMenuId != null) openMenuId = null;
-  }
-
-  function handleSearchMetadata(e: MouseEvent) {
+  function handleContextMenu(e: MouseEvent) {
+    if (!hasMenu) return;
     e.preventDefault();
-    e.stopPropagation();
-    openMenuId = null;
-    searchAlbum = album;
+    menuAnchor = anchorAtPointer(e);
   }
 
-  function handleRefreshWithOptions(e: MouseEvent) {
-    e.preventDefault();
-    e.stopPropagation();
-    openMenuId = null;
-    optionsAlbum = album;
+  function openModal(open: () => void) {
+    menuAnchor = null;
+    open();
   }
 
-  function handleExternalIds(e: MouseEvent) {
-    e.preventDefault();
-    e.stopPropagation();
-    openMenuId = null;
-    idsAlbum = album;
-  }
-
-  async function handleRefresh(e: MouseEvent) {
-    e.preventDefault();
-    e.stopPropagation();
-    openMenuId = null;
+  async function handleRefresh() {
+    menuAnchor = null;
     if (album.id == null) return;
     refreshing = true;
     try {
@@ -85,9 +83,11 @@ www.meshiplaw.com/lyra.
   }
 </script>
 
-<svelte:window onclick={handleWindowClick} />
-
-<a href={album.id != null ? `#/albums/${album.id}` : undefined} class="block">
+<a
+  href={album.id != null ? `#/albums/${album.id}` : undefined}
+  class="block"
+  oncontextmenu={handleContextMenu}
+>
   <article
     class="group relative cursor-pointer overflow-hidden rounded-lg bg-white shadow-sm transition-shadow hover:shadow-md dark:bg-[#1b1d1e] dark:shadow-black/30"
   >
@@ -130,146 +130,49 @@ www.meshiplaw.com/lyra.
       {/if}
     </div>
 
-    <!-- Three-dot menu button -->
-    <button
-      type="button"
-      class="absolute top-1.5 right-1.5 flex h-7 w-7 items-center justify-center rounded-full bg-black/50 text-white opacity-0 transition-opacity group-hover:opacity-100 hover:bg-black/70"
-      class:opacity-100={menuOpen || refreshing}
-      onclick={toggleMenu}
-    >
-      {#if refreshing}
-        <svg
-          class="h-4 w-4 animate-spin"
-          xmlns="http://www.w3.org/2000/svg"
-          fill="none"
-          viewBox="0 0 24 24"
-        >
-          <circle
-            class="opacity-25"
-            cx="12"
-            cy="12"
-            r="10"
-            stroke="currentColor"
-            stroke-width="4"
-          ></circle>
-          <path
-            class="opacity-75"
-            fill="currentColor"
-            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-          ></path>
-        </svg>
-      {:else}
-        <svg
-          class="h-4 w-4"
-          xmlns="http://www.w3.org/2000/svg"
-          viewBox="0 0 24 24"
-          fill="currentColor"
-        >
-          <circle cx="12" cy="5" r="2" />
-          <circle cx="12" cy="12" r="2" />
-          <circle cx="12" cy="19" r="2" />
-        </svg>
-      {/if}
-    </button>
-
-    <!-- Dropdown menu -->
-    {#if menuOpen}
-      <div
-        role="menu"
-        tabindex="-1"
-        class="absolute top-10 right-1.5 z-10 min-w-40 rounded-md bg-white py-1 shadow-lg ring-1 ring-black/5 dark:bg-[#1b1d1e] dark:shadow-black/50 dark:ring-white/10"
-        onclick={(e) => e.stopPropagation()}
-        onkeydown={(e) => e.stopPropagation()}
+    {#if hasMenu}
+      <button
+        type="button"
+        class="absolute top-1.5 right-1.5 flex h-7 w-7 items-center justify-center rounded-full bg-black/50 text-white opacity-0 transition-opacity group-hover:opacity-100 hover:bg-black/70"
+        class:opacity-100={menuAnchor != null || refreshing}
+        title="Album options"
+        aria-label="Album options"
+        onclick={toggleMenu}
       >
-        <button
-          type="button"
-          role="menuitem"
-          class="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm text-slate-700 hover:bg-slate-100 dark:text-neutral-200 dark:hover:bg-neutral-600"
-          onclick={handleSearchMetadata}
-        >
+        {#if refreshing}
           <svg
-            class="h-4 w-4 text-slate-400 dark:text-neutral-500"
+            class="h-4 w-4 animate-spin"
             xmlns="http://www.w3.org/2000/svg"
             fill="none"
             viewBox="0 0 24 24"
-            stroke="currentColor"
-            stroke-width="2"
           >
+            <circle
+              class="opacity-25"
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="currentColor"
+              stroke-width="4"
+            ></circle>
             <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              d="M21 21l-4.35-4.35M11 19a8 8 0 100-16 8 8 0 000 16z"
-            />
+              class="opacity-75"
+              fill="currentColor"
+              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+            ></path>
           </svg>
-          Search metadata
-        </button>
-        <button
-          type="button"
-          role="menuitem"
-          class="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm text-slate-700 hover:bg-slate-100 dark:text-neutral-200 dark:hover:bg-neutral-600"
-          onclick={handleExternalIds}
-        >
+        {:else}
           <svg
-            class="h-4 w-4 text-slate-400 dark:text-neutral-500"
+            class="h-4 w-4"
             xmlns="http://www.w3.org/2000/svg"
-            fill="none"
             viewBox="0 0 24 24"
-            stroke="currentColor"
-            stroke-width="2"
+            fill="currentColor"
           >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              d="M7 7h.01M3 11.59V4a1 1 0 011-1h7.59a1 1 0 01.7.29l8.42 8.42a1 1 0 010 1.41l-7.59 7.59a1 1 0 01-1.41 0L3.29 12.3a1 1 0 01-.29-.71z"
-            />
+            <circle cx="12" cy="5" r="2" />
+            <circle cx="12" cy="12" r="2" />
+            <circle cx="12" cy="19" r="2" />
           </svg>
-          External IDs…
-        </button>
-        <button
-          type="button"
-          role="menuitem"
-          class="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm text-slate-700 hover:bg-slate-100 dark:text-neutral-200 dark:hover:bg-neutral-600"
-          onclick={handleRefresh}
-        >
-          <svg
-            class="h-4 w-4 text-slate-400 dark:text-neutral-500"
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            stroke-width="2"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              d="M4 4v5h5M20 20v-5h-5M4 9a8 8 0 0113.292-4.708M20 15a8 8 0 01-13.292 4.708"
-            />
-          </svg>
-          Refresh metadata
-        </button>
-        <button
-          type="button"
-          role="menuitem"
-          class="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm text-slate-700 hover:bg-slate-100 dark:text-neutral-200 dark:hover:bg-neutral-600"
-          onclick={handleRefreshWithOptions}
-        >
-          <svg
-            class="h-4 w-4 text-slate-400 dark:text-neutral-500"
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            stroke-width="2"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              d="M4 6h16M4 12h10M4 18h6"
-            />
-          </svg>
-          Refresh with options…
-        </button>
-      </div>
+        {/if}
+      </button>
     {/if}
 
     <div class="p-3">
@@ -294,12 +197,113 @@ www.meshiplaw.com/lyra.
   </article>
 </a>
 
+{#if menuAnchor}
+  <ContextMenu anchor={menuAnchor} onclose={() => (menuAnchor = null)}>
+    {#if canManage}
+      <button
+        type="button"
+        role="menuitem"
+        class={menuItemClass}
+        onclick={() => openModal(() => (searchAlbum = album))}
+      >
+        <svg
+          class="h-4 w-4 text-slate-400 dark:text-neutral-500"
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          stroke-width="2"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            d="M21 21l-4.35-4.35M11 19a8 8 0 100-16 8 8 0 000 16z"
+          />
+        </svg>
+        Search metadata
+      </button>
+      <button
+        type="button"
+        role="menuitem"
+        class={menuItemClass}
+        onclick={() => openModal(() => (idsAlbum = album))}
+      >
+        <svg
+          class="h-4 w-4 text-slate-400 dark:text-neutral-500"
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          stroke-width="2"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"
+          />
+        </svg>
+        External IDs…
+      </button>
+    {/if}
+    {#if canSync}
+      <button
+        type="button"
+        role="menuitem"
+        class={menuItemClass}
+        onclick={handleRefresh}
+      >
+        <svg
+          class="h-4 w-4 text-slate-400 dark:text-neutral-500"
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          stroke-width="2"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            d="M4 4v5h5M20 20v-5h-5M4 9a8 8 0 0113.292-4.708M20 15a8 8 0 01-13.292 4.708"
+          />
+        </svg>
+        Refresh metadata
+      </button>
+      <button
+        type="button"
+        role="menuitem"
+        class={menuItemClass}
+        onclick={() => openModal(() => (optionsAlbum = album))}
+      >
+        <svg
+          class="h-4 w-4 text-slate-400 dark:text-neutral-500"
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          stroke-width="2"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            d="M4 6h16M4 12h10M4 18h6"
+          />
+        </svg>
+        Refresh with options…
+      </button>
+    {/if}
+  </ContextMenu>
+{/if}
+
 {#if searchAlbum?.id === album.id}
   <MetadataSearchModal {album} onclose={() => (searchAlbum = null)} />
 {/if}
 
-{#if idsAlbum?.id === album.id}
-  <ExternalIdsModal {album} onclose={() => (idsAlbum = null)} />
+{#if idsAlbum?.id === album.id && album.id != null}
+  <ExternalIdsModal
+    entityId={album.id}
+    noun="album"
+    onclose={() => (idsAlbum = null)}
+  />
 {/if}
 
 {#if optionsAlbum?.id === album.id}

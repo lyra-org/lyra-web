@@ -5,17 +5,14 @@ You can obtain one here:
 www.meshiplaw.com/lyra.
 -->
 
-<script module lang="ts">
-  let openMenuTrackId = $state<string | null>(null);
-</script>
-
 <script lang="ts">
   import type { ArtistResponse, ReleaseResponse, TrackResponse } from "./types";
   import { fetchRelease } from "./api";
   import { getPlayer } from "./player.svelte.ts";
   import { getTags, tagChipClasses } from "./tags.svelte.ts";
   import BlurhashCanvas from "./BlurhashCanvas.svelte";
-  import TrackMenu from "./TrackMenu.svelte";
+  import { anchorAtPointer, anchorBelow } from "./ContextMenu.svelte";
+  import TrackMenu, { type TrackMenuTarget } from "./TrackMenu.svelte";
   import FavoriteButton from "./FavoriteButton.svelte";
   import { getFavoriteState } from "./favorites.svelte.ts";
   const player = getPlayer();
@@ -101,8 +98,25 @@ www.meshiplaw.com/lyra.
     }
   }
 
-  function handleWindowClick() {
-    if (openMenuTrackId != null) openMenuTrackId = null;
+  let trackMenu = $state<TrackMenuTarget | null>(null);
+
+  function openTrackMenu(e: MouseEvent, track: TrackResponse) {
+    if (!albumContext) return;
+    e.preventDefault();
+    trackMenu = { track, anchor: anchorAtPointer(e), context: albumContext };
+  }
+
+  function toggleTrackMenu(e: MouseEvent, track: TrackResponse) {
+    e.stopPropagation();
+    if (!albumContext || trackMenu?.track.id === track.id) {
+      trackMenu = null;
+      return;
+    }
+    trackMenu = {
+      track,
+      anchor: anchorBelow(e.currentTarget as Element),
+      context: albumContext,
+    };
   }
 
   let albumContext = $derived.by(() => {
@@ -128,8 +142,6 @@ www.meshiplaw.com/lyra.
     tagsStore.load();
   });
 </script>
-
-<svelte:window onclick={handleWindowClick} />
 
 {#if loading}
   <div class="flex items-center justify-center py-20">
@@ -258,6 +270,7 @@ www.meshiplaw.com/lyra.
                   class:dark:bg-neutral-700={player.isCurrentTrack(track)}
                   onclick={() =>
                     albumContext && player.playTrack(track, albumContext)}
+                  oncontextmenu={(e) => openTrackMenu(e, track)}
                 >
                   <td
                     class="w-10 py-2 pr-3 pl-3 text-right text-sm text-slate-400 tabular-nums dark:text-neutral-500"
@@ -355,7 +368,7 @@ www.meshiplaw.com/lyra.
                     {#if track.id != null}
                       <div
                         class="flex items-center justify-end gap-0.5 opacity-0 group-hover:opacity-100"
-                        class:opacity-100={openMenuTrackId === track.id ||
+                        class:opacity-100={trackMenu?.track.id === track.id ||
                           getFavoriteState(track.id) === true}
                       >
                         <FavoriteButton
@@ -369,11 +382,7 @@ www.meshiplaw.com/lyra.
                           class="flex h-6 w-6 items-center justify-center rounded text-slate-400 hover:bg-slate-200 hover:text-slate-600 dark:text-neutral-500 dark:hover:bg-neutral-600 dark:hover:text-neutral-300"
                           title="Track options"
                           aria-label="Track options"
-                          onclick={(e) => {
-                            e.stopPropagation();
-                            openMenuTrackId =
-                              openMenuTrackId === track.id ? null : track.id;
-                          }}
+                          onclick={(e) => toggleTrackMenu(e, track)}
                         >
                           <svg
                             class="h-4 w-4"
@@ -387,14 +396,6 @@ www.meshiplaw.com/lyra.
                           </svg>
                         </button>
                       </div>
-                      {#if openMenuTrackId === track.id && albumContext}
-                        <TrackMenu
-                          trackId={track.id}
-                          {track}
-                          context={albumContext}
-                          onclose={() => (openMenuTrackId = null)}
-                        />
-                      {/if}
                     {/if}
                   </td>
                 </tr>
@@ -406,3 +407,5 @@ www.meshiplaw.com/lyra.
     {/if}
   </div>
 {/if}
+
+<TrackMenu target={trackMenu} onclose={() => (trackMenu = null)} />

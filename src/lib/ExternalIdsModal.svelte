@@ -6,7 +6,7 @@ www.meshiplaw.com/lyra.
 -->
 
 <script lang="ts">
-  import type { ExternalIdResponse, ReleaseResponse } from "./types";
+  import type { ExternalIdResponse } from "./types";
   import {
     fetchExternalIds,
     fetchProviders,
@@ -16,11 +16,13 @@ www.meshiplaw.com/lyra.
   import Modal from "./Modal.svelte";
 
   interface Props {
-    album: ReleaseResponse;
+    entityId: string;
+    // Names the entity in the empty state, as in "This album has no…".
+    noun: "album" | "artist" | "track";
     onclose: () => void;
   }
 
-  let { album, onclose }: Props = $props();
+  let { entityId, noun, onclose }: Props = $props();
 
   interface ProviderGroup {
     providerId: string;
@@ -43,12 +45,11 @@ www.meshiplaw.com/lyra.
   }
 
   async function load() {
-    if (album.id == null) return;
     loading = true;
     error = null;
     try {
       const [ids, providers] = await Promise.all([
-        fetchExternalIds(album.id),
+        fetchExternalIds(entityId),
         fetchProviders(),
       ]);
       const byProvider = new Map<string, ProviderGroup>();
@@ -81,14 +82,13 @@ www.meshiplaw.com/lyra.
     }
   }
 
-  // Refreshes afterwards so the album's metadata follows the ID now in effect.
+  // Refreshes afterwards so the metadata follows the ID now in effect.
   async function handleInherit(id: ExternalIdResponse) {
-    if (album.id == null) return;
     inheritingKey = idKey(id);
     error = null;
     try {
-      await inheritExternalId(album.id, id.provider_id, id.id_type);
-      await refreshEntity(album.id);
+      await inheritExternalId(entityId, id.provider_id, id.id_type);
+      await refreshEntity(entityId);
       await load();
     } catch (err) {
       error = err instanceof Error ? err.message : "Failed to update the ID";
@@ -98,12 +98,12 @@ www.meshiplaw.com/lyra.
   }
 </script>
 
-<Modal title="External IDs" subtitle={album.title} {onclose}>
+<Modal title="External IDs" {onclose}>
   {#if loading && groups.length === 0}
     <p class="text-sm text-slate-500 dark:text-neutral-400">Loading IDs…</p>
   {:else if groups.length === 0}
     <p class="text-sm text-slate-500 dark:text-neutral-400">
-      This album has no external IDs.
+      This {noun} has no external IDs.
     </p>
   {:else}
     {#each groups as group (group.providerId)}

@@ -22,6 +22,8 @@ www.meshiplaw.com/lyra.
   import BlurhashCanvas from "./BlurhashCanvas.svelte";
   import FavoriteButton from "./FavoriteButton.svelte";
   import { getFavoriteState } from "./favorites.svelte.ts";
+  import { anchorAtPointer } from "./ContextMenu.svelte";
+  import TrackMenu, { type TrackMenuTarget } from "./TrackMenu.svelte";
 
   interface Props {
     libraryId: string;
@@ -53,6 +55,13 @@ www.meshiplaw.com/lyra.
       return releaseArtists.map((a) => a.name).join(", ");
     }
     return "Unknown Artist";
+  }
+
+  let trackMenu = $state<TrackMenuTarget | null>(null);
+
+  function openTrackMenu(e: MouseEvent, track: TrackResponse) {
+    e.preventDefault();
+    trackMenu = { track, anchor: anchorAtPointer(e) };
   }
 
   function openTrack(track: TrackResponse) {
@@ -107,6 +116,7 @@ www.meshiplaw.com/lyra.
               class:bg-slate-100={player.isCurrentTrack(track)}
               class:dark:bg-neutral-700={player.isCurrentTrack(track)}
               onclick={() => openTrack(track)}
+              oncontextmenu={(e) => openTrackMenu(e, track)}
             >
               <td class="w-14 py-2 pr-3 pl-3">
                 <div
@@ -206,3 +216,5 @@ www.meshiplaw.com/lyra.
     {/snippet}
   </PaginatedList>
 </div>
+
+<TrackMenu target={trackMenu} onclose={() => (trackMenu = null)} />

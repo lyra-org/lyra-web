@@ -16,6 +16,8 @@ www.meshiplaw.com/lyra.
   } from "./api";
   import { getPlayer } from "./player.svelte.ts";
   import FavoriteButton from "./FavoriteButton.svelte";
+  import { anchorAtPointer } from "./ContextMenu.svelte";
+  import TrackMenu, { type TrackMenuTarget } from "./TrackMenu.svelte";
   import { getAuth } from "./auth.svelte.ts";
 
   const player = getPlayer();
@@ -76,8 +78,8 @@ www.meshiplaw.com/lyra.
     }
   }
 
-  function playItem(item: PlaylistTrackResponse) {
-    if (!playlist) return;
+  let playlistContext = $derived.by(() => {
+    if (!playlist) return null;
     const tracks = sortedItems.map((item) => ({
       ...item.track,
       releases: item.release ? [item.release] : item.track.releases,
@@ -89,13 +91,27 @@ www.meshiplaw.com/lyra.
         trackArtistNames[i.track.id] = i.artists.map((a) => a.name).join(", ");
       }
     }
-    player.playTrack(item.track, {
+    return {
       tracks,
       title: playlist.name,
       coverUrl: null,
       coverBlurhash: null,
       trackArtistNames,
-    });
+    };
+  });
+
+  function playItem(item: PlaylistTrackResponse) {
+    if (playlistContext) player.playTrack(item.track, playlistContext);
+  }
+
+  let trackMenu = $state<TrackMenuTarget | null>(null);
+
+  function openTrackMenu(e: MouseEvent, index: number) {
+    const context = playlistContext;
+    const track = context?.tracks[index];
+    if (!context || !track) return;
+    e.preventDefault();
+    trackMenu = { track, anchor: anchorAtPointer(e), context };
   }
 
   function startEdit() {
@@ -277,6 +293,7 @@ www.meshiplaw.com/lyra.
                 class:bg-slate-100={player.isCurrentTrack(item.track)}
                 class:dark:bg-neutral-700={player.isCurrentTrack(item.track)}
                 onclick={() => playItem(item)}
+                oncontextmenu={(e) => openTrackMenu(e, idx)}
               >
                 <!-- Position / play icon -->
                 <td
@@ -459,3 +476,5 @@ www.meshiplaw.com/lyra.
     {/if}
   </div>
 {/if}
+
+<TrackMenu target={trackMenu} onclose={() => (trackMenu = null)} />

@@ -7,6 +7,7 @@ www.meshiplaw.com/lyra.
 
 <script lang="ts">
   import type { CoverResponse } from "./types";
+  import ArtistMenu from "./ArtistMenu.svelte";
   import BlurhashCanvas from "./BlurhashCanvas.svelte";
 
   interface Props {
@@ -18,6 +19,7 @@ www.meshiplaw.com/lyra.
 
   let { id, name, cover = null, role = null }: Props = $props();
 
+  let menu = $state<ArtistMenu>();
   let coverFailed = $state(false);
   let coverSrc = $derived(cover && !coverFailed ? cover.url : null);
 </script>
@@ -26,6 +28,7 @@ www.meshiplaw.com/lyra.
   href={`#/artists/${id}`}
   class="group flex w-28 shrink-0 flex-col items-center"
   aria-label="Open {name}"
+  oncontextmenu={(e) => menu?.open(e)}
 >
   <div
     class="relative aspect-square w-full overflow-hidden rounded-full bg-slate-200 shadow-sm transition-shadow group-hover:shadow-md dark:bg-neutral-700 dark:shadow-black/30"
@@ -81,3 +84,5 @@ www.meshiplaw.com/lyra.
     </p>
   {/if}
 </a>
+
+<ArtistMenu bind:this={menu} artistId={id} />
