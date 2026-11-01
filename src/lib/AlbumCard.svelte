@@ -202,29 +202,13 @@ www.meshiplaw.com/lyra.
 
 {#if menuAnchor}
   <ContextMenu anchor={menuAnchor} onclose={() => (menuAnchor = null)}>
+    {#if canSync}
+      <RefreshMenuItem
+        onrefresh={handleRefresh}
+        onoptions={() => openModal(() => (optionsAlbum = album))}
+      />
+    {/if}
     {#if canManage}
-      <button
-        type="button"
-        role="menuitem"
-        class={menuItemClass}
-        onclick={() => openModal(() => (editAlbum = album))}
-      >
-        <svg
-          class="h-4 w-4 text-slate-400 dark:text-neutral-500"
-          xmlns="http://www.w3.org/2000/svg"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-          stroke-width="2"
-        >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
-          />
-        </svg>
-        Edit metadata…
-      </button>
       <button
         type="button"
         role="menuitem"
@@ -245,7 +229,7 @@ www.meshiplaw.com/lyra.
             d="M21 21l-4.35-4.35M11 19a8 8 0 100-16 8 8 0 000 16z"
           />
         </svg>
-        Search metadata
+        Search metadata…
       </button>
       <button
         type="button"
@@ -269,12 +253,28 @@ www.meshiplaw.com/lyra.
         </svg>
         External IDs…
       </button>
-    {/if}
-    {#if canSync}
-      <RefreshMenuItem
-        onrefresh={handleRefresh}
-        onoptions={() => openModal(() => (optionsAlbum = album))}
-      />
+      <button
+        type="button"
+        role="menuitem"
+        class={menuItemClass}
+        onclick={() => openModal(() => (editAlbum = album))}
+      >
+        <svg
+          class="h-4 w-4 text-slate-400 dark:text-neutral-500"
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          stroke-width="2"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
+          />
+        </svg>
+        Edit metadata…
+      </button>
     {/if}
   </ContextMenu>
 {/if}

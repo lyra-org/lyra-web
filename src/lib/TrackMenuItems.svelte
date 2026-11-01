@@ -224,24 +224,16 @@ www.meshiplaw.com/lyra.
       <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
     </svg>
   </button>
+  {#if canSync || canManage}
+    <div
+      role="separator"
+      class="my-1 h-px bg-slate-100 dark:bg-neutral-700"
+    ></div>
+  {/if}
+  {#if canSync}
+    <RefreshMenuItem {onrefresh} onoptions={onrefreshoptions} />
+  {/if}
   {#if canManage}
-    <button type="button" class={menuItemClass} onclick={onedit}>
-      <svg
-        class="h-4 w-4 text-slate-400 dark:text-neutral-500"
-        xmlns="http://www.w3.org/2000/svg"
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke="currentColor"
-        stroke-width="2"
-      >
-        <path
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
-        />
-      </svg>
-      Edit metadata…
-    </button>
     <button type="button" class={menuItemClass} onclick={onexternalids}>
       <svg
         class="h-4 w-4 text-slate-400 dark:text-neutral-500"
@@ -259,9 +251,23 @@ www.meshiplaw.com/lyra.
       </svg>
       External IDs…
     </button>
-  {/if}
-  {#if canSync}
-    <RefreshMenuItem {onrefresh} onoptions={onrefreshoptions} />
+    <button type="button" class={menuItemClass} onclick={onedit}>
+      <svg
+        class="h-4 w-4 text-slate-400 dark:text-neutral-500"
+        xmlns="http://www.w3.org/2000/svg"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke="currentColor"
+        stroke-width="2"
+      >
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
+        />
+      </svg>
+      Edit metadata…
+    </button>
   {/if}
 {:else if view === "playlists"}
   <button
