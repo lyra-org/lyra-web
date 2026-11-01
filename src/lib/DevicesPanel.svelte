@@ -12,7 +12,6 @@ www.meshiplaw.com/lyra.
   import { getPlayer } from "./player.svelte.ts";
   import CloseButton from "./CloseButton.svelte";
   import DeviceIcon from "./DeviceIcon.svelte";
-  import NowPlayingBars from "./NowPlayingBars.svelte";
   import TrackCover from "./TrackCover.svelte";
 
   let { onclose }: { onclose: () => void } = $props();
@@ -86,6 +85,8 @@ www.meshiplaw.com/lyra.
     "shrink-0 rounded-full border border-slate-200 px-3 py-1 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-100 disabled:opacity-40 disabled:hover:bg-transparent dark:border-neutral-700 dark:text-neutral-200 dark:hover:bg-neutral-800";
   const volumeSlider =
     "h-1 w-20 cursor-pointer appearance-none rounded-full bg-slate-200 accent-[#E6CEE3] disabled:cursor-not-allowed disabled:opacity-30 dark:bg-neutral-700 dark:accent-[#BB7FB5]";
+  const card =
+    "overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-neutral-800 dark:bg-[#222425] dark:shadow-black/40";
   const sectionLabel =
     "mb-2 px-1 text-xs font-medium text-slate-500 dark:text-neutral-400";
 </script>
@@ -251,7 +252,6 @@ www.meshiplaw.com/lyra.
   kind: "self" | "connection",
   degraded: boolean,
   controlled: boolean,
-  isPlaying: boolean,
 )}
   <div
     class="flex items-center gap-2 border-b border-slate-100 px-3 py-2 dark:border-neutral-800"
@@ -272,7 +272,10 @@ www.meshiplaw.com/lyra.
       >
     {/if}
     {#if controlled}
-      <NowPlayingBars playing={isPlaying} />
+      <span
+        class="rounded-full bg-[#E6CEE3]/60 px-1.5 py-0.5 text-[10px] font-medium text-slate-700 dark:bg-[#BB7FB5]/25 dark:text-[#E6CEE3]"
+        title="The player bar controls this device">Active</span
+      >
     {/if}
   </div>
 {/snippet}
@@ -354,16 +357,8 @@ www.meshiplaw.com/lyra.
           <ul class="space-y-3">
             {#if player.currentTrack}
               {@const track = player.currentTrack}
-              <li
-                class="overflow-hidden rounded-xl border border-[#E6CEE3] bg-white shadow-sm dark:border-[#BB7FB5] dark:bg-[#222425] dark:shadow-black/40"
-              >
-                {@render cardHeader(
-                  "This browser",
-                  "self",
-                  false,
-                  true,
-                  player.playing,
-                )}
+              <li class={card}>
+                {@render cardHeader("This browser", "self", false, true)}
                 {@render trackRow(
                   player.currentCover,
                   track.title,
@@ -408,19 +403,12 @@ www.meshiplaw.com/lyra.
               {@const isPlaying =
                 p.state === "playing" || p.state === "buffering"}
               {@const controlled = devices.controlled?.id === c.id}
-              <li
-                class="overflow-hidden rounded-xl border bg-white shadow-sm dark:bg-[#222425] dark:shadow-black/40"
-                class:border-[#E6CEE3]={controlled}
-                class:dark:border-[#BB7FB5]={controlled}
-                class:border-slate-200={!controlled}
-                class:dark:border-neutral-800={!controlled}
-              >
+              <li class={card}>
                 {@render cardHeader(
                   devices.deviceName(c),
                   "connection",
                   c.remote_control_degraded,
                   controlled,
-                  isPlaying,
                 )}
                 {@render trackRow(
                   coverOf(p.track_id),
