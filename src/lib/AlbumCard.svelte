@@ -26,6 +26,7 @@ www.meshiplaw.com/lyra.
   import ExternalIdsModal from "./ExternalIdsModal.svelte";
   import MetadataEditModal from "./MetadataEditModal.svelte";
   import MetadataSearchModal from "./MetadataSearchModal.svelte";
+  import RefreshMenuItem from "./RefreshMenuItem.svelte";
   import RefreshOptionsModal from "./RefreshOptionsModal.svelte";
 
   interface Props {
@@ -270,50 +271,10 @@ www.meshiplaw.com/lyra.
       </button>
     {/if}
     {#if canSync}
-      <button
-        type="button"
-        role="menuitem"
-        class={menuItemClass}
-        onclick={handleRefresh}
-      >
-        <svg
-          class="h-4 w-4 text-slate-400 dark:text-neutral-500"
-          xmlns="http://www.w3.org/2000/svg"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-          stroke-width="2"
-        >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            d="M4 4v5h5M20 20v-5h-5M4 9a8 8 0 0113.292-4.708M20 15a8 8 0 01-13.292 4.708"
-          />
-        </svg>
-        Refresh metadata
-      </button>
-      <button
-        type="button"
-        role="menuitem"
-        class={menuItemClass}
-        onclick={() => openModal(() => (optionsAlbum = album))}
-      >
-        <svg
-          class="h-4 w-4 text-slate-400 dark:text-neutral-500"
-          xmlns="http://www.w3.org/2000/svg"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-          stroke-width="2"
-        >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            d="M4 6h16M4 12h10M4 18h6"
-          />
-        </svg>
-        Refresh with options…
-      </button>
+      <RefreshMenuItem
+        onrefresh={handleRefresh}
+        onoptions={() => openModal(() => (optionsAlbum = album))}
+      />
     {/if}
   </ContextMenu>
 {/if}
@@ -330,8 +291,11 @@ www.meshiplaw.com/lyra.
   />
 {/if}
 
-{#if optionsAlbum?.id === album.id}
-  <RefreshOptionsModal {album} onclose={() => (optionsAlbum = null)} />
+{#if optionsAlbum?.id === album.id && album.id != null}
+  <RefreshOptionsModal
+    entityId={album.id}
+    onclose={() => (optionsAlbum = null)}
+  />
 {/if}
 
 {#if editAlbum?.id === album.id && album.id != null}

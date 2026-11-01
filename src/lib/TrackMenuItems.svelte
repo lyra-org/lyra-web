@@ -12,6 +12,7 @@ www.meshiplaw.com/lyra.
   import { getPlayer } from "./player.svelte.ts";
   import { getAuth } from "./auth.svelte.ts";
   import { menuItemClass } from "./ContextMenu.svelte";
+  import RefreshMenuItem from "./RefreshMenuItem.svelte";
   import { TAG_COLORS, getTags, tagSwatchClass } from "./tags.svelte.ts";
 
   interface Props {
@@ -20,12 +21,23 @@ www.meshiplaw.com/lyra.
     onclose: () => void;
     onexternalids: () => void;
     onedit: () => void;
+    onrefresh: () => void;
+    onrefreshoptions: () => void;
   }
 
-  let { track, context, onclose, onexternalids, onedit }: Props = $props();
+  let {
+    track,
+    context,
+    onclose,
+    onexternalids,
+    onedit,
+    onrefresh,
+    onrefreshoptions,
+  }: Props = $props();
 
   let trackId = $derived(track.id);
   let canManage = $derived(getAuth().hasPermission("manage_metadata"));
+  let canSync = $derived(getAuth().hasPermission("sync_metadata"));
 
   const player = getPlayer();
   const tagsStore = getTags();
@@ -247,6 +259,9 @@ www.meshiplaw.com/lyra.
       </svg>
       External IDs…
     </button>
+  {/if}
+  {#if canSync}
+    <RefreshMenuItem {onrefresh} onoptions={onrefreshoptions} />
   {/if}
 {:else if view === "playlists"}
   <button

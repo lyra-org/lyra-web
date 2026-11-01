@@ -15,6 +15,8 @@ www.meshiplaw.com/lyra.
   } from "./ContextMenu.svelte";
   import ExternalIdsModal from "./ExternalIdsModal.svelte";
   import MetadataEditModal from "./MetadataEditModal.svelte";
+  import RefreshMenuItem from "./RefreshMenuItem.svelte";
+  import RefreshOptionsModal from "./RefreshOptionsModal.svelte";
 
   interface Props {
     artistId: string;
@@ -30,6 +32,7 @@ www.meshiplaw.com/lyra.
   let anchor = $state<MenuAnchor | null>(null);
   let showIds = $state(false);
   let showEdit = $state(false);
+  let showOptions = $state(false);
 
   // The card's contextmenu handler. Without any permitted item, the browser's
   // own menu shows instead.
@@ -106,28 +109,13 @@ www.meshiplaw.com/lyra.
       </button>
     {/if}
     {#if canSync}
-      <button
-        type="button"
-        role="menuitem"
-        class={menuItemClass}
-        onclick={handleRefresh}
-      >
-        <svg
-          class="h-4 w-4 text-slate-400 dark:text-neutral-500"
-          xmlns="http://www.w3.org/2000/svg"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-          stroke-width="2"
-        >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            d="M4 4v5h5M20 20v-5h-5M4 9a8 8 0 0113.292-4.708M20 15a8 8 0 01-13.292 4.708"
-          />
-        </svg>
-        Refresh metadata
-      </button>
+      <RefreshMenuItem
+        onrefresh={handleRefresh}
+        onoptions={() => {
+          anchor = null;
+          showOptions = true;
+        }}
+      />
     {/if}
   </ContextMenu>
 {/if}
@@ -142,4 +130,11 @@ www.meshiplaw.com/lyra.
 
 {#if showEdit}
   <MetadataEditModal entityId={artistId} onclose={() => (showEdit = false)} />
+{/if}
+
+{#if showOptions}
+  <RefreshOptionsModal
+    entityId={artistId}
+    onclose={() => (showOptions = false)}
+  />
 {/if}

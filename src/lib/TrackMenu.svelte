@@ -40,6 +40,8 @@ www.meshiplaw.com/lyra.
   import ContextMenu from "./ContextMenu.svelte";
   import ExternalIdsModal from "./ExternalIdsModal.svelte";
   import MetadataEditModal from "./MetadataEditModal.svelte";
+  import RefreshOptionsModal from "./RefreshOptionsModal.svelte";
+  import { refreshEntity } from "./api";
   import TrackMenuItems from "./TrackMenuItems.svelte";
 
   // One instance serves a whole list; the target says which track and where.
@@ -53,6 +55,7 @@ www.meshiplaw.com/lyra.
   // Outlives the menu, which closes when the modal opens.
   let idsTrack = $state<TrackResponse | null>(null);
   let editTrack = $state<TrackResponse | null>(null);
+  let optionsTrack = $state<TrackResponse | null>(null);
 </script>
 
 {#if target}
@@ -69,6 +72,15 @@ www.meshiplaw.com/lyra.
         }}
         onedit={() => {
           editTrack = track;
+          onclose();
+        }}
+        onrefresh={() => {
+          // Nothing in a track list shows refresh progress or failure.
+          refreshEntity(track.id).catch(() => {});
+          onclose();
+        }}
+        onrefreshoptions={() => {
+          optionsTrack = track;
           onclose();
         }}
       />
@@ -88,5 +100,12 @@ www.meshiplaw.com/lyra.
   <MetadataEditModal
     entityId={editTrack.id}
     onclose={() => (editTrack = null)}
+  />
+{/if}
+
+{#if optionsTrack}
+  <RefreshOptionsModal
+    entityId={optionsTrack.id}
+    onclose={() => (optionsTrack = null)}
   />
 {/if}

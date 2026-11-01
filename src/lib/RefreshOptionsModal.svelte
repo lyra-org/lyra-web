@@ -6,21 +6,17 @@ www.meshiplaw.com/lyra.
 -->
 
 <script lang="ts">
-  import type {
-    ProviderOptionValues,
-    ProviderResponse,
-    ReleaseResponse,
-  } from "./types";
+  import type { ProviderOptionValues, ProviderResponse } from "./types";
   import { fetchProviders, refreshEntity } from "./api";
   import Modal from "./Modal.svelte";
   import OptionField, { defaultOptionValue } from "./OptionField.svelte";
 
   interface Props {
-    album: ReleaseResponse;
+    entityId: string;
     onclose: () => void;
   }
 
-  let { album, onclose }: Props = $props();
+  let { entityId, onclose }: Props = $props();
 
   let providers = $state<ProviderResponse[]>([]);
   let values = $state<ProviderOptionValues>({});
@@ -70,11 +66,10 @@ www.meshiplaw.com/lyra.
   }
 
   async function handleRefresh() {
-    if (album.id == null) return;
     refreshing = true;
     error = null;
     try {
-      await refreshEntity(album.id, false, false, changedValues());
+      await refreshEntity(entityId, false, false, changedValues());
       onclose();
     } catch (err) {
       error = err instanceof Error ? err.message : "Refresh failed";
@@ -84,7 +79,7 @@ www.meshiplaw.com/lyra.
   }
 </script>
 
-<Modal title="Refresh with options" subtitle={album.title} {onclose}>
+<Modal title="Refresh with options" {onclose}>
   {#if loading}
     <p class="text-sm text-slate-500 dark:text-neutral-400">
       Loading providers…
@@ -124,7 +119,7 @@ www.meshiplaw.com/lyra.
     </button>
     <button
       type="button"
-      disabled={loading || refreshing || album.id == null}
+      disabled={loading || refreshing}
       class="rounded-md bg-[#E6CEE3] px-4 py-1.5 text-sm font-medium text-slate-900 hover:bg-[#d4b5cf] disabled:opacity-50 dark:bg-[#BB7FB5] dark:text-white dark:hover:bg-[#cfa2c9]"
       onclick={handleRefresh}
     >
