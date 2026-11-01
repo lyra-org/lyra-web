@@ -15,7 +15,6 @@ import type {
 } from "./types";
 import { connectionSessionKey } from "./api";
 import { getAuth } from "./auth.svelte.ts";
-import { getPlayer } from "./player.svelte.ts";
 
 const CAPABILITIES: RemoteAction[] = [
   "play",
@@ -26,6 +25,7 @@ const CAPABILITIES: RemoteAction[] = [
   "next_track",
   "previous_track",
   "set_volume",
+  "handoff_queue",
 ];
 
 const BASE_BACKOFF_MS = 500;
@@ -40,7 +40,23 @@ const TERMINAL_CLOSE_CODES = new Set([
 type Status = "disconnected" | "connecting" | "connected";
 
 let status = $state<Status>("disconnected");
-let lastEvent = $state<EventMessage | null>(null);
+// This browser's connection, as other devices address it.
+let selfId = $state<string | null>(null);
+
+type CommandHandler = (cmd: ForwardedCommand) => void;
+type EventHandler = (event: EventMessage) => void;
+let commandHandler: CommandHandler | null = null;
+const eventHandlers = new Set<EventHandler>();
+
+// The player executes commands other devices send this browser.
+export function onForwardedCommand(handler: CommandHandler) {
+  commandHandler = handler;
+}
+
+export function onEvent(handler: EventHandler): () => void {
+  eventHandlers.add(handler);
+  return () => eventHandlers.delete(handler);
+}
 
 let socket: WebSocket | null = null;
 let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
@@ -107,34 +123,6 @@ function isForwardedCommand(m: OutgoingMessage): m is ForwardedCommand {
   );
 }
 
-function handleForwardedCommand(cmd: ForwardedCommand) {
-  const player = getPlayer();
-  switch (cmd.action) {
-    case "play":
-    case "unpause":
-      player.resume();
-      break;
-    case "pause":
-      player.pause();
-      break;
-    case "stop":
-      player.stop();
-      break;
-    case "next_track":
-      player.nextTrack();
-      break;
-    case "previous_track":
-      player.prevTrack();
-      break;
-    case "seek":
-      player.seek(cmd.position_ms / 1000);
-      break;
-    case "set_volume":
-      player.setVolume(cmd.level);
-      break;
-  }
-}
-
 function onMessage(ev: MessageEvent<string>) {
   let msg: OutgoingMessage;
   try {
@@ -151,11 +139,12 @@ function onMessage(ev: MessageEvent<string>) {
     return;
   }
   if (isForwardedCommand(msg)) {
-    handleForwardedCommand(msg);
+    commandHandler?.(msg);
     return;
   }
   if (isEventMessage(msg)) {
-    lastEvent = msg;
+    if (msg.event === "connected") selfId = msg.data.id;
+    for (const handler of eventHandlers) handler(msg);
   }
 }
 
@@ -172,6 +161,7 @@ function onOpen() {
 function onClose(ev: CloseEvent) {
   socket = null;
   status = "disconnected";
+  selfId = null;
   for (const [id, cb] of pending.entries()) {
     cb({ type: "response", id, status: "error", error: "disconnected" });
   }
@@ -233,6 +223,7 @@ export function disconnect() {
     socket = null;
   }
   status = "disconnected";
+  selfId = null;
   pending.clear();
 }
 
@@ -281,13 +272,29 @@ export function sendSetVolume(target: string, level: number) {
   return send(cmd);
 }
 
+// Resolves once the target has taken over the playback, or with an error
+// response if it didn't within the server's timeout.
+export function sendHandoff(
+  target: string,
+  playbackId: string,
+  queueRevision: number,
+) {
+  return send({
+    action: "handoff_queue",
+    id: makeId(),
+    target,
+    playback_id: playbackId,
+    queue_revision: queueRevision,
+  });
+}
+
 export function getWebSocket() {
   return {
     get status() {
       return status;
     },
-    get lastEvent() {
-      return lastEvent;
+    get selfId() {
+      return selfId;
     },
     connect,
     disconnect,

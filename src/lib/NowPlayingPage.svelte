@@ -18,8 +18,8 @@ www.meshiplaw.com/lyra.
   let lyricsLoading = $state(false);
   let lineEls = $state<(HTMLElement | null)[]>([]);
 
-  let coverSrc = $derived(player.playbackContext?.coverUrl ?? null);
-  let coverBlurhash = $derived(player.playbackContext?.coverBlurhash ?? null);
+  let coverSrc = $derived(player.currentCover.url);
+  let coverBlurhash = $derived(player.currentCover.blurhash);
   let artistNames = $derived(player.currentArtistNames);
   let track = $derived(
     player.playbackContext?.tracks.find(

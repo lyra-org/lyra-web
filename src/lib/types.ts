@@ -53,27 +53,48 @@ export interface PlaybackResponse {
   current: CurrentPlayback | null;
   created_at: string;
   updated_at: string;
-  controller?: PlaybackController | null;
+  controller?: Connection | null;
 }
 
 export interface CurrentPlayback {
   track_id: string;
+  play_id: string;
   client_name: string | null;
+  // The plugin that reported the play; null for Lyra's own clients.
+  plugin_id: string | null;
   position_ms: number;
   state: PlaybackState;
-  activity_ms: number;
+  played_ms: number;
   // RFC 3339 UTC timestamp.
   updated_at: string;
   effective_position_ms: number;
   duration_ms?: number | null;
 }
 
-export interface PlaybackController {
-  connection_token: string;
-  connection_session_key: string;
+// An open WebSocket connection of the user's, addressed by `id` as a remote
+// control command's `target`.
+export interface Connection {
+  id: string;
   client_name: string | null;
   supported_commands: RemoteAction[];
+  // Null when the connection is idle.
+  playback_id: string | null;
   remote_control_degraded: boolean;
+  // RFC 3339 UTC timestamp.
+  connected_at: string;
+}
+
+export type RepeatMode = "none" | "one" | "all";
+
+export interface QueueSnapshot {
+  track_ids: string[];
+  current_index: number;
+  repeat_mode: RepeatMode;
+  shuffle_enabled: boolean;
+}
+
+export interface QueueResponse extends QueueSnapshot {
+  revision: number;
 }
 
 export type EntityType = "release" | "artist" | "track";
@@ -768,7 +789,8 @@ export type RemoteAction =
   | "seek"
   | "next_track"
   | "previous_track"
-  | "set_volume";
+  | "set_volume"
+  | "handoff_queue";
 
 export type ResponseStatus = "ok" | "error";
 
@@ -804,11 +826,20 @@ export interface SetVolumeCommand {
   level: number;
 }
 
+export interface HandoffQueueCommand {
+  action: "handoff_queue";
+  id: string;
+  target: string;
+  playback_id: string;
+  queue_revision: number;
+}
+
 export type ClientCommand =
   | DeclareCapabilitiesCommand
   | BasicRemoteCommand
   | SeekCommand
-  | SetVolumeCommand;
+  | SetVolumeCommand
+  | HandoffQueueCommand;
 
 export interface ResponseMessage {
   type: "response";
@@ -817,11 +848,12 @@ export interface ResponseMessage {
   error?: string | null;
 }
 
-export interface EventMessage {
-  type: "event";
-  event: string;
-  data: unknown;
-}
+export type EventMessage = { type: "event" } & (
+  | { event: "connected" | "connection_updated"; data: Connection }
+  | { event: "connection_closed"; data: { id: string } }
+  | { event: "sync_required"; data: Record<string, never> }
+  | { event: "playback_state_changed"; data: unknown }
+);
 
 export type ForwardedCommand =
   | {
@@ -833,38 +865,40 @@ export type ForwardedCommand =
         | "stop"
         | "next_track"
         | "previous_track";
-      from?: number | null;
+      from?: string | null;
     }
   | {
       type: "command";
       action: "seek";
-      from?: number | null;
+      from?: string | null;
       position_ms: number;
     }
   | {
       type: "command";
       action: "set_volume";
-      from?: number | null;
+      from?: string | null;
       level: number;
+    }
+  | {
+      type: "command";
+      action: "handoff_queue";
+      from?: string | null;
+      playback_id: string;
+      queue_revision: number;
+      // The current track's play, which this connection continues.
+      play_id?: string | null;
+      handoff_token: string;
     };
 
 export type OutgoingMessage = ResponseMessage | EventMessage | ForwardedCommand;
 
-export interface ActivePlayback {
+// A playback with a current track, flattened for listing devices.
+export interface ActivePlayback extends CurrentPlayback {
   playback_id: string;
-  track_id: string;
-  user_id: string;
-  client_name: string | null;
-  position_ms: number;
-  effective_position_ms: number;
-  duration_ms?: number | null;
-  state: PlaybackState;
-  activity_ms: number;
-  updated_at: string;
-  connection_session_key?: string | null;
-  connection_token?: string | null;
-  supported_commands: RemoteAction[];
-  remote_control_degraded: boolean;
+  // Null for plugin-reported playback without a server-managed queue.
+  queue_revision: number | null;
+  // The connection driving the playback, if any.
+  connection_id: string | null;
 }
 
 // Plugin repositories

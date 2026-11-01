@@ -15,6 +15,9 @@ import type {
   PlaybackResponse,
   PlaybackState,
   ActivePlayback,
+  Connection,
+  QueueResponse,
+  QueueSnapshot,
   RefreshResponse,
   ProviderResponse,
   ProviderOptionValues,
@@ -74,6 +77,33 @@ function makeId(): string {
 }
 
 const CONNECTION_SESSION_KEY = makeId();
+
+// Names this browser to the user's other devices, such as "Firefox on Linux".
+function browserClientName(): string | undefined {
+  const ua = navigator.userAgent;
+  const browser = /Edg\//.test(ua)
+    ? "Edge"
+    : /Firefox\//.test(ua)
+      ? "Firefox"
+      : /Chrome\//.test(ua)
+        ? "Chrome"
+        : /Safari\//.test(ua)
+          ? "Safari"
+          : null;
+  const os = /Android/.test(ua)
+    ? "Android"
+    : /iPhone|iPad/.test(ua)
+      ? "iOS"
+      : /Mac OS X/.test(ua)
+        ? "macOS"
+        : /Windows/.test(ua)
+          ? "Windows"
+          : /Linux/.test(ua)
+            ? "Linux"
+            : null;
+  if (browser && os) return `${browser} on ${os}`;
+  return browser ?? os ?? undefined;
+}
 
 export function connectionSessionKey(): string {
   return CONNECTION_SESSION_KEY;
@@ -201,7 +231,11 @@ export function loginUser(
   username: string,
   password: string,
 ): Promise<Session> {
-  return post<LoginResponse>("/users/login", { username, password });
+  return post<LoginResponse>("/users/login", {
+    username,
+    password,
+    client_name: browserClientName(),
+  });
 }
 
 // Revokes the current session on the server. Failures are ignored so that
@@ -354,17 +388,17 @@ export async function fetchActivePlaybacks(): Promise<ActivePlayback[]> {
       sessions.push({
         ...playback.current,
         playback_id: playback.id,
-        user_id: playback.user_id,
-        connection_token: playback.controller?.connection_token,
-        connection_session_key: playback.controller?.connection_session_key,
-        supported_commands: playback.controller?.supported_commands ?? [],
-        remote_control_degraded:
-          playback.controller?.remote_control_degraded ?? false,
+        queue_revision: playback.queue_revision,
+        connection_id: playback.controller?.id ?? null,
       });
     }
     cursor = page.next_cursor;
   } while (cursor);
   return sessions;
+}
+
+export function fetchConnections(): Promise<Connection[]> {
+  return get<Connection[]>("/me/connections");
 }
 
 // Artists
@@ -421,22 +455,47 @@ export function createPlaybackUrl(
 
 // Playback
 
-export function startPlayback(
-  trackId: string,
+export function createPlayback(
+  queue: QueueSnapshot,
+  playId: string,
   durationMs?: number | null,
   positionMs?: number | null,
   state?: PlaybackState | null,
 ): Promise<PlaybackResponse> {
   return post<PlaybackResponse>("/me/playbacks", {
-    track_ids: [trackId],
-    current_index: 0,
-    repeat_mode: "none",
-    shuffle_enabled: false,
+    ...queue,
+    play_id: playId,
     connection_session_key: CONNECTION_SESSION_KEY,
     duration_ms: durationMs ?? undefined,
     position_ms: positionMs ?? undefined,
     state: state ?? undefined,
   });
+}
+
+export function fetchPlayback(id: string): Promise<PlaybackResponse> {
+  return get<PlaybackResponse>(`/me/playbacks/${encodeURIComponent(id)}`);
+}
+
+// Pass `revision` to require exactly that revision, as a handoff does.
+export function fetchPlaybackQueue(
+  playbackId: string,
+  revision?: number,
+): Promise<QueueResponse> {
+  const query = revision != null ? `?revision=${revision}` : "";
+  return get<QueueResponse>(
+    `/me/playbacks/${encodeURIComponent(playbackId)}/queue${query}`,
+  );
+}
+
+export function replacePlaybackQueue(
+  playbackId: string,
+  expectedRevision: number,
+  queue: QueueSnapshot,
+): Promise<QueueResponse> {
+  return put<QueueResponse>(
+    `/me/playbacks/${encodeURIComponent(playbackId)}/queue`,
+    { expected_revision: expectedRevision, ...queue },
+  );
 }
 
 export function fetchPlaybacks(
@@ -451,21 +510,32 @@ export function fetchPlaybacks(
   return get<Page<PlaybackResponse>>(`/me/playbacks?${params}`);
 }
 
+export interface PlaybackProgress {
+  queueRevision: number;
+  trackId: string;
+  playId: string;
+  positionMs: number;
+  state: PlaybackState;
+  durationMs?: number | null;
+  // From a handoff_queue command; this report completes the handoff.
+  handoffToken?: string;
+}
+
 export function reportPlaybackProgress(
   playbackId: string,
-  queueRevision: number,
-  positionMs: number,
-  state: PlaybackState | string,
-  durationMs?: number | null,
+  progress: PlaybackProgress,
 ): Promise<PlaybackResponse> {
   return post<PlaybackResponse>(
     `/me/playbacks/${encodeURIComponent(playbackId)}/progress`,
     {
-      queue_revision: queueRevision,
+      queue_revision: progress.queueRevision,
+      track_id: progress.trackId,
+      play_id: progress.playId,
       connection_session_key: CONNECTION_SESSION_KEY,
-      position_ms: positionMs,
-      state,
-      duration_ms: durationMs ?? undefined,
+      position_ms: progress.positionMs,
+      state: progress.state,
+      duration_ms: progress.durationMs ?? undefined,
+      handoff_token: progress.handoffToken,
     },
   );
 }

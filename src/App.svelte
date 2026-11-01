@@ -23,7 +23,8 @@ www.meshiplaw.com/lyra.
   import NowPlayingPage from "./lib/NowPlayingPage.svelte";
   import Player from "./lib/Player.svelte";
   import SettingsPanel from "./lib/SettingsPanel.svelte";
-  import RemotePanel from "./lib/RemotePanel.svelte";
+  import DevicesPanel from "./lib/DevicesPanel.svelte";
+  import DeviceIcon from "./lib/DeviceIcon.svelte";
   import SearchNav from "./lib/SearchNav.svelte";
   import SearchResults from "./lib/SearchResults.svelte";
   import { onMount, untrack } from "svelte";
@@ -36,7 +37,7 @@ www.meshiplaw.com/lyra.
     connect as wsConnect,
     disconnect as wsDisconnect,
   } from "./lib/ws.svelte.ts";
-  import { getRemote } from "./lib/remote.svelte.ts";
+  import { getDevices } from "./lib/devices.svelte.ts";
   import { endSession } from "./lib/api";
   import MixButton from "./lib/MixButton.svelte";
   import { headerMixForRoute } from "./lib/headerMix.svelte.ts";
@@ -47,7 +48,7 @@ www.meshiplaw.com/lyra.
   const setup = getSetup();
   const pluginUpdates = getPluginUpdates();
   const theme = getTheme();
-  const remote = getRemote();
+  const devices = getDevices();
   const player = getPlayer();
 
   let loggingOut = $state(false);
@@ -156,8 +157,8 @@ www.meshiplaw.com/lyra.
   }
 
   $effect(() => {
-    if (!auth.isLoggedIn && remote.isOpen) {
-      remote.close();
+    if (!auth.isLoggedIn && devices.panelOpen) {
+      devices.closePanel();
     }
   });
 
@@ -559,28 +560,24 @@ www.meshiplaw.com/lyra.
         {@render themeToggle()}
         <button
           type="button"
-          aria-label="Open remote control"
-          title="Remote control"
+          aria-label={devices.controlled
+            ? `Open devices (playing on ${devices.deviceName(devices.controlled)})`
+            : "Open devices"}
+          title={devices.controlled
+            ? `Playing on ${devices.deviceName(devices.controlled)}`
+            : "Devices"}
           class="relative flex h-8 w-8 items-center justify-center rounded-full text-slate-500 hover:bg-slate-100 hover:text-slate-700 dark:text-neutral-400 dark:hover:bg-neutral-700 dark:hover:text-neutral-200"
-          onclick={() => remote.open()}
+          onclick={() => devices.openPanel()}
         >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            class="h-5 w-5"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            stroke-width="1.8"
-          >
-            <rect x="2" y="5" width="20" height="14" rx="2" />
-            <path d="M2 11h5M2 15h3" stroke-linecap="round" />
-            <circle cx="17" cy="14" r="1.6" fill="currentColor" />
-          </svg>
-          {#if remote.sessions.length > 0}
+          <DeviceIcon kind="devices" class="h-5 w-5" />
+          {#if devices.controlled}
             <span
-              class="absolute -top-0.5 -right-0.5 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-[#E6CEE3] px-1 text-[9px] font-semibold text-slate-900 dark:bg-[#BB7FB5] dark:text-white"
-              >{remote.sessions.length}</span
-            >
+              class="absolute top-0.5 right-0.5 h-2 w-2 rounded-full bg-[#BB7FB5] ring-2 ring-slate-50 dark:ring-[#181a1b]"
+            ></span>
+          {:else if !devices.online}
+            <span
+              class="absolute top-0.5 right-0.5 h-2 w-2 rounded-full bg-amber-500 ring-2 ring-slate-50 dark:ring-[#181a1b]"
+            ></span>
           {/if}
         </button>
         <button
@@ -694,8 +691,8 @@ www.meshiplaw.com/lyra.
     {#if settingsOpen}
       <SettingsPanel onclose={() => (settingsOpen = false)} />
     {/if}
-    {#if remote.isOpen}
-      <RemotePanel onclose={() => remote.close()} />
+    {#if devices.panelOpen}
+      <DevicesPanel onclose={() => devices.closePanel()} />
     {/if}
   </main>
 {/if}
