@@ -11,6 +11,7 @@ import type {
 } from "./types";
 import { fetchMix, fetchMixers } from "./api";
 import { getAuth } from "./auth.svelte.ts";
+import { optionTakes } from "./OptionField.svelte";
 
 // Option values keyed `<mixer_id>.<name>`, as a mix request takes them.
 export type MixOptionValues = Record<string, OptionValue>;
@@ -80,7 +81,7 @@ async function mixRequestOptions(): Promise<MixOptionValues> {
     for (const option of mixer.options) {
       const key = mixOptionKey(mixer.mixer_id, option.name);
       const value = saved[key];
-      if (option.available && typeof value === option.type) {
+      if (option.available && optionTakes(option, value)) {
         options[key] = value;
       }
     }

@@ -12,7 +12,19 @@ www.meshiplaw.com/lyra.
     if (option.default != null) return option.default;
     if (option.type === "boolean") return false;
     if (option.type === "number") return 0;
+    if (option.type === "choice") return option.options?.[0]?.value ?? "";
     return "";
+  }
+
+  /** Whether the server would take `value` for `option` as it is declared now. */
+  export function optionTakes(
+    option: OptionResponse,
+    value: unknown,
+  ): value is OptionValue {
+    if (option.type === "choice") {
+      return (option.options ?? []).some((choice) => choice.value === value);
+    }
+    return typeof value === option.type;
   }
 </script>
 
@@ -55,6 +67,12 @@ www.meshiplaw.com/lyra.
       disabled={!option.available}
       bind:value={() => Number(value), (number) => (value = number)}
     />
+  {:else if option.type === "choice"}
+    <select class={inputClass} disabled={!option.available} bind:value>
+      {#each option.options ?? [] as choice (choice.value)}
+        <option value={choice.value}>{choice.label}</option>
+      {/each}
+    </select>
   {:else}
     <input
       type="text"

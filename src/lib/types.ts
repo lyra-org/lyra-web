@@ -172,12 +172,20 @@ export interface EntryResponse {
 
 export type OptionValue = boolean | number | string;
 
+// One value a `choice` option takes.
+export interface OptionChoice {
+  value: string;
+  label: string;
+}
+
 // An option a provider accepts on refresh, or a mixer on a mix, as declared by
 // its plugin.
 export interface OptionResponse {
   name: string;
   label: string;
-  type: "boolean" | "number" | "string";
+  type: "boolean" | "number" | "string" | "choice";
+  // The values a `choice` takes, in display order.
+  options?: OptionChoice[];
   default: OptionValue | null;
   available: boolean;
   unavailable_reason?: string | null;

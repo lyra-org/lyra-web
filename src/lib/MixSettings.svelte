@@ -8,7 +8,10 @@ www.meshiplaw.com/lyra.
 <script lang="ts">
   import { onMount } from "svelte";
   import type { MixerResponse } from "./types";
-  import OptionField, { defaultOptionValue } from "./OptionField.svelte";
+  import OptionField, {
+    defaultOptionValue,
+    optionTakes,
+  } from "./OptionField.svelte";
   import {
     loadMixers,
     mixOptionKey,
@@ -37,7 +40,7 @@ www.meshiplaw.com/lyra.
             const value = saved[key];
             return [
               key,
-              typeof value === option.type ? value : defaultOptionValue(option),
+              optionTakes(option, value) ? value : defaultOptionValue(option),
             ];
           }),
         ),
