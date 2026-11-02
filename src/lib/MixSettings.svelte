@@ -10,7 +10,9 @@ www.meshiplaw.com/lyra.
   import type { MixerResponse } from "./types";
   import OptionField, {
     defaultOptionValue,
+    optionChanged,
     optionTakes,
+    type OptionFieldValue,
   } from "./OptionField.svelte";
   import {
     loadMixers,
@@ -21,7 +23,7 @@ www.meshiplaw.com/lyra.
   } from "./mixOptions";
 
   let mixers = $state<MixerResponse[] | null>(null);
-  let values = $state<MixOptionValues>({});
+  let values = $state<Record<string, OptionFieldValue>>({});
   let loadError = $state(false);
   // Saved values of mixers not listed here, kept for when they come back.
   let saved: MixOptionValues = {};
@@ -58,10 +60,11 @@ www.meshiplaw.com/lyra.
     for (const mixer of mixers) {
       for (const option of mixer.options) {
         const key = mixOptionKey(mixer.mixer_id, option.name);
-        if (values[key] === defaultOptionValue(option)) {
-          delete changed[key];
+        const value = values[key];
+        if (optionChanged(option, value)) {
+          changed[key] = value;
         } else {
-          changed[key] = values[key];
+          delete changed[key];
         }
       }
     }

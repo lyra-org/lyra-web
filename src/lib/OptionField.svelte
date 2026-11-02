@@ -8,12 +8,21 @@ www.meshiplaw.com/lyra.
 <script module lang="ts">
   import type { OptionResponse, OptionValue } from "./types";
 
-  export function defaultOptionValue(option: OptionResponse): OptionValue {
+  // A field's value, where `null` leaves the option unset so the plugin's own
+  // default applies.
+  export type OptionFieldValue = OptionValue | null;
+
+  export function defaultOptionValue(option: OptionResponse): OptionFieldValue {
     if (option.default != null) return option.default;
-    if (option.type === "boolean") return false;
-    if (option.type === "number") return 0;
-    if (option.type === "choice") return option.options?.[0]?.value ?? "";
-    return "";
+    return option.type === "string" ? "" : null;
+  }
+
+  /** Whether `value` differs from what the plugin applies with the option unset. */
+  export function optionChanged(
+    option: OptionResponse,
+    value: OptionFieldValue,
+  ): value is OptionValue {
+    return value != null && value !== defaultOptionValue(option);
   }
 
   /** Whether the server would take `value` for `option` as it is declared now. */
@@ -31,7 +40,7 @@ www.meshiplaw.com/lyra.
 <script lang="ts">
   interface Props {
     option: OptionResponse;
-    value: OptionValue;
+    value: OptionFieldValue;
   }
 
   let { option, value = $bindable() }: Props = $props();
@@ -54,7 +63,20 @@ www.meshiplaw.com/lyra.
       </span>
     {/if}
   </span>
-  {#if option.type === "boolean"}
+  {#if option.type === "boolean" && option.default == null}
+    <select
+      class={inputClass}
+      disabled={!option.available}
+      bind:value={
+        () => (value == null ? "" : value ? "on" : "off"),
+        (state) => (value = state === "" ? null : state === "on")
+      }
+    >
+      <option value="">Default</option>
+      <option value="on">On</option>
+      <option value="off">Off</option>
+    </select>
+  {:else if option.type === "boolean"}
     <input
       type="checkbox"
       disabled={!option.available}
@@ -65,10 +87,21 @@ www.meshiplaw.com/lyra.
       type="number"
       class={inputClass}
       disabled={!option.available}
-      bind:value={() => Number(value), (number) => (value = number)}
+      placeholder={option.default == null ? "Default" : String(option.default)}
+      bind:value={
+        () => (typeof value === "number" ? value : null),
+        (number) => (value = number ?? null)
+      }
     />
   {:else if option.type === "choice"}
-    <select class={inputClass} disabled={!option.available} bind:value>
+    <select
+      class={inputClass}
+      disabled={!option.available}
+      bind:value={() => value ?? "", (choice) => (value = choice || null)}
+    >
+      {#if option.default == null}
+        <option value="">Default</option>
+      {/if}
       {#each option.options ?? [] as choice (choice.value)}
         <option value={choice.value}>{choice.label}</option>
       {/each}

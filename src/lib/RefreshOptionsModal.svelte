@@ -9,7 +9,11 @@ www.meshiplaw.com/lyra.
   import type { ProviderOptionValues, ProviderResponse } from "./types";
   import { fetchProviders, refreshEntity } from "./api";
   import Modal from "./Modal.svelte";
-  import OptionField, { defaultOptionValue } from "./OptionField.svelte";
+  import OptionField, {
+    defaultOptionValue,
+    optionChanged,
+    type OptionFieldValue,
+  } from "./OptionField.svelte";
 
   interface Props {
     entityId: string;
@@ -19,7 +23,7 @@ www.meshiplaw.com/lyra.
   let { entityId, onclose }: Props = $props();
 
   let providers = $state<ProviderResponse[]>([]);
-  let values = $state<ProviderOptionValues>({});
+  let values = $state<Record<string, Record<string, OptionFieldValue>>>({});
   let loading = $state(true);
   let refreshing = $state(false);
   let error = $state<string | null>(null);
@@ -56,7 +60,7 @@ www.meshiplaw.com/lyra.
     for (const provider of providers) {
       for (const option of provider.options) {
         const value = values[provider.provider_id][option.name];
-        if (option.available && value !== defaultOptionValue(option)) {
+        if (option.available && optionChanged(option, value)) {
           changed[provider.provider_id] ??= {};
           changed[provider.provider_id][option.name] = value;
         }
