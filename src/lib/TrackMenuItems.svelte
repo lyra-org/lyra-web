@@ -12,6 +12,7 @@ www.meshiplaw.com/lyra.
   import { getPlayer } from "./player.svelte.ts";
   import { getAuth } from "./auth.svelte.ts";
   import { menuItemClass } from "./ContextMenu.svelte";
+  import RatingMenuItem from "./RatingMenuItem.svelte";
   import RefreshMenuItem from "./RefreshMenuItem.svelte";
   import { TAG_COLORS, getTags, tagSwatchClass } from "./tags.svelte.ts";
 
@@ -224,6 +225,7 @@ www.meshiplaw.com/lyra.
       <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
     </svg>
   </button>
+  <RatingMenuItem targetId={trackId} label={track.title} />
   {#if canSync || canManage}
     <div
       role="separator"

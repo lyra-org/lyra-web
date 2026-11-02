@@ -21,7 +21,9 @@ www.meshiplaw.com/lyra.
   import { getPlayer } from "./player.svelte.ts";
   import BlurhashCanvas from "./BlurhashCanvas.svelte";
   import FavoriteButton from "./FavoriteButton.svelte";
+  import RatingButton from "./RatingButton.svelte";
   import { getFavoriteState } from "./favorites.svelte.ts";
+  import { getRating } from "./ratings.svelte.ts";
   import { anchorAtPointer } from "./ContextMenu.svelte";
   import TrackMenu, { type TrackMenuTarget } from "./TrackMenu.svelte";
 
@@ -185,6 +187,21 @@ www.meshiplaw.com/lyra.
                   </a>
                 {:else if release}
                   {release.title}
+                {/if}
+              </td>
+              <td class="w-12 py-2 pl-3">
+                {#if track.id}
+                  <div
+                    class="flex justify-end opacity-0 group-focus-within:opacity-100 group-hover:opacity-100"
+                    class:opacity-100={getRating(track.id) != null}
+                  >
+                    <RatingButton
+                      targetId={track.id}
+                      label={track.title}
+                      size="sm"
+                      stopPropagation
+                    />
+                  </div>
                 {/if}
               </td>
               <td

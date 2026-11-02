@@ -667,6 +667,11 @@ export interface CheckResponse {
   favorited: Record<string, boolean>;
 }
 
+// A 1-5 rating for each submitted ID, null where unrated or not visible.
+export interface CheckRatingsResponse {
+  ratings: Record<string, number | null>;
+}
+
 // Plugins
 
 export interface PluginManifestResponse {

@@ -12,6 +12,7 @@ www.meshiplaw.com/lyra.
   import BlurhashCanvas from "./BlurhashCanvas.svelte";
   import ArtistPortraitCard from "./ArtistPortraitCard.svelte";
   import FavoriteButton from "./FavoriteButton.svelte";
+  import RatingButton from "./RatingButton.svelte";
 
   interface Props {
     trackId: string;
@@ -272,6 +273,7 @@ www.meshiplaw.com/lyra.
           </button>
           {#if track.id}
             <FavoriteButton targetId={track.id} label={track.title} />
+            <RatingButton targetId={track.id} label={track.title} />
           {/if}
         </div>
       </div>

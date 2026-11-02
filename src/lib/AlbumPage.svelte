@@ -14,7 +14,9 @@ www.meshiplaw.com/lyra.
   import { anchorAtPointer, anchorBelow } from "./ContextMenu.svelte";
   import TrackMenu, { type TrackMenuTarget } from "./TrackMenu.svelte";
   import FavoriteButton from "./FavoriteButton.svelte";
+  import RatingButton from "./RatingButton.svelte";
   import { getFavoriteState } from "./favorites.svelte.ts";
+  import { getRating } from "./ratings.svelte.ts";
   const player = getPlayer();
   const tagsStore = getTags();
 
@@ -208,6 +210,7 @@ www.meshiplaw.com/lyra.
           </h2>
           {#if album.id}
             <FavoriteButton targetId={album.id} label={album.title} />
+            <RatingButton targetId={album.id} label={album.title} />
           {/if}
         </div>
         <p class="mt-1 text-lg text-slate-600 dark:text-neutral-300">
@@ -355,6 +358,21 @@ www.meshiplaw.com/lyra.
                           >
                         {/each}
                       </span>
+                    {/if}
+                  </td>
+                  <td class="w-12 py-2 pl-3">
+                    {#if track.id}
+                      <div
+                        class="flex justify-end opacity-0 group-focus-within:opacity-100 group-hover:opacity-100"
+                        class:opacity-100={getRating(track.id) != null}
+                      >
+                        <RatingButton
+                          targetId={track.id}
+                          label={track.title}
+                          size="sm"
+                          stopPropagation
+                        />
+                      </div>
                     {/if}
                   </td>
                   <td

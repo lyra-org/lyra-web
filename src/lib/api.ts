@@ -49,6 +49,7 @@ import type {
   ServerSettingsResponse,
   ServerSettingValue,
   FavoriteStateResponse,
+  CheckRatingsResponse,
   CheckResponse,
   TargetListResponse,
   TargetStateResponse,
@@ -275,15 +276,18 @@ const RELEASE_LIST_INC = "artists,covers";
 const ARTIST_LIST_INC = "covers";
 const TRACK_LIST_INC = "releases,artists,release_covers";
 
-// Narrows a track, release or artist list to the user's favorites or listens.
+// Narrows a track, release or artist list by the user's favorites, listens or
+// ratings.
 export interface ListFilter {
   favorite?: boolean;
   listened?: boolean;
+  rated?: boolean;
 }
 
 function setListFilter(params: URLSearchParams, filter?: ListFilter) {
   if (filter?.favorite != null) params.set("favorite", String(filter.favorite));
   if (filter?.listened != null) params.set("listened", String(filter.listened));
+  if (filter?.rated != null) params.set("rated", String(filter.rated));
 }
 
 export function fetchReleases(opts?: {
@@ -1042,6 +1046,24 @@ export function addFavorite(targetId: string): Promise<void> {
 
 export function removeFavorite(targetId: string): Promise<void> {
   return del<void>(`/me/favorites/${encodeURIComponent(targetId)}`);
+}
+
+// Ratings
+
+export function checkRatings(
+  targetIds: string[],
+): Promise<CheckRatingsResponse> {
+  return post<CheckRatingsResponse>("/me/ratings/check", {
+    target_ids: targetIds,
+  });
+}
+
+export function setRating(targetId: string, rating: number): Promise<void> {
+  return put<void>(`/me/ratings/${encodeURIComponent(targetId)}`, { rating });
+}
+
+export function removeRating(targetId: string): Promise<void> {
+  return del<void>(`/me/ratings/${encodeURIComponent(targetId)}`);
 }
 
 // Tracks

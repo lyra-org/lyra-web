@@ -26,6 +26,7 @@ www.meshiplaw.com/lyra.
   import ExternalIdsModal from "./ExternalIdsModal.svelte";
   import MetadataEditModal from "./MetadataEditModal.svelte";
   import MetadataSearchModal from "./MetadataSearchModal.svelte";
+  import RatingMenuItem from "./RatingMenuItem.svelte";
   import RefreshMenuItem from "./RefreshMenuItem.svelte";
   import RefreshOptionsModal from "./RefreshOptionsModal.svelte";
 
@@ -48,7 +49,7 @@ www.meshiplaw.com/lyra.
 
   let canManage = $derived(auth.hasPermission("manage_metadata"));
   let canSync = $derived(auth.hasPermission("sync_metadata"));
-  let hasMenu = $derived(album.id != null && (canManage || canSync));
+  let hasMenu = $derived(album.id != null);
 
   let menuAnchor = $state<MenuAnchor | null>(null);
   let refreshing = $state(false);
@@ -202,6 +203,15 @@ www.meshiplaw.com/lyra.
 
 {#if menuAnchor}
   <ContextMenu anchor={menuAnchor} onclose={() => (menuAnchor = null)}>
+    {#if album.id != null}
+      <RatingMenuItem targetId={album.id} label={album.title} />
+    {/if}
+    {#if canSync || canManage}
+      <div
+        role="separator"
+        class="my-1 h-px bg-slate-100 dark:bg-neutral-700"
+      ></div>
+    {/if}
     {#if canSync}
       <RefreshMenuItem
         onrefresh={handleRefresh}

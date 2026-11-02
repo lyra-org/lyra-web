@@ -15,14 +15,16 @@ www.meshiplaw.com/lyra.
   } from "./ContextMenu.svelte";
   import ExternalIdsModal from "./ExternalIdsModal.svelte";
   import MetadataEditModal from "./MetadataEditModal.svelte";
+  import RatingMenuItem from "./RatingMenuItem.svelte";
   import RefreshMenuItem from "./RefreshMenuItem.svelte";
   import RefreshOptionsModal from "./RefreshOptionsModal.svelte";
 
   interface Props {
     artistId: string;
+    artistName: string;
   }
 
-  let { artistId }: Props = $props();
+  let { artistId, artistName }: Props = $props();
 
   const auth = getAuth();
 
@@ -34,10 +36,8 @@ www.meshiplaw.com/lyra.
   let showEdit = $state(false);
   let showOptions = $state(false);
 
-  // The card's contextmenu handler. Without any permitted item, the browser's
-  // own menu shows instead.
+  // The card's contextmenu handler.
   export function open(e: MouseEvent) {
-    if (!canManage && !canSync) return;
     e.preventDefault();
     anchor = anchorAtPointer(e);
   }
@@ -59,6 +59,13 @@ www.meshiplaw.com/lyra.
 
 {#if anchor}
   <ContextMenu {anchor} onclose={() => (anchor = null)}>
+    <RatingMenuItem targetId={artistId} label={artistName} />
+    {#if canSync || canManage}
+      <div
+        role="separator"
+        class="my-1 h-px bg-slate-100 dark:bg-neutral-700"
+      ></div>
+    {/if}
     {#if canSync}
       <RefreshMenuItem
         onrefresh={handleRefresh}

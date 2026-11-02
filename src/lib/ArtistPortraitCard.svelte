@@ -85,4 +85,4 @@ www.meshiplaw.com/lyra.
   {/if}
 </a>
 
-<ArtistMenu bind:this={menu} artistId={id} />
+<ArtistMenu bind:this={menu} artistId={id} artistName={name} />

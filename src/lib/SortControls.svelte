@@ -28,6 +28,8 @@ www.meshiplaw.com/lyra.
     track_count: "Track count",
     total_duration: "Total duration",
     duration: "Duration",
+    rating: "Rating",
+    rated_at: "Date rated",
     favorited_at: "Date favorited",
   };
 
@@ -40,6 +42,7 @@ www.meshiplaw.com/lyra.
             "updated_at",
             "release_date",
             "last_played_at",
+            "rated_at",
             "favorited_at",
           ].includes(sortBy)
         ? ["Oldest first", "Newest first"]

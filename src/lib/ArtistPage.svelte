@@ -12,6 +12,7 @@ www.meshiplaw.com/lyra.
   import AlbumCard from "./AlbumCard.svelte";
   import ArtistPortraitCard from "./ArtistPortraitCard.svelte";
   import FavoriteButton from "./FavoriteButton.svelte";
+  import RatingButton from "./RatingButton.svelte";
 
   interface Props {
     artistId: string;
@@ -151,6 +152,7 @@ www.meshiplaw.com/lyra.
           {artist.name}
           {#if artist.id}
             <FavoriteButton targetId={artist.id} label={artist.name} />
+            <RatingButton targetId={artist.id} label={artist.name} />
           {/if}
         </h2>
         {#if sortedReleases.length > 0}

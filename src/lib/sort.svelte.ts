@@ -22,6 +22,8 @@ export const sortFields: Record<SortKind, string[]> = {
     "last_played_at",
     "listen_count",
     "total_duration",
+    "rating",
+    "rated_at",
     "favorited_at",
   ],
   artists: [
@@ -32,6 +34,8 @@ export const sortFields: Record<SortKind, string[]> = {
     "release_count",
     "track_count",
     "total_duration",
+    "rating",
+    "rated_at",
     "favorited_at",
   ],
   tracks: [
@@ -40,6 +44,8 @@ export const sortFields: Record<SortKind, string[]> = {
     "last_played_at",
     "listen_count",
     "duration",
+    "rating",
+    "rated_at",
     "favorited_at",
   ],
   genres: [
@@ -65,6 +71,8 @@ export const listFilters = {
   favorites: { favorite: true },
   played: { listened: true },
   unplayed: { listened: false },
+  rated: { rated: true },
+  unrated: { rated: false },
 } satisfies Record<string, ListFilter>;
 
 export type ListFilterKey = keyof typeof listFilters;
@@ -74,6 +82,8 @@ export const listFilterOptions: { value: ListFilterKey; label: string }[] = [
   { value: "favorites", label: "Favorites" },
   { value: "played", label: "Played" },
   { value: "unplayed", label: "Not played" },
+  { value: "rated", label: "Rated" },
+  { value: "unrated", label: "Not rated" },
 ];
 
 const STORAGE_PREFIX = "lyra-sort";

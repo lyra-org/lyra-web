@@ -35,11 +35,21 @@ www.meshiplaw.com/lyra.
   interface Props {
     anchor: MenuAnchor;
     onclose: () => void;
-    minWidth?: "narrow" | "wide";
+    minWidth?: "narrow" | "wide" | "none";
+    // A dialog holds controls other than menu items, such as rating stars.
+    role?: "menu" | "dialog";
+    label?: string;
     children: Snippet;
   }
 
-  let { anchor, onclose, minWidth = "narrow", children }: Props = $props();
+  let {
+    anchor,
+    onclose,
+    minWidth = "narrow",
+    role = "menu",
+    label,
+    children,
+  }: Props = $props();
 
   const MARGIN = 8;
 
@@ -92,7 +102,8 @@ stay inside, away from the rows and page shortcuts around it. -->
   bind:this={menu}
   bind:offsetWidth={width}
   bind:offsetHeight={height}
-  role="menu"
+  {role}
+  aria-label={label}
   tabindex="-1"
   class="fixed z-30 rounded-md bg-white py-1 shadow-lg ring-1 ring-black/5 dark:bg-[#1b1d1e] dark:shadow-black/50 dark:ring-white/10"
   class:min-w-40={minWidth === "narrow"}

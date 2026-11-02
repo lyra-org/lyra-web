@@ -77,5 +77,5 @@ www.meshiplaw.com/lyra.
 </a>
 
 {#if artist.id != null}
-  <ArtistMenu bind:this={menu} artistId={artist.id} />
+  <ArtistMenu bind:this={menu} artistId={artist.id} artistName={artist.name} />
 {/if}

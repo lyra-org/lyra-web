@@ -11,6 +11,7 @@ www.meshiplaw.com/lyra.
   import type { LyricsResponse } from "./types";
   import BlurhashCanvas from "./BlurhashCanvas.svelte";
   import FavoriteButton from "./FavoriteButton.svelte";
+  import RatingButton from "./RatingButton.svelte";
 
   const player = getPlayer();
 
@@ -176,6 +177,10 @@ www.meshiplaw.com/lyra.
           </h1>
           {#if player.currentTrack.id}
             <FavoriteButton
+              targetId={player.currentTrack.id}
+              label={player.currentTrack.title}
+            />
+            <RatingButton
               targetId={player.currentTrack.id}
               label={player.currentTrack.title}
             />
