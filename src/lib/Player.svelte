@@ -13,6 +13,7 @@ www.meshiplaw.com/lyra.
   import DevicePicker from "./DevicePicker.svelte";
   import FavoriteButton from "./FavoriteButton.svelte";
   import TrackCover from "./TrackCover.svelte";
+  import VolumeControl from "./VolumeControl.svelte";
 
   const player = getPlayer();
   const devices = getDevices();
@@ -293,61 +294,15 @@ www.meshiplaw.com/lyra.
 
       <!-- Right: volume + time -->
       <div class="flex flex-1 items-center justify-end gap-3">
-        <div class="flex items-center gap-1.5">
-          <button
-            class="cursor-pointer text-slate-400 hover:text-slate-600 disabled:cursor-not-allowed disabled:opacity-30 dark:text-neutral-500 dark:hover:text-neutral-300"
-            onclick={() => {
-              setVolume(volume > 0 ? 0 : 1);
-              commitVolume();
-            }}
-            disabled={!supports("set_volume")}
-            aria-label={volume === 0 ? "Unmute" : "Mute"}
-          >
-            {#if volume === 0}
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                class="h-4 w-4"
-                viewBox="0 0 20 20"
-                fill="currentColor"
-              >
-                <path
-                  fill-rule="evenodd"
-                  d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.707.707L4.586 13H2a1 1 0 01-1-1V8a1 1 0 011-1h2.586l3.707-3.707a1 1 0 011.09-.217zM12.293 7.293a1 1 0 011.414 0L15 8.586l1.293-1.293a1 1 0 111.414 1.414L16.414 10l1.293 1.293a1 1 0 01-1.414 1.414L15 11.414l-1.293 1.293a1 1 0 01-1.414-1.414L13.586 10l-1.293-1.293a1 1 0 010-1.414z"
-                  clip-rule="evenodd"
-                />
-              </svg>
-            {:else}
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                class="h-4 w-4"
-                viewBox="0 0 20 20"
-                fill="currentColor"
-              >
-                <path
-                  fill-rule="evenodd"
-                  d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.707.707L4.586 13H2a1 1 0 01-1-1V8a1 1 0 011-1h2.586l3.707-3.707a1 1 0 011.09-.217zM14.657 2.929a1 1 0 011.414 0A9.972 9.972 0 0119 10a9.972 9.972 0 01-2.929 7.071 1 1 0 01-1.414-1.414A7.971 7.971 0 0017 10c0-2.21-.894-4.208-2.343-5.657a1 1 0 010-1.414zm-2.829 2.828a1 1 0 011.415 0A5.983 5.983 0 0115 10a5.984 5.984 0 01-1.757 4.243 1 1 0 01-1.415-1.415A3.984 3.984 0 0013 10a3.983 3.983 0 00-1.172-2.828 1 1 0 010-1.415z"
-                  clip-rule="evenodd"
-                />
-              </svg>
-            {/if}
-          </button>
-          <input
-            type="range"
-            min="0"
-            max="1"
-            step="0.01"
-            value={volume}
-            disabled={!supports("set_volume")}
-            oninput={(e) =>
-              setVolume(Number((e.target as HTMLInputElement).value))}
-            onchange={commitVolume}
-            class="h-1 w-20 cursor-pointer appearance-none rounded-full bg-slate-200 accent-[#E6CEE3] disabled:cursor-not-allowed disabled:opacity-30 dark:bg-neutral-700 dark:accent-[#BB7FB5]"
-            aria-label="Volume"
-            title={remote
-              ? "Sets the device's volume; its current level isn't reported"
-              : undefined}
-          />
-        </div>
+        <VolumeControl
+          value={volume}
+          disabled={!supports("set_volume")}
+          title={remote
+            ? "Sets the device's volume; its current level isn't reported"
+            : undefined}
+          oninput={setVolume}
+          onchange={commitVolume}
+        />
         <div class="relative" data-device-picker>
           <button
             type="button"

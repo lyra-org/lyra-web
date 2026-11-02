@@ -13,6 +13,7 @@ www.meshiplaw.com/lyra.
   import CloseButton from "./CloseButton.svelte";
   import DeviceIcon from "./DeviceIcon.svelte";
   import TrackCover from "./TrackCover.svelte";
+  import VolumeControl from "./VolumeControl.svelte";
 
   let { onclose }: { onclose: () => void } = $props();
 
@@ -83,8 +84,6 @@ www.meshiplaw.com/lyra.
     "flex h-9 w-9 items-center justify-center rounded-full bg-[#E6CEE3] text-slate-900 shadow-sm transition-all hover:scale-105 hover:bg-[#d4b5cf] disabled:scale-100 disabled:opacity-40 disabled:hover:bg-[#E6CEE3] dark:bg-[#BB7FB5] dark:text-white dark:hover:bg-[#cfa2c9] dark:disabled:hover:bg-[#BB7FB5]";
   const pillButton =
     "shrink-0 rounded-full border border-slate-200 px-3 py-1 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-100 disabled:opacity-40 disabled:hover:bg-transparent dark:border-neutral-700 dark:text-neutral-200 dark:hover:bg-neutral-800";
-  const volumeSlider =
-    "h-1 w-20 cursor-pointer appearance-none rounded-full bg-slate-200 accent-[#E6CEE3] disabled:cursor-not-allowed disabled:opacity-30 dark:bg-neutral-700 dark:accent-[#BB7FB5]";
   const card =
     "overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-neutral-800 dark:bg-[#222425] dark:shadow-black/40";
   const sectionLabel =
@@ -177,39 +176,6 @@ www.meshiplaw.com/lyra.
       </svg>
     </button>
   </div>
-{/snippet}
-
-{#snippet volume(
-  value: number,
-  disabled: boolean,
-  title: string,
-  oninput: (v: number) => void,
-  onchange: () => void,
-)}
-  <label
-    class="ml-2 flex items-center gap-1.5 text-slate-400 dark:text-neutral-500"
-    {title}
-  >
-    <svg class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
-      <path
-        fill-rule="evenodd"
-        d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.707.707L4.586 13H2a1 1 0 01-1-1V8a1 1 0 011-1h2.586l3.707-3.707a1 1 0 011.09-.217z"
-        clip-rule="evenodd"
-      />
-    </svg>
-    <input
-      type="range"
-      min="0"
-      max="1"
-      step="0.01"
-      {value}
-      {disabled}
-      oninput={(e) => oninput(Number(e.currentTarget.value))}
-      {onchange}
-      class={volumeSlider}
-      aria-label="Volume"
-    />
-  </label>
 {/snippet}
 
 {#snippet progress(
@@ -388,13 +354,11 @@ www.meshiplaw.com/lyra.
                       stop: () => player.stop(),
                     },
                   )}
-                  {@render volume(
-                    player.volume,
-                    false,
-                    "Volume",
-                    (v) => player.setVolume(v),
-                    () => {},
-                  )}
+                  <VolumeControl
+                    class="ml-2"
+                    value={player.volume}
+                    oninput={(v) => player.setVolume(v)}
+                  />
                 </div>
               </li>
             {/if}
@@ -449,13 +413,15 @@ www.meshiplaw.com/lyra.
                       },
                     )}
                     {#if c.supported_commands.includes("set_volume")}
-                      {@render volume(
-                        volumes[c.id] ?? 1,
-                        !supports(c, "set_volume"),
-                        "Sets the device's volume; its current level isn't reported",
-                        (v) => (volumes = { ...volumes, [c.id]: v }),
-                        () => devices.setVolume(c.id, volumes[c.id] ?? 1),
-                      )}
+                      <VolumeControl
+                        class="ml-2"
+                        value={volumes[c.id] ?? 1}
+                        disabled={!supports(c, "set_volume")}
+                        title="Sets the device's volume; its current level isn't reported"
+                        oninput={(v) => (volumes = { ...volumes, [c.id]: v })}
+                        onchange={() =>
+                          devices.setVolume(c.id, volumes[c.id] ?? 1)}
+                      />
                     {/if}
                   </div>
                   {#if p.queue_revision != null}
