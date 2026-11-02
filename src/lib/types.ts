@@ -494,6 +494,7 @@ export interface LyricsLineResponse {
 export interface LyricsResponse {
   id: string;
   provider_id?: string | null;
+  provider_lyrics_id?: string | null;
   language: string;
   scope: "personal" | "shared";
   source: "manual" | "provider";
