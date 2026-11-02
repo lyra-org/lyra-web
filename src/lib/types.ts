@@ -600,6 +600,14 @@ export interface LibrarySyncStatus {
   sequence: number;
 }
 
+// The covers a refresh or sync fetches: none, only where none is set (the
+// server's default), or replacing the ones already set.
+export type CoverUpdate = "skip" | "missing" | "replace";
+
+// The releases a library sync asks the providers about: those the scan found
+// new or changed (the server's default), or every release.
+export type SyncReleases = "changed" | "all";
+
 export interface LibrarySyncStartResponse {
   started: boolean;
   run: LibrarySyncStatus;

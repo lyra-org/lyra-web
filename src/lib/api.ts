@@ -22,6 +22,8 @@ import type {
   RefreshResponse,
   ProviderResponse,
   ProviderOptionValues,
+  CoverUpdate,
+  SyncReleases,
   SearchResult,
   SearchEntityType,
   LibrarySearchResponse,
@@ -579,24 +581,41 @@ export function reportPlaybackProgress(
 
 // Entity refresh & lock
 
+export interface CoverOptions {
+  covers?: CoverUpdate;
+  // Rejected by the server alongside `covers: "skip"`.
+  bypassCoverCache?: boolean;
+}
+
+// Leaves out values matching the server's defaults.
+function coverParams(options: CoverOptions): URLSearchParams {
+  const params = new URLSearchParams();
+  if (options.covers && options.covers !== "missing")
+    params.set("covers", options.covers);
+  if (options.bypassCoverCache) params.set("bypass_cover_cache", "true");
+  return params;
+}
+
+function withQuery(path: string, params: URLSearchParams): string {
+  const qs = params.toString();
+  return qs ? `${path}?${qs}` : path;
+}
+
 export function refreshEntity(
   id: string,
-  forceRefresh?: boolean,
-  replaceCover?: boolean,
-  providerOptions?: ProviderOptionValues,
+  options: CoverOptions & { providerOptions?: ProviderOptionValues } = {},
 ): Promise<RefreshResponse> {
-  const params = new URLSearchParams();
-  if (forceRefresh) params.set("force_refresh", "true");
-  if (replaceCover) params.set("replace_cover", "true");
+  const params = coverParams(options);
   // Namespaced so each provider receives only its own options.
-  for (const [providerId, values] of Object.entries(providerOptions ?? {})) {
+  for (const [providerId, values] of Object.entries(
+    options.providerOptions ?? {},
+  )) {
     for (const [name, value] of Object.entries(values)) {
       params.set(`${providerId}.${name}`, String(value));
     }
   }
-  const qs = params.toString();
   return post<RefreshResponse>(
-    `/entities/${id}/refresh${qs ? `?${qs}` : ""}`,
+    withQuery(`/entities/${id}/refresh`, params),
     {},
   );
 }
@@ -630,7 +649,7 @@ export function searchProvider(
   providerId: string,
   query: string,
   type: SearchEntityType,
-  forceRefresh?: boolean,
+  bypassCoverCache?: boolean,
   includeCoverUrls?: boolean,
 ): Promise<SearchResult[]> {
   return post<SearchResult[]>(
@@ -638,7 +657,7 @@ export function searchProvider(
     {
       type,
       q: query,
-      force_refresh: forceRefresh ?? undefined,
+      bypass_cover_cache: bypassCoverCache ?? undefined,
       include_cover_urls: includeCoverUrls ?? undefined,
     },
   );
@@ -772,15 +791,10 @@ export function revokeLibraryAccess(id: string, userId: string): Promise<void> {
 
 export function refreshLibrary(
   id: string,
-  forceRefresh?: boolean,
-  replaceCover?: boolean,
+  options: CoverOptions = {},
 ): Promise<LibrarySyncStartResponse> {
-  const params = new URLSearchParams();
-  if (forceRefresh) params.set("force_refresh", "true");
-  if (replaceCover) params.set("replace_cover", "true");
-  const qs = params.toString();
   return post<LibrarySyncStartResponse>(
-    `/libraries/${id}/refresh${qs ? `?${qs}` : ""}`,
+    withQuery(`/libraries/${id}/refresh`, coverParams(options)),
     {},
   );
 }
@@ -789,10 +803,19 @@ export function fetchLibrarySyncStatus(id: string): Promise<LibrarySyncStatus> {
   return get<LibrarySyncStatus>(`/libraries/${id}/sync`);
 }
 
+// While a sync or refresh of the library runs, starts nothing, ignores the
+// options, and answers with the running one.
 export function startLibrarySync(
   id: string,
+  options: CoverOptions & { releases?: SyncReleases } = {},
 ): Promise<LibrarySyncStartResponse> {
-  return post<LibrarySyncStartResponse>(`/libraries/${id}/sync`, {});
+  const params = coverParams(options);
+  if (options.releases && options.releases !== "changed")
+    params.set("releases", options.releases);
+  return post<LibrarySyncStartResponse>(
+    withQuery(`/libraries/${id}/sync`, params),
+    {},
+  );
 }
 
 export function fetchSyncRun(runId: string): Promise<LibrarySyncStatus> {
@@ -1162,13 +1185,13 @@ export function fetchEntry(id: string): Promise<EntryResponse> {
 export function searchReleaseCovers(
   releaseId: string,
   provider?: string,
-  forceRefresh?: boolean,
+  bypassCoverCache?: boolean,
 ): Promise<ReleaseCoverSearchResponse> {
   return post<ReleaseCoverSearchResponse>(
     `/releases/${releaseId}/covers/search`,
     {
       provider: provider ?? undefined,
-      force_refresh: forceRefresh ?? undefined,
+      bypass_cover_cache: bypassCoverCache ?? undefined,
     },
   );
 }
@@ -1176,11 +1199,11 @@ export function searchReleaseCovers(
 export function searchArtistCovers(
   artistId: string,
   provider?: string,
-  forceRefresh?: boolean,
+  bypassCoverCache?: boolean,
 ): Promise<ArtistCoverSearchResponse> {
   return post<ArtistCoverSearchResponse>(`/artists/${artistId}/covers/search`, {
     provider: provider ?? undefined,
-    force_refresh: forceRefresh ?? undefined,
+    bypass_cover_cache: bypassCoverCache ?? undefined,
   });
 }
 

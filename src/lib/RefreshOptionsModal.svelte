@@ -73,7 +73,7 @@ www.meshiplaw.com/lyra.
     refreshing = true;
     error = null;
     try {
-      await refreshEntity(entityId, false, false, changedValues());
+      await refreshEntity(entityId, { providerOptions: changedValues() });
       onclose();
     } catch (err) {
       error = err instanceof Error ? err.message : "Refresh failed";
