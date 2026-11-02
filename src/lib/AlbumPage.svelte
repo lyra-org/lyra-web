@@ -62,6 +62,22 @@ www.meshiplaw.com/lyra.
     return names;
   });
 
+  // Each chained track's chain, as its tracks' titles in play order.
+  let chainTitles = $derived.by(() => {
+    const chains = new Map<string, TrackResponse[]>();
+    for (const t of album?.tracks ?? []) {
+      if (!t.chain) continue;
+      chains.set(t.chain.id, [...(chains.get(t.chain.id) ?? []), t]);
+    }
+    const titles: Record<string, string> = {};
+    for (const tracks of chains.values()) {
+      tracks.sort((a, b) => a.chain!.position - b.chain!.position);
+      const label = `Plays together: ${tracks.map((t) => t.title).join(" → ")}`;
+      for (const t of tracks) titles[t.id] = label;
+    }
+    return titles;
+  });
+
   function groupByDisc(tracks: TrackResponse[]): Map<number, TrackResponse[]> {
     const map = new Map<number, TrackResponse[]>();
     for (const t of tracks) {
@@ -331,6 +347,25 @@ www.meshiplaw.com/lyra.
                   >
                     <span class="inline-flex flex-wrap items-center gap-1.5">
                       <span>{track.title}</span>
+                      {#if chainTitles[track.id]}
+                        <svg
+                          class="h-3.5 w-3.5 shrink-0 text-slate-400 dark:text-neutral-500"
+                          xmlns="http://www.w3.org/2000/svg"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                          stroke-width="2"
+                          role="img"
+                          aria-label={chainTitles[track.id]}
+                        >
+                          <title>{chainTitles[track.id]}</title>
+                          <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"
+                          />
+                        </svg>
+                      {/if}
                       {#if track.id != null}
                         {#each tagsStore.tagsForTarget(track.id) as tag}
                           <span

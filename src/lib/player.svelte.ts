@@ -72,17 +72,42 @@ let queueDirty = false;
 // Server writes run one at a time so each sees the revision the last left.
 let serverWrites: Promise<unknown> = Promise.resolve();
 
+// Shuffles the tracks, moving the tracks of a chain as one run in chain order.
+// `headId` plays first, then the rest of its chain; the chain's earlier tracks
+// shuffle as a run of their own.
 function shuffleTracksFrom(
   tracks: TrackResponse[],
   headId: string | null,
 ): string[] {
-  const ids = tracks.map((t) => t.id).filter((id): id is string => !!id);
-  const rest = ids.filter((id) => id !== headId);
+  const runs = new Map<string, TrackResponse[]>();
+  const seen = new Set<string>();
+  for (const track of tracks) {
+    if (!track.id || seen.has(track.id)) continue;
+    seen.add(track.id);
+    const key = track.chain ? `chain:${track.chain.id}` : `track:${track.id}`;
+    const run = runs.get(key);
+    if (run) run.push(track);
+    else runs.set(key, [track]);
+  }
+
+  let head: string[] = [];
+  const rest: string[][] = [];
+  for (const run of runs.values()) {
+    run.sort((a, b) => (a.chain?.position ?? 0) - (b.chain?.position ?? 0));
+    const ids = run.map((t) => t.id);
+    const at = headId ? ids.indexOf(headId) : -1;
+    if (at < 0) {
+      rest.push(ids);
+      continue;
+    }
+    head = ids.slice(at);
+    if (at > 0) rest.push(ids.slice(0, at));
+  }
   for (let i = rest.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [rest[i], rest[j]] = [rest[j], rest[i]];
   }
-  return headId && ids.includes(headId) ? [headId, ...rest] : rest;
+  return [...head, ...rest.flat()];
 }
 
 function isSkipped(track: TrackResponse): boolean {

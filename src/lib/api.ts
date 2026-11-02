@@ -7,6 +7,7 @@ import type {
   ApiKeyResponse,
   CreatedApiKeyResponse,
   ReleaseResponse,
+  ReleaseChainsResponse,
   ReleaseCoverSearchResponse,
   ArtistCoverSearchResponse,
   ArtistResponse,
@@ -316,6 +317,24 @@ export function fetchReleases(opts?: {
 export function fetchRelease(id: string): Promise<ReleaseResponse> {
   return get<ReleaseResponse>(
     `/releases/${id}?inc=artists,tracks,covers,track_artists`,
+  );
+}
+
+export function fetchReleaseChains(id: string): Promise<ReleaseChainsResponse> {
+  return get<ReleaseChainsResponse>(
+    `/releases/${encodeURIComponent(id)}/chains`,
+  );
+}
+
+// Replaces every chain on the release; each chain lists its track ids in play
+// order.
+export function replaceReleaseChains(
+  id: string,
+  chains: string[][],
+): Promise<ReleaseChainsResponse> {
+  return put<ReleaseChainsResponse>(
+    `/releases/${encodeURIComponent(id)}/chains`,
+    { chains },
   );
 }
 

@@ -11,6 +11,7 @@ www.meshiplaw.com/lyra.
   let optionsAlbum = $state<ReleaseResponse | null>(null);
   let idsAlbum = $state<ReleaseResponse | null>(null);
   let editAlbum = $state<ReleaseResponse | null>(null);
+  let chainsAlbum = $state<ReleaseResponse | null>(null);
 </script>
 
 <script lang="ts">
@@ -29,6 +30,7 @@ www.meshiplaw.com/lyra.
   import RatingMenuItem from "./RatingMenuItem.svelte";
   import RefreshMenuItem from "./RefreshMenuItem.svelte";
   import RefreshOptionsModal from "./RefreshOptionsModal.svelte";
+  import ReleaseChainsModal from "./ReleaseChainsModal.svelte";
 
   interface Props {
     album: ReleaseResponse;
@@ -285,6 +287,28 @@ www.meshiplaw.com/lyra.
         </svg>
         Edit metadata…
       </button>
+      <button
+        type="button"
+        role="menuitem"
+        class={menuItemClass}
+        onclick={() => openModal(() => (chainsAlbum = album))}
+      >
+        <svg
+          class="h-4 w-4 text-slate-400 dark:text-neutral-500"
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          stroke-width="2"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            d="M4 6h16M4 12h16M4 18h7m4 0l3 3m0 0l3-3m-3 3v-7"
+          />
+        </svg>
+        Edit chains…
+      </button>
     {/if}
   </ContextMenu>
 {/if}
@@ -310,4 +334,11 @@ www.meshiplaw.com/lyra.
 
 {#if editAlbum?.id === album.id && album.id != null}
   <MetadataEditModal entityId={album.id} onclose={() => (editAlbum = null)} />
+{/if}
+
+{#if chainsAlbum?.id === album.id && album.id != null}
+  <ReleaseChainsModal
+    releaseId={album.id}
+    onclose={() => (chainsAlbum = null)}
+  />
 {/if}

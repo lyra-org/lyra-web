@@ -36,6 +36,25 @@ export interface TrackResponse {
   year?: number;
   releases?: ReleaseResponse[];
   artists?: ArtistResponse[];
+  chain?: TrackChainPosition;
+}
+
+// Where a track sits in its release chain: tracks Lyra keeps together and in
+// order whenever it picks the play order.
+export interface TrackChainPosition {
+  id: string;
+  // 0-based.
+  position: number;
+}
+
+export interface ReleaseChain {
+  // Changes whenever the release's chains are replaced.
+  id: string;
+  track_ids: string[];
+}
+
+export interface ReleaseChainsResponse {
+  chains: ReleaseChain[];
 }
 
 export type PlaybackState =
