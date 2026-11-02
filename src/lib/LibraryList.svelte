@@ -18,6 +18,7 @@ www.meshiplaw.com/lyra.
     streamSyncRun,
   } from "./api";
   import LibraryModal from "./LibraryModal.svelte";
+  import LibraryRunOptionsModal from "./LibraryRunOptionsModal.svelte";
   import Modal from "./Modal.svelte";
 
   const SYNC_RECONNECT_DELAY_MS = 1500;
@@ -33,6 +34,10 @@ www.meshiplaw.com/lyra.
   let actioningId = $state<string | null>(null);
   let deleteError = $state<string | null>(null);
   let deletingLibrary = $state<LibraryResponse | null>(null);
+  let runOptions = $state<{
+    library: LibraryResponse & { id: string };
+    run: "sync" | "refresh";
+  } | null>(null);
   let statusRefreshNonce = $state(0);
 
   interface SyncRunStream {
@@ -349,6 +354,19 @@ www.meshiplaw.com/lyra.
     }
   }
 
+  function handleRunOptions(
+    lib: LibraryResponse,
+    run: "sync" | "refresh",
+    e: MouseEvent,
+  ) {
+    e.preventDefault();
+    e.stopPropagation();
+    openMenuId = null;
+    const id = lib.id;
+    if (id == null) return;
+    runOptions = { library: { ...lib, id }, run };
+  }
+
   async function handleCancelSync(lib: LibraryResponse, e: MouseEvent) {
     e.preventDefault();
     e.stopPropagation();
@@ -548,52 +566,116 @@ www.meshiplaw.com/lyra.
                     </svg>
                     Edit
                   </button>
-                  <button
-                    type="button"
-                    role="menuitem"
-                    disabled={isRunning}
-                    class="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-transparent dark:text-neutral-200 dark:hover:bg-neutral-600 dark:disabled:hover:bg-transparent"
-                    onclick={(e) => handleSyncLibrary(lib, e)}
+                  <div
+                    class={[
+                      "flex items-center",
+                      !isRunning &&
+                        "hover:bg-slate-100 dark:hover:bg-neutral-600",
+                    ]}
                   >
-                    <svg
-                      class="h-4 w-4 text-slate-400 dark:text-neutral-500"
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                      stroke-width="2"
+                    <button
+                      type="button"
+                      role="menuitem"
+                      disabled={isRunning}
+                      class="flex flex-1 items-center gap-2 px-3 py-1.5 text-left text-sm text-slate-700 disabled:cursor-not-allowed disabled:opacity-50 dark:text-neutral-200"
+                      onclick={(e) => handleSyncLibrary(lib, e)}
                     >
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        d="M4 4v5h5M20 20v-5h-5M4 9a8 8 0 0113.292-4.708M20 15a8 8 0 01-13.292 4.708"
-                      />
-                    </svg>
-                    {isRunning ? "Sync in progress…" : "Sync library"}
-                  </button>
-                  <button
-                    type="button"
-                    role="menuitem"
-                    disabled={isRunning}
-                    class="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-transparent dark:text-neutral-200 dark:hover:bg-neutral-600 dark:disabled:hover:bg-transparent"
-                    onclick={(e) => handleRefreshMetadata(lib, e)}
+                      <svg
+                        class="h-4 w-4 text-slate-400 dark:text-neutral-500"
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        stroke-width="2"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          d="M4 4v5h5M20 20v-5h-5M4 9a8 8 0 0113.292-4.708M20 15a8 8 0 01-13.292 4.708"
+                        />
+                      </svg>
+                      {isRunning ? "Sync in progress…" : "Sync library"}
+                    </button>
+                    <button
+                      type="button"
+                      role="menuitem"
+                      disabled={isRunning}
+                      class="mr-1.5 flex h-6 w-6 shrink-0 items-center justify-center rounded text-slate-400 hover:bg-slate-200 hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-transparent dark:text-neutral-500 dark:hover:bg-neutral-500 dark:hover:text-neutral-100 dark:disabled:hover:bg-transparent"
+                      title="Sync with options…"
+                      aria-label="Sync with options…"
+                      onclick={(e) => handleRunOptions(lib, "sync", e)}
+                    >
+                      <svg
+                        class="h-4 w-4"
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        stroke-width="1.75"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          d="M10.5 6h9.75M10.5 6a1.5 1.5 0 11-3 0m3 0a1.5 1.5 0 10-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-9.75 0h9.75"
+                        />
+                      </svg>
+                    </button>
+                  </div>
+                  <div
+                    class={[
+                      "flex items-center",
+                      !isRunning &&
+                        "hover:bg-slate-100 dark:hover:bg-neutral-600",
+                    ]}
                   >
-                    <svg
-                      class="h-4 w-4 text-slate-400 dark:text-neutral-500"
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                      stroke-width="2"
+                    <button
+                      type="button"
+                      role="menuitem"
+                      disabled={isRunning}
+                      class="flex flex-1 items-center gap-2 px-3 py-1.5 text-left text-sm text-slate-700 disabled:cursor-not-allowed disabled:opacity-50 dark:text-neutral-200"
+                      onclick={(e) => handleRefreshMetadata(lib, e)}
                     >
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        d="M21 21l-4.35-4.35M11 19a8 8 0 100-16 8 8 0 000 16z"
-                      />
-                    </svg>
-                    {isRunning ? "Refresh in progress…" : "Refresh metadata"}
-                  </button>
+                      <svg
+                        class="h-4 w-4 text-slate-400 dark:text-neutral-500"
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        stroke-width="2"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          d="M21 21l-4.35-4.35M11 19a8 8 0 100-16 8 8 0 000 16z"
+                        />
+                      </svg>
+                      {isRunning ? "Refresh in progress…" : "Refresh metadata"}
+                    </button>
+                    <button
+                      type="button"
+                      role="menuitem"
+                      disabled={isRunning}
+                      class="mr-1.5 flex h-6 w-6 shrink-0 items-center justify-center rounded text-slate-400 hover:bg-slate-200 hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-transparent dark:text-neutral-500 dark:hover:bg-neutral-500 dark:hover:text-neutral-100 dark:disabled:hover:bg-transparent"
+                      title="Refresh with options…"
+                      aria-label="Refresh with options…"
+                      onclick={(e) => handleRunOptions(lib, "refresh", e)}
+                    >
+                      <svg
+                        class="h-4 w-4"
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        stroke-width="1.75"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          d="M10.5 6h9.75M10.5 6a1.5 1.5 0 11-3 0m3 0a1.5 1.5 0 10-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-9.75 0h9.75"
+                        />
+                      </svg>
+                    </button>
+                  </div>
                   {#if canCancel}
                     <button
                       type="button"
@@ -684,6 +766,18 @@ www.meshiplaw.com/lyra.
       >
     {/snippet}
   </Modal>
+{/if}
+
+{#if runOptions}
+  <LibraryRunOptionsModal
+    library={runOptions.library}
+    run={runOptions.run}
+    onstarted={(response) => {
+      applySyncStatus(response.run);
+      statusRefreshNonce++;
+    }}
+    onclose={() => (runOptions = null)}
+  />
 {/if}
 
 {#if modalLibrary !== undefined}
