@@ -481,13 +481,27 @@ export function coverUrl(coverId: string): string {
 // <audio> element cannot send. Call createPlaybackUrl() to mint a
 // scoped media_token URL usable as an audio src.
 
+export interface PlaybackUrlOptions {
+  // Ordered codec preferences; "copy" sends a source as it is.
+  codecs?: string[];
+  // `container/codec` source pairs the client plays as they are.
+  copyProfiles?: string[];
+  waitForTranscode?: boolean;
+}
+
 export function createPlaybackUrl(
   trackId: string,
-  format?: "mp3",
+  options: PlaybackUrlOptions = {},
 ): Promise<PlaybackUrlResponse> {
-  const query = format ? `?format=${format}` : "";
+  const params = new URLSearchParams();
+  if (options.codecs?.length) params.set("codec", options.codecs.join(","));
+  if (options.copyProfiles) {
+    params.set("copy_profiles", options.copyProfiles.join(","));
+  }
+  if (options.waitForTranscode) params.set("wait_for_transcode", "true");
+  const query = params.toString();
   return post<PlaybackUrlResponse>(
-    `/tracks/${trackId}/playback-url${query}`,
+    `/tracks/${trackId}/playback-url${query ? `?${query}` : ""}`,
     {},
   );
 }

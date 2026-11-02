@@ -22,6 +22,7 @@ import {
   reportPlaybackProgress,
 } from "./api";
 import { onForwardedCommand, sendHandoff } from "./ws.svelte.ts";
+import { browserPlaybackOptions } from "./playbackFormats";
 
 export interface PlaybackContext {
   tracks: TrackResponse[];
@@ -417,18 +418,14 @@ async function playTrackInternal(
 
   try {
     const [playbackUrl] = await Promise.all([
-      createPlaybackUrl(track.id),
+      createPlaybackUrl(track.id, browserPlaybackOptions()),
       serialize(() => bindCurrentTrack(track, trackPlayId, options.adopt)),
     ]);
     if (playId !== trackPlayId) return;
-    // Some source containers cannot stream directly. Ask for a browser-playable
-    // transcode when the server only offers HLS for the original request.
-    const streamUrl =
-      playbackUrl.stream_url ??
-      (await createPlaybackUrl(track.id, "mp3")).stream_url;
-    if (playId !== trackPlayId) return;
-    if (!streamUrl) throw new Error("No playable audio stream available");
-    audio.src = streamUrl;
+    if (!playbackUrl.stream_url) {
+      throw new Error("No playable audio stream available");
+    }
+    audio.src = playbackUrl.stream_url;
     if (options.positionMs) await seekOnceLoaded(options.positionMs / 1000);
     if (playId !== trackPlayId) return;
     let started = false;
