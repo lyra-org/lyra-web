@@ -409,6 +409,16 @@ export function fetchConnections(): Promise<Connection[]> {
   return get<Connection[]>("/me/connections");
 }
 
+// A single-use ticket that opens one WebSocket, so the session token stays out
+// of the socket URL.
+export async function createConnectionTicket(): Promise<string> {
+  const { ticket } = await post<{ ticket: string; expires_at: string }>(
+    "/me/connections/tickets",
+    {},
+  );
+  return ticket;
+}
+
 // Artists
 
 export function fetchArtists(opts?: {

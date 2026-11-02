@@ -13,7 +13,7 @@ import type {
   SeekCommand,
   SetVolumeCommand,
 } from "./types";
-import { connectionSessionKey } from "./api";
+import { connectionSessionKey, createConnectionTicket } from "./api";
 import { getAuth } from "./auth.svelte.ts";
 
 const CAPABILITIES: RemoteAction[] = [
@@ -62,6 +62,8 @@ let socket: WebSocket | null = null;
 let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 let reconnectAttempt = 0;
 let manualDisconnect = false;
+// Set while a ticket is being fetched, before the socket exists.
+let opening = false;
 const pending = new Map<string, (msg: ResponseMessage) => void>();
 
 function makeId(): string {
@@ -71,11 +73,11 @@ function makeId(): string {
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
 }
 
-function buildUrl(token: string): string {
+function buildUrl(ticket: string): string {
   const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
   const params = new URLSearchParams({
     session_key: connectionSessionKey(),
-    token,
+    ticket,
   });
   return `${protocol}//${window.location.host}/ws?${params.toString()}`;
 }
@@ -190,17 +192,38 @@ function send(cmd: ClientCommand): Promise<ResponseMessage> {
 
 export function connect() {
   clearReconnectTimer();
-  if (socket != null) return;
-  const token = getAuth().token;
-  if (!token) {
+  if (socket != null || opening) return;
+  if (!getAuth().token) {
     status = "disconnected";
     return;
   }
   manualDisconnect = false;
   status = "connecting";
+  void open();
+}
+
+async function open() {
+  opening = true;
+  let ticket: string;
+  try {
+    ticket = await createConnectionTicket();
+  } catch (err) {
+    opening = false;
+    if (manualDisconnect) return;
+    console.error("websocket ticket request failed", err);
+    status = "disconnected";
+    scheduleReconnect();
+    return;
+  }
+  opening = false;
+  if (manualDisconnect || socket != null) return;
+  if (!getAuth().token) {
+    status = "disconnected";
+    return;
+  }
   let ws: WebSocket;
   try {
-    ws = new WebSocket(buildUrl(token));
+    ws = new WebSocket(buildUrl(ticket));
   } catch (err) {
     console.error("websocket connect failed", err);
     status = "disconnected";
