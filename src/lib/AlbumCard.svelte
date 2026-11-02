@@ -328,6 +328,7 @@ www.meshiplaw.com/lyra.
 {#if optionsAlbum?.id === album.id && album.id != null}
   <RefreshOptionsModal
     entityId={album.id}
+    hasCover
     onclose={() => (optionsAlbum = null)}
   />
 {/if}

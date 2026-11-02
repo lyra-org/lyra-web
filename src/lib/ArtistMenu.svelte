@@ -142,6 +142,7 @@ www.meshiplaw.com/lyra.
 {#if showOptions}
   <RefreshOptionsModal
     entityId={artistId}
+    hasCover
     onclose={() => (showOptions = false)}
   />
 {/if}

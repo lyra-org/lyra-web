@@ -6,8 +6,13 @@ www.meshiplaw.com/lyra.
 -->
 
 <script lang="ts">
-  import type { ProviderOptionValues, ProviderResponse } from "./types";
+  import type {
+    CoverUpdate,
+    ProviderOptionValues,
+    ProviderResponse,
+  } from "./types";
   import { fetchProviders, refreshEntity } from "./api";
+  import CoverOptionsFields from "./CoverOptionsFields.svelte";
   import Modal from "./Modal.svelte";
   import OptionField, {
     defaultOptionValue,
@@ -17,10 +22,15 @@ www.meshiplaw.com/lyra.
 
   interface Props {
     entityId: string;
+    // Releases and artists fetch covers on refresh; tracks do not.
+    hasCover?: boolean;
     onclose: () => void;
   }
 
-  let { entityId, onclose }: Props = $props();
+  let { entityId, hasCover = false, onclose }: Props = $props();
+
+  let covers = $state<CoverUpdate>("missing");
+  let bypassCoverCache = $state(false);
 
   let providers = $state<ProviderResponse[]>([]);
   let values = $state<Record<string, Record<string, OptionFieldValue>>>({});
@@ -73,7 +83,11 @@ www.meshiplaw.com/lyra.
     refreshing = true;
     error = null;
     try {
-      await refreshEntity(entityId, { providerOptions: changedValues() });
+      await refreshEntity(entityId, {
+        covers,
+        bypassCoverCache,
+        providerOptions: changedValues(),
+      });
       onclose();
     } catch (err) {
       error = err instanceof Error ? err.message : "Refresh failed";
@@ -84,11 +98,21 @@ www.meshiplaw.com/lyra.
 </script>
 
 <Modal title="Refresh with options" {onclose}>
+  {#if hasCover}
+    <section>
+      <h3
+        class="mb-1.5 text-sm font-medium text-slate-700 dark:text-neutral-200"
+      >
+        Covers
+      </h3>
+      <CoverOptionsFields bind:covers bind:bypassCoverCache />
+    </section>
+  {/if}
   {#if loading}
     <p class="text-sm text-slate-500 dark:text-neutral-400">
       Loading providers…
     </p>
-  {:else if providers.length === 0}
+  {:else if providers.length === 0 && !hasCover}
     <p class="text-sm text-slate-500 dark:text-neutral-400">
       No enabled provider has refresh options.
     </p>
