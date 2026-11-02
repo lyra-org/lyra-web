@@ -40,6 +40,7 @@ www.meshiplaw.com/lyra.
   import { getDevices } from "./lib/devices.svelte.ts";
   import { endSession } from "./lib/api";
   import MixButton from "./lib/MixButton.svelte";
+  import HeaderMixMenu from "./lib/HeaderMixMenu.svelte";
   import { headerMixForRoute } from "./lib/headerMix.svelte.ts";
   import { pushEntry, replaceEntry, restoreScroll } from "./lib/history.ts";
   import logo from "./assets/logo.svg";
@@ -556,6 +557,7 @@ www.meshiplaw.com/lyra.
             startTrack={headerMix.startTrack}
             cover={headerMix.cover}
           />
+          <HeaderMixMenu config={headerMix} />
         {/if}
         {@render themeToggle()}
         <button

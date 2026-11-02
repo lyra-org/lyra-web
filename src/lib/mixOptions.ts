@@ -89,6 +89,21 @@ async function mixRequestOptions(): Promise<MixOptionValues> {
   return options;
 }
 
+// The mixes beyond a plain blend that an enabled mixer serves. The server
+// rejects a request no mixer takes, so these gate their UI.
+export interface MixSupport {
+  path: boolean;
+  query: boolean;
+}
+
+export async function mixSupport(): Promise<MixSupport> {
+  const enabled = (mixers ?? (await loadMixers())).filter((m) => m.enabled);
+  return {
+    path: enabled.some((m) => m.path?.seeds.includes("track")),
+    query: enabled.some((m) => m.blend?.query),
+  };
+}
+
 /** Requests a mix with the user's saved mixer options. */
 export async function mix(request: MixRequest): Promise<TrackResponse[]> {
   return fetchMix({ ...request, options: await mixRequestOptions() });

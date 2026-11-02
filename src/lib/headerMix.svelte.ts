@@ -29,6 +29,10 @@ export type HeaderMixConfig = {
   load: () => Promise<TrackResponse[]>;
   startTrack?: TrackResponse;
   cover?: { url: string | null; blurhash: string | null };
+  // What a described mix can blend with.
+  seed?: { id: string; label: string };
+  // Where a path mix from this page starts.
+  pathFrom?: TrackResponse;
 };
 
 export function headerMixForRoute(
@@ -56,30 +60,35 @@ export function headerMixForRoute(
         label: "Mix album",
         title: "Album mix",
         load: () => mix({ seeds: [route.id] }),
+        seed: { id: route.id, label: "this album" },
       };
     case "artist":
       return {
         label: "Mix artist",
         title: "Artist mix",
         load: () => mix({ seeds: [route.id] }),
+        seed: { id: route.id, label: "this artist" },
       };
     case "genre":
       return {
         label: "Mix genre",
         title: "Genre mix",
         load: () => mix({ seeds: [route.id] }),
+        seed: { id: route.id, label: "this genre" },
       };
     case "playlist":
       return {
         label: "Mix playlist",
         title: "Playlist mix",
         load: () => mix({ seeds: [route.id] }),
+        seed: { id: route.id, label: "this playlist" },
       };
     case "track":
       return {
         label: "Mix from track",
         title: "Similar tracks",
         load: () => mix({ seeds: [route.id], pin_seed: true }),
+        seed: { id: route.id, label: "this track" },
       };
     case "now_playing":
       if (!currentTrack?.id) return null;
@@ -90,6 +99,8 @@ export function headerMixForRoute(
           : "Similar tracks",
         load: () => mix({ seeds: [currentTrack.id!], pin_seed: true }),
         startTrack: currentTrack,
+        seed: { id: currentTrack.id, label: `“${currentTrack.title}”` },
+        pathFrom: currentTrack,
         cover: {
           url: playbackContext?.coverUrl ?? null,
           blurhash: playbackContext?.coverBlurhash ?? null,

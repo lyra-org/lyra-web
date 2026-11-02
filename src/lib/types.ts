@@ -233,6 +233,10 @@ export interface MixRequest {
   from_history?: boolean;
   // Leads the mix with its single track seed.
   pin_seed?: boolean;
+  // A description of the mix, alone or alongside seeds.
+  q?: string;
+  // A path leads from the first of two track seeds to the second.
+  shape?: "blend" | "path";
   limit?: number;
   // Option values keyed `<mixer_id>.<name>`.
   options?: Record<string, OptionValue>;

@@ -40,6 +40,7 @@ www.meshiplaw.com/lyra.
   import ContextMenu from "./ContextMenu.svelte";
   import ExternalIdsModal from "./ExternalIdsModal.svelte";
   import MetadataEditModal from "./MetadataEditModal.svelte";
+  import PathMixModal from "./PathMixModal.svelte";
   import RefreshOptionsModal from "./RefreshOptionsModal.svelte";
   import { refreshEntity } from "./api";
   import TrackMenuItems from "./TrackMenuItems.svelte";
@@ -56,6 +57,7 @@ www.meshiplaw.com/lyra.
   let idsTrack = $state<TrackResponse | null>(null);
   let editTrack = $state<TrackResponse | null>(null);
   let optionsTrack = $state<TrackResponse | null>(null);
+  let pathTrack = $state<TrackResponse | null>(null);
 </script>
 
 {#if target}
@@ -83,6 +85,10 @@ www.meshiplaw.com/lyra.
           optionsTrack = track;
           onclose();
         }}
+        onpath={() => {
+          pathTrack = track;
+          onclose();
+        }}
       />
     </ContextMenu>
   {/key}
@@ -101,6 +107,10 @@ www.meshiplaw.com/lyra.
     entityId={editTrack.id}
     onclose={() => (editTrack = null)}
   />
+{/if}
+
+{#if pathTrack}
+  <PathMixModal from={pathTrack} onclose={() => (pathTrack = null)} />
 {/if}
 
 {#if optionsTrack}

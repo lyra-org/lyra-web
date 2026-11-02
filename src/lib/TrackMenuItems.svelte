@@ -11,6 +11,7 @@ www.meshiplaw.com/lyra.
   import { addPlaylistTracks, fetchPlaylists, fetchAllPages } from "./api";
   import { getPlayer } from "./player.svelte.ts";
   import { getAuth } from "./auth.svelte.ts";
+  import { mixSupport } from "./mixOptions";
   import { menuItemClass } from "./ContextMenu.svelte";
   import RatingMenuItem from "./RatingMenuItem.svelte";
   import RefreshMenuItem from "./RefreshMenuItem.svelte";
@@ -24,6 +25,7 @@ www.meshiplaw.com/lyra.
     onedit: () => void;
     onrefresh: () => void;
     onrefreshoptions: () => void;
+    onpath: () => void;
   }
 
   let {
@@ -34,6 +36,7 @@ www.meshiplaw.com/lyra.
     onedit,
     onrefresh,
     onrefreshoptions,
+    onpath,
   }: Props = $props();
 
   let trackId = $derived(track.id);
@@ -51,6 +54,12 @@ www.meshiplaw.com/lyra.
   let playlistsLoaded = $state(false);
   let adding = $state<string | null>(null);
   let added = $state<string | null>(null);
+
+  let pathSupported = $state(false);
+  mixSupport().then(
+    (support) => (pathSupported = support.path),
+    () => {},
+  );
 
   let newTagName = $state("");
   let newTagColor = $state<TagColor>("blue");
@@ -159,6 +168,28 @@ www.meshiplaw.com/lyra.
     </svg>
     Add to queue
   </button>
+  {#if pathSupported}
+    <button type="button" class={menuItemClass} onclick={onpath}>
+      <svg
+        class="h-4 w-4 text-slate-400 dark:text-neutral-500"
+        xmlns="http://www.w3.org/2000/svg"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke="currentColor"
+        stroke-width="2"
+        aria-hidden="true"
+      >
+        <circle cx="6" cy="18" r="2" />
+        <circle cx="18" cy="6" r="2" />
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          d="M8 18h7a3 3 0 0 0 0-6H9a3 3 0 0 1 0-6h7"
+        />
+      </svg>
+      Path to…
+    </button>
+  {/if}
   <button
     type="button"
     class="flex w-full items-center justify-between gap-2 px-3 py-1.5 text-left text-sm text-slate-700 hover:bg-slate-100 dark:text-neutral-200 dark:hover:bg-neutral-600"
