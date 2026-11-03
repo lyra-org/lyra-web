@@ -10,8 +10,12 @@ www.meshiplaw.com/lyra.
   import { fetchRelease } from "./api";
   import { getPlayer } from "./player.svelte.ts";
   import { getTags, tagChipClasses } from "./tags.svelte.ts";
+  import { getAuth } from "./auth.svelte.ts";
   import BlurhashCanvas from "./BlurhashCanvas.svelte";
   import DescriptionSection from "./DescriptionSection.svelte";
+  import ChangeCoverButton from "./ChangeCoverButton.svelte";
+  import CoverManagerModal from "./CoverManagerModal.svelte";
+  import { shownCover } from "./covers.svelte.ts";
   import { anchorAtPointer, anchorBelow } from "./ContextMenu.svelte";
   import TrackMenu, { type TrackMenuTarget } from "./TrackMenu.svelte";
   import FavoriteButton from "./FavoriteButton.svelte";
@@ -30,11 +34,13 @@ www.meshiplaw.com/lyra.
   let album = $state<ReleaseResponse | null>(null);
   let loading = $state(true);
   let error: string | null = $state(null);
-  let coverFailed = $state(false);
+  const auth = getAuth();
+  let canManage = $derived(auth.hasPermission("manage_metadata"));
+  let showCovers = $state(false);
 
-  let coverSrc = $derived(
-    album?.cover && !coverFailed ? album.cover.url : null,
-  );
+  let cover = $derived(album ? shownCover(album.id, album.cover) : null);
+  let failedSrc = $state<string | null>(null);
+  let coverSrc = $derived(cover && cover.url !== failedSrc ? cover.url : null);
   let releaseYear = $derived(
     album?.release_date ? album.release_date.slice(0, 4) : null,
   );
@@ -107,7 +113,6 @@ www.meshiplaw.com/lyra.
     loading = true;
     error = null;
     album = null;
-    coverFailed = false;
     try {
       album = await fetchRelease(id);
     } catch (e) {
@@ -147,8 +152,8 @@ www.meshiplaw.com/lyra.
         releases: [release],
       })),
       title: album.title,
-      coverUrl: album.cover?.url ?? null,
-      coverBlurhash: album.cover?.blurhash ?? null,
+      coverUrl: cover?.url ?? null,
+      coverBlurhash: cover?.blurhash ?? null,
       trackArtistNames,
     };
   });
@@ -181,13 +186,13 @@ www.meshiplaw.com/lyra.
   <div class="mx-auto max-w-4xl">
     <!-- Header -->
     <div class="flex flex-col gap-6 sm:flex-row">
-      <div class="w-full shrink-0 sm:w-64">
+      <div class="group relative w-full shrink-0 sm:w-64">
         <div
           class="relative aspect-square w-full overflow-hidden rounded-lg bg-slate-200 shadow-md dark:bg-neutral-600 dark:shadow-black/40"
         >
-          {#if album?.cover?.blurhash}
+          {#if cover?.blurhash}
             <BlurhashCanvas
-              hash={album.cover.blurhash}
+              hash={cover.blurhash}
               class="absolute inset-0 h-full w-full object-cover"
             />
           {/if}
@@ -196,9 +201,9 @@ www.meshiplaw.com/lyra.
               src={coverSrc}
               alt="Cover for {album.title}"
               class="relative h-full w-full object-cover"
-              onerror={() => (coverFailed = true)}
+              onerror={() => (failedSrc = coverSrc)}
             />
-          {:else if !album?.cover?.blurhash}
+          {:else if !cover?.blurhash}
             <div
               class="flex h-full w-full items-center justify-center text-slate-400 dark:text-neutral-500"
             >
@@ -219,6 +224,12 @@ www.meshiplaw.com/lyra.
             </div>
           {/if}
         </div>
+        {#if canManage && album.id}
+          <ChangeCoverButton
+            class="right-2 bottom-2"
+            onclick={() => (showCovers = true)}
+          />
+        {/if}
       </div>
       <div class="flex flex-col justify-end">
         <div class="flex items-start gap-2">
@@ -465,3 +476,12 @@ www.meshiplaw.com/lyra.
 {/if}
 
 <TrackMenu target={trackMenu} onclose={() => (trackMenu = null)} />
+
+{#if showCovers && album?.id}
+  <CoverManagerModal
+    kind="release"
+    entityId={album.id}
+    name={album.title}
+    onclose={() => (showCovers = false)}
+  />
+{/if}

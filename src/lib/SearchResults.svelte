@@ -16,6 +16,7 @@ www.meshiplaw.com/lyra.
   import AlbumCard from "./AlbumCard.svelte";
   import ArtistCard from "./ArtistCard.svelte";
   import BlurhashCanvas from "./BlurhashCanvas.svelte";
+  import { shownCover } from "./covers.svelte.ts";
   import { anchorAtPointer } from "./ContextMenu.svelte";
   import TrackMenu, { type TrackMenuTarget } from "./TrackMenu.svelte";
   import PaginatedList from "./PaginatedList.svelte";
@@ -155,7 +156,7 @@ www.meshiplaw.com/lyra.
       <ul>
         {#each tracks as track (track.id)}
           {@const release = track.releases?.[0]}
-          {@const cover = release?.cover}
+          {@const cover = shownCover(release?.id, release?.cover)}
           {@const artists = track.artists?.filter(
             (artist) => !artist.credit || artist.credit.type === "artist",
           )}

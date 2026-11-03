@@ -12,12 +12,15 @@ www.meshiplaw.com/lyra.
   let idsAlbum = $state<ReleaseResponse | null>(null);
   let editAlbum = $state<ReleaseResponse | null>(null);
   let chainsAlbum = $state<ReleaseResponse | null>(null);
+  let coverAlbum = $state<ReleaseResponse | null>(null);
 </script>
 
 <script lang="ts">
   import { refreshEntity } from "./api";
   import { getAuth } from "./auth.svelte.ts";
   import BlurhashCanvas from "./BlurhashCanvas.svelte";
+  import CoverManagerModal from "./CoverManagerModal.svelte";
+  import { reloadShownCover, shownCover } from "./covers.svelte.ts";
   import ContextMenu, {
     anchorAtPointer,
     anchorBelow,
@@ -40,8 +43,9 @@ www.meshiplaw.com/lyra.
 
   const auth = getAuth();
 
-  let coverFailed = $state(false);
-  let coverSrc = $derived(album.cover && !coverFailed ? album.cover.url : null);
+  let cover = $derived(shownCover(album.id, album.cover));
+  let failedSrc = $state<string | null>(null);
+  let coverSrc = $derived(cover && cover.url !== failedSrc ? cover.url : null);
   let artistNames = $derived(
     album.artists?.map((a) => a.name).join(", ") ?? "Unknown Artist",
   );
@@ -82,10 +86,18 @@ www.meshiplaw.com/lyra.
     try {
       await refreshEntity(album.id);
     } catch {
-      // refresh failed — spinner stops regardless
+      // A failed refresh leaves the album as it was; nothing to update.
+      return;
     } finally {
       refreshing = false;
     }
+    showRefreshedCover(album.id);
+  }
+
+  // The refresh returns once the server has refreshed the album and synced
+  // its cover, so the cover it shows now is the refreshed one.
+  function showRefreshedCover(id: string) {
+    reloadShownCover("release", id).catch(() => {});
   }
 </script>
 
@@ -100,9 +112,9 @@ www.meshiplaw.com/lyra.
     <div
       class="relative aspect-square w-full overflow-hidden bg-slate-200 dark:bg-neutral-600"
     >
-      {#if album.cover?.blurhash}
+      {#if cover?.blurhash}
         <BlurhashCanvas
-          hash={album.cover.blurhash}
+          hash={cover.blurhash}
           class="absolute inset-0 h-full w-full object-cover"
         />
       {/if}
@@ -112,9 +124,9 @@ www.meshiplaw.com/lyra.
           alt="Cover for {album.title}"
           class="relative h-full w-full object-cover transition-transform group-hover:scale-105"
           loading="lazy"
-          onerror={() => (coverFailed = true)}
+          onerror={() => (failedSrc = coverSrc)}
         />
-      {:else if !album.cover?.blurhash}
+      {:else if !cover?.blurhash}
         <div
           class="flex h-full w-full items-center justify-center text-slate-400 dark:text-neutral-500"
         >
@@ -309,6 +321,28 @@ www.meshiplaw.com/lyra.
         </svg>
         Edit chains…
       </button>
+      <button
+        type="button"
+        role="menuitem"
+        class={menuItemClass}
+        onclick={() => openModal(() => (coverAlbum = album))}
+      >
+        <svg
+          class="h-4 w-4 text-slate-400 dark:text-neutral-500"
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          stroke-width="2"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+          />
+        </svg>
+        Change cover…
+      </button>
     {/if}
   </ContextMenu>
 {/if}
@@ -330,6 +364,7 @@ www.meshiplaw.com/lyra.
     entityId={album.id}
     hasCover
     onclose={() => (optionsAlbum = null)}
+    onrefreshed={() => album.id != null && showRefreshedCover(album.id)}
   />
 {/if}
 
@@ -341,5 +376,14 @@ www.meshiplaw.com/lyra.
   <ReleaseChainsModal
     releaseId={album.id}
     onclose={() => (chainsAlbum = null)}
+  />
+{/if}
+
+{#if coverAlbum?.id === album.id && album.id != null}
+  <CoverManagerModal
+    kind="release"
+    entityId={album.id}
+    name={album.title}
+    onclose={() => (coverAlbum = null)}
   />
 {/if}
