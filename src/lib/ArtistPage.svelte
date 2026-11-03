@@ -9,6 +9,7 @@ www.meshiplaw.com/lyra.
   import type { ArtistRelationResponse, ArtistResponse } from "./types";
   import { fetchArtist } from "./api";
   import BlurhashCanvas from "./BlurhashCanvas.svelte";
+  import DescriptionSection from "./DescriptionSection.svelte";
   import AlbumCard from "./AlbumCard.svelte";
   import ArtistPortraitCard from "./ArtistPortraitCard.svelte";
   import FavoriteButton from "./FavoriteButton.svelte";
@@ -165,21 +166,7 @@ www.meshiplaw.com/lyra.
       </div>
     </div>
 
-    <!-- Description -->
-    {#if artist.description}
-      <div class="mt-8">
-        <h3
-          class="mb-2 text-xs font-semibold tracking-wide text-slate-400 uppercase dark:text-neutral-500"
-        >
-          About
-        </h3>
-        <p
-          class="text-sm leading-relaxed whitespace-pre-line text-slate-700 dark:text-neutral-300"
-        >
-          {artist.description}
-        </p>
-      </div>
-    {/if}
+    <DescriptionSection description={artist.description} />
 
     <!-- Relations -->
     {#if relations.length > 0}

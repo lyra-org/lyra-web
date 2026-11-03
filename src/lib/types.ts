@@ -142,6 +142,7 @@ export interface ReleaseResponse {
   title: string;
   cover?: CoverResponse | null;
   release_date?: string | null;
+  description?: string;
   genres?: string[];
   sort_title?: string;
   artists?: ArtistResponse[];

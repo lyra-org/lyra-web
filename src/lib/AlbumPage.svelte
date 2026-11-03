@@ -11,6 +11,7 @@ www.meshiplaw.com/lyra.
   import { getPlayer } from "./player.svelte.ts";
   import { getTags, tagChipClasses } from "./tags.svelte.ts";
   import BlurhashCanvas from "./BlurhashCanvas.svelte";
+  import DescriptionSection from "./DescriptionSection.svelte";
   import { anchorAtPointer, anchorBelow } from "./ContextMenu.svelte";
   import TrackMenu, { type TrackMenuTarget } from "./TrackMenu.svelte";
   import FavoriteButton from "./FavoriteButton.svelte";
@@ -268,6 +269,8 @@ www.meshiplaw.com/lyra.
         </div>
       </div>
     </div>
+
+    <DescriptionSection description={album.description} />
 
     <!-- Track list -->
     {#if album.tracks && album.tracks.length > 0}

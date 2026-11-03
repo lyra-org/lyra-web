@@ -82,6 +82,7 @@ www.meshiplaw.com/lyra.
       "sort_title",
       "release_type",
       "release_date",
+      "description",
       "genres",
       "labels",
       "credits",
