@@ -8,11 +8,13 @@ www.meshiplaw.com/lyra.
 <script lang="ts">
   import { refreshEntity } from "./api";
   import { getAuth } from "./auth.svelte.ts";
+  import { reloadShownCover } from "./covers.svelte.ts";
   import ContextMenu, {
     anchorAtPointer,
     menuItemClass,
     type MenuAnchor,
   } from "./ContextMenu.svelte";
+  import CoverManagerModal from "./CoverManagerModal.svelte";
   import ExternalIdsModal from "./ExternalIdsModal.svelte";
   import MetadataEditModal from "./MetadataEditModal.svelte";
   import RatingMenuItem from "./RatingMenuItem.svelte";
@@ -35,6 +37,7 @@ www.meshiplaw.com/lyra.
   let showIds = $state(false);
   let showEdit = $state(false);
   let showOptions = $state(false);
+  let showCovers = $state(false);
 
   // The card's contextmenu handler.
   export function open(e: MouseEvent) {
@@ -47,13 +50,21 @@ www.meshiplaw.com/lyra.
     showIds = true;
   }
 
+  // The refresh returns once the server has refreshed the artist and synced
+  // its cover, so the cover it shows now is the refreshed one.
+  function showRefreshedCover() {
+    reloadShownCover("artist", artistId).catch(() => {});
+  }
+
   async function handleRefresh() {
     anchor = null;
     try {
       await refreshEntity(artistId);
     } catch {
-      // The artist page shows the refreshed metadata; nothing to report here.
+      // A failed refresh leaves the artist as it was; nothing to update.
+      return;
     }
+    showRefreshedCover();
   }
 </script>
 
@@ -123,6 +134,31 @@ www.meshiplaw.com/lyra.
         </svg>
         Edit metadata…
       </button>
+      <button
+        type="button"
+        role="menuitem"
+        class={menuItemClass}
+        onclick={() => {
+          anchor = null;
+          showCovers = true;
+        }}
+      >
+        <svg
+          class="h-4 w-4 text-slate-400 dark:text-neutral-500"
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          stroke-width="2"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+          />
+        </svg>
+        Change cover…
+      </button>
     {/if}
   </ContextMenu>
 {/if}
@@ -144,5 +180,15 @@ www.meshiplaw.com/lyra.
     entityId={artistId}
     hasCover
     onclose={() => (showOptions = false)}
+    onrefreshed={showRefreshedCover}
+  />
+{/if}
+
+{#if showCovers}
+  <CoverManagerModal
+    kind="artist"
+    entityId={artistId}
+    name={artistName}
+    onclose={() => (showCovers = false)}
   />
 {/if}

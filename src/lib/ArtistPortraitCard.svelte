@@ -9,6 +9,7 @@ www.meshiplaw.com/lyra.
   import type { CoverResponse } from "./types";
   import ArtistMenu from "./ArtistMenu.svelte";
   import BlurhashCanvas from "./BlurhashCanvas.svelte";
+  import { shownCover } from "./covers.svelte.ts";
 
   interface Props {
     id: string;
@@ -17,11 +18,12 @@ www.meshiplaw.com/lyra.
     role?: string | null;
   }
 
-  let { id, name, cover = null, role = null }: Props = $props();
+  let { id, name, cover: loadedCover = null, role = null }: Props = $props();
 
   let menu = $state<ArtistMenu>();
-  let coverFailed = $state(false);
-  let coverSrc = $derived(cover && !coverFailed ? cover.url : null);
+  let cover = $derived(shownCover(id, loadedCover));
+  let failedSrc = $state<string | null>(null);
+  let coverSrc = $derived(cover && cover.url !== failedSrc ? cover.url : null);
 </script>
 
 <a
@@ -45,7 +47,7 @@ www.meshiplaw.com/lyra.
         alt="Photo of {name}"
         class="relative h-full w-full object-cover transition-transform group-hover:scale-105"
         loading="lazy"
-        onerror={() => (coverFailed = true)}
+        onerror={() => (failedSrc = coverSrc)}
       />
     {:else if !cover?.blurhash}
       <div

@@ -8,8 +8,12 @@ www.meshiplaw.com/lyra.
 <script lang="ts">
   import type { ArtistRelationResponse, ArtistResponse } from "./types";
   import { fetchArtist } from "./api";
+  import { getAuth } from "./auth.svelte.ts";
   import BlurhashCanvas from "./BlurhashCanvas.svelte";
   import DescriptionSection from "./DescriptionSection.svelte";
+  import ChangeCoverButton from "./ChangeCoverButton.svelte";
+  import CoverManagerModal from "./CoverManagerModal.svelte";
+  import { shownCover } from "./covers.svelte.ts";
   import AlbumCard from "./AlbumCard.svelte";
   import ArtistPortraitCard from "./ArtistPortraitCard.svelte";
   import FavoriteButton from "./FavoriteButton.svelte";
@@ -24,10 +28,13 @@ www.meshiplaw.com/lyra.
   let artist = $state<ArtistResponse | null>(null);
   let loading = $state(true);
   let error: string | null = $state(null);
-  let coverFailed = $state(false);
-  let coverSrc = $derived(
-    artist?.cover && !coverFailed ? artist.cover.url : null,
-  );
+  const auth = getAuth();
+  let canManage = $derived(auth.hasPermission("manage_metadata"));
+  let showCovers = $state(false);
+
+  let cover = $derived(artist ? shownCover(artist.id, artist.cover) : null);
+  let failedSrc = $state<string | null>(null);
+  let coverSrc = $derived(cover && cover.url !== failedSrc ? cover.url : null);
 
   let sortedReleases = $derived.by(() => {
     const releases = artist?.releases ?? [];
@@ -73,7 +80,6 @@ www.meshiplaw.com/lyra.
     loading = true;
     error = null;
     artist = null;
-    coverFailed = false;
     try {
       artist = await fetchArtist(id);
     } catch (e) {
@@ -107,13 +113,13 @@ www.meshiplaw.com/lyra.
   <div class="mx-auto max-w-5xl">
     <!-- Header -->
     <div class="flex flex-col gap-6 sm:flex-row sm:items-end">
-      <div class="w-48 shrink-0 sm:w-56">
+      <div class="group relative w-48 shrink-0 sm:w-56">
         <div
           class="relative aspect-square w-full overflow-hidden rounded-full bg-slate-200 shadow-md dark:bg-neutral-600 dark:shadow-black/40"
         >
-          {#if artist.cover?.blurhash}
+          {#if cover?.blurhash}
             <BlurhashCanvas
-              hash={artist.cover.blurhash}
+              hash={cover.blurhash}
               class="absolute inset-0 h-full w-full object-cover"
             />
           {/if}
@@ -122,9 +128,9 @@ www.meshiplaw.com/lyra.
               src={coverSrc}
               alt="Photo of {artist.name}"
               class="relative h-full w-full object-cover"
-              onerror={() => (coverFailed = true)}
+              onerror={() => (failedSrc = coverSrc)}
             />
-          {:else if !artist.cover?.blurhash}
+          {:else if !cover?.blurhash}
             <div
               class="flex h-full w-full items-center justify-center text-slate-400 dark:text-neutral-500"
             >
@@ -145,6 +151,12 @@ www.meshiplaw.com/lyra.
             </div>
           {/if}
         </div>
+        {#if canManage && artist.id}
+          <ChangeCoverButton
+            class="right-3 bottom-3"
+            onclick={() => (showCovers = true)}
+          />
+        {/if}
       </div>
       <div class="flex flex-col">
         <h2
@@ -207,4 +219,13 @@ www.meshiplaw.com/lyra.
       </div>
     {/if}
   </div>
+{/if}
+
+{#if showCovers && artist?.id}
+  <CoverManagerModal
+    kind="artist"
+    entityId={artist.id}
+    name={artist.name}
+    onclose={() => (showCovers = false)}
+  />
 {/if}

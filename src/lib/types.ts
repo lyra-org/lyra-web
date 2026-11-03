@@ -629,6 +629,7 @@ export interface CoverSearchCandidateResponse {
 export interface ProviderCoverSearchResponse {
   provider_id: string;
   candidates: CoverSearchCandidateResponse[];
+  // The 1-based position of the candidate a refresh or sync downloads.
   selected_index?: number | null;
 }
 
@@ -640,6 +641,31 @@ export interface ReleaseCoverSearchResponse {
 export interface ArtistCoverSearchResponse {
   artist_id: string;
   results: ProviderCoverSearchResponse[];
+}
+
+// The entities whose cover users choose.
+export type CoverOwnerKind = "artist" | "release";
+
+// Where a stored cover came from: an image beside the audio files, a
+// provider, or an upload.
+export type StoredCoverSource = "local" | "provider" | "manual";
+
+export interface CoverCandidateResponse {
+  // "generated" is listed only for playlists.
+  source: StoredCoverSource | "generated";
+  // Whether this is the cover the entity shows.
+  active: boolean;
+  // Whether the image file is there.
+  available: boolean;
+  provider_id?: string | null;
+  cover: CoverResponse;
+}
+
+export interface CoverCandidatesResponse {
+  candidates: CoverCandidateResponse[];
+  // The pinned source, or null when the shown cover follows the automatic
+  // order: manual, then provider, then local.
+  selection: StoredCoverSource | null;
 }
 
 export interface SyncResponse {

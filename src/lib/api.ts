@@ -10,6 +10,10 @@ import type {
   ReleaseChainsResponse,
   ReleaseCoverSearchResponse,
   ArtistCoverSearchResponse,
+  CoverCandidatesResponse,
+  CoverOwnerKind,
+  CoverResponse,
+  StoredCoverSource,
   ArtistResponse,
   GenreResponse,
   TrackResponse,
@@ -1216,6 +1220,103 @@ export function searchArtistCovers(
     provider: provider ?? undefined,
     bypass_cover_cache: bypassCoverCache ?? undefined,
   });
+}
+
+// Cover management
+
+function coverOwnerPath(kind: CoverOwnerKind, id: string): string {
+  return `/${kind}s/${encodeURIComponent(id)}`;
+}
+
+/** The cover the entity shows, or null when it has none. */
+export async function fetchShownCover(
+  kind: CoverOwnerKind,
+  id: string,
+): Promise<CoverResponse | null> {
+  const entity = await get<{ cover?: CoverResponse | null }>(
+    `${coverOwnerPath(kind, id)}?inc=covers`,
+  );
+  return entity.cover ?? null;
+}
+
+export function searchCovers(
+  kind: CoverOwnerKind,
+  id: string,
+  provider?: string,
+  bypassCoverCache?: boolean,
+): Promise<ArtistCoverSearchResponse | ReleaseCoverSearchResponse> {
+  return kind === "artist"
+    ? searchArtistCovers(id, provider, bypassCoverCache)
+    : searchReleaseCovers(id, provider, bypassCoverCache);
+}
+
+export function fetchCoverCandidates(
+  kind: CoverOwnerKind,
+  id: string,
+): Promise<CoverCandidatesResponse> {
+  return get<CoverCandidatesResponse>(
+    `${coverOwnerPath(kind, id)}/covers/candidates`,
+  );
+}
+
+/** Uploads `image` as the manual cover and pins it. The body is the raw
+ * image, typed by its own MIME type. */
+export async function uploadManualCover(
+  kind: CoverOwnerKind,
+  id: string,
+  image: Blob,
+): Promise<CoverCandidatesResponse> {
+  const path = `${coverOwnerPath(kind, id)}/covers/manual`;
+  const res = await fetch(`${BASE}${path}`, {
+    method: "PUT",
+    headers: authHeaders({ "Content-Type": image.type }),
+    body: image,
+  });
+  await handleResponse(res, "PUT", path);
+  return parseBody<CoverCandidatesResponse>(res);
+}
+
+export function removeManualCover(
+  kind: CoverOwnerKind,
+  id: string,
+): Promise<CoverCandidatesResponse> {
+  return del<CoverCandidatesResponse>(
+    `${coverOwnerPath(kind, id)}/covers/manual`,
+  );
+}
+
+/** Downloads a candidate from a fresh cover search as the provider cover and
+ * pins it. */
+export function applyProviderCover(
+  kind: CoverOwnerKind,
+  id: string,
+  providerId: string,
+  url: string,
+): Promise<CoverCandidatesResponse> {
+  return put<CoverCandidatesResponse>(
+    `${coverOwnerPath(kind, id)}/covers/provider`,
+    { provider_id: providerId, url },
+  );
+}
+
+export function pinCoverSource(
+  kind: CoverOwnerKind,
+  id: string,
+  source: StoredCoverSource,
+): Promise<CoverCandidatesResponse> {
+  return put<CoverCandidatesResponse>(
+    `${coverOwnerPath(kind, id)}/covers/selection`,
+    { source },
+  );
+}
+
+export function clearCoverPin(
+  kind: CoverOwnerKind,
+  id: string,
+): Promise<CoverCandidatesResponse> {
+  return del<CoverCandidatesResponse>(
+    `${coverOwnerPath(kind, id)}/covers/selection`,
+  );
 }
 
 // Users

@@ -25,9 +25,11 @@ www.meshiplaw.com/lyra.
     // Releases and artists fetch covers on refresh; tracks do not.
     hasCover?: boolean;
     onclose: () => void;
+    // Called once the refresh returns, after the server refreshed the entity.
+    onrefreshed?: () => void;
   }
 
-  let { entityId, hasCover = false, onclose }: Props = $props();
+  let { entityId, hasCover = false, onclose, onrefreshed }: Props = $props();
 
   let covers = $state<CoverUpdate>("missing");
   let bypassCoverCache = $state(false);
@@ -88,6 +90,7 @@ www.meshiplaw.com/lyra.
         bypassCoverCache,
         providerOptions: changedValues(),
       });
+      onrefreshed?.();
       onclose();
     } catch (err) {
       error = err instanceof Error ? err.message : "Refresh failed";

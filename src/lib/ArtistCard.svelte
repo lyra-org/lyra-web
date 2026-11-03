@@ -9,6 +9,7 @@ www.meshiplaw.com/lyra.
   import type { ArtistResponse } from "./types";
   import ArtistMenu from "./ArtistMenu.svelte";
   import BlurhashCanvas from "./BlurhashCanvas.svelte";
+  import { shownCover } from "./covers.svelte.ts";
 
   interface Props {
     artist: ArtistResponse;
@@ -17,10 +18,9 @@ www.meshiplaw.com/lyra.
   let { artist }: Props = $props();
 
   let menu = $state<ArtistMenu>();
-  let coverFailed = $state(false);
-  let coverSrc = $derived(
-    artist.cover && !coverFailed ? artist.cover.url : null,
-  );
+  let cover = $derived(shownCover(artist.id, artist.cover));
+  let failedSrc = $state<string | null>(null);
+  let coverSrc = $derived(cover && cover.url !== failedSrc ? cover.url : null);
 </script>
 
 <a
@@ -31,9 +31,9 @@ www.meshiplaw.com/lyra.
   <div
     class="relative aspect-square w-full overflow-hidden rounded-full bg-slate-200 shadow-sm transition-shadow group-hover:shadow-md dark:bg-neutral-600 dark:shadow-black/30"
   >
-    {#if artist.cover?.blurhash}
+    {#if cover?.blurhash}
       <BlurhashCanvas
-        hash={artist.cover.blurhash}
+        hash={cover.blurhash}
         class="absolute inset-0 h-full w-full object-cover"
       />
     {/if}
@@ -43,9 +43,9 @@ www.meshiplaw.com/lyra.
         alt="Photo of {artist.name}"
         class="relative h-full w-full object-cover transition-transform group-hover:scale-105"
         loading="lazy"
-        onerror={() => (coverFailed = true)}
+        onerror={() => (failedSrc = coverSrc)}
       />
-    {:else if !artist.cover?.blurhash}
+    {:else if !cover?.blurhash}
       <div
         class="flex h-full w-full items-center justify-center text-slate-400 dark:text-neutral-500"
       >
