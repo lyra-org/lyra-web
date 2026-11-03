@@ -665,10 +665,13 @@ async function playQueue(
   snapshot: QueueSnapshot & { revision: number },
   options: StartOptions & { adoptPlayback?: string },
 ) {
-  // A track queued twice would confuse the up-next order, so keep one.
+  // A track queued twice would confuse the up-next order, so keep one: the
+  // current track where the queue plays it, any other its first time.
   const currentId = snapshot.track_ids[snapshot.current_index];
-  const ids = snapshot.track_ids.filter(
-    (id, i) => snapshot.track_ids.indexOf(id) === i,
+  const ids = snapshot.track_ids.filter((id, i) =>
+    id === currentId
+      ? i === snapshot.current_index
+      : snapshot.track_ids.indexOf(id) === i,
   );
   const current = await fetchTrackDetail(currentId);
   const context: PlaybackContext = {
