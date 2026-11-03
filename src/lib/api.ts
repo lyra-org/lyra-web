@@ -813,10 +813,6 @@ export function refreshLibrary(
   );
 }
 
-export function fetchLibrarySyncStatus(id: string): Promise<LibrarySyncStatus> {
-  return get<LibrarySyncStatus>(`/libraries/${id}/sync`);
-}
-
 // While a sync or refresh of the library runs, starts nothing, ignores the
 // options, and answers with the running one.
 export function startLibrarySync(
@@ -832,10 +828,6 @@ export function startLibrarySync(
   );
 }
 
-export function fetchSyncRun(runId: string): Promise<LibrarySyncStatus> {
-  return get<LibrarySyncStatus>(`/sync/runs/${encodeURIComponent(runId)}`);
-}
-
 export function cancelSyncRun(runId: string): Promise<LibrarySyncStatus> {
   return post<LibrarySyncStatus>(
     `/sync/runs/${encodeURIComponent(runId)}/cancel`,
@@ -845,20 +837,17 @@ export function cancelSyncRun(runId: string): Promise<LibrarySyncStatus> {
 
 interface SseFrame {
   event?: string;
-  id?: string;
   data: string;
 }
 
-export interface SyncRunStreamOptions {
-  after?: number;
-  signal?: AbortSignal;
-  onSnapshot: (snapshot: LibrarySyncStatus) => void;
+export interface SyncEventsOptions {
+  signal: AbortSignal;
+  onStatus: (status: LibrarySyncStatus) => void;
 }
 
 function parseSseFrame(frame: string): SseFrame | null {
   const data: string[] = [];
   let event: string | undefined;
-  let id: string | undefined;
 
   for (const line of frame.split("\n")) {
     if (line.length === 0 || line.startsWith(":")) continue;
@@ -868,36 +857,31 @@ function parseSseFrame(frame: string): SseFrame | null {
     if (value.startsWith(" ")) value = value.slice(1);
 
     if (field === "event") event = value;
-    if (field === "id") id = value;
     if (field === "data") data.push(value);
   }
 
   if (data.length === 0) return null;
-  return { event, id, data: data.join("\n") };
+  return { event, data: data.join("\n") };
 }
 
 function normalizeSseBuffer(buffer: string): string {
   return buffer.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
 }
 
-export async function streamSyncRun(
-  runId: string,
-  options: SyncRunStreamOptions,
+// Follows the sync status of every library the caller can see: first each
+// one's current status, then every change. Resolves when the server ends the
+// stream; there is no resume cursor, so a new call starts over.
+export async function streamSyncEvents(
+  options: SyncEventsOptions,
 ): Promise<void> {
-  const params = new URLSearchParams();
-  if (options.after != null && options.after > 0) {
-    params.set("after", String(options.after));
-  }
-  const qs = params.toString();
-  const path = `/sync/runs/${encodeURIComponent(runId)}/events${
-    qs ? `?${qs}` : ""
-  }`;
+  const path = "/sync/events";
+  const token = getAuth().token;
   const res = await fetch(`${BASE}${path}`, {
     headers: authHeaders({ Accept: "text/event-stream" }),
     cache: "no-store",
     signal: options.signal,
   });
-  await handleResponse(res, "GET", path);
+  await handleResponse(res, "GET", path, token);
   if (res.body == null) {
     throw new Error("Sync event stream is not readable");
   }
@@ -905,6 +889,12 @@ export async function streamSyncRun(
   const reader = res.body.getReader();
   const decoder = new TextDecoder();
   let buffer = "";
+
+  const dispatch = (frame: SseFrame | null) => {
+    if (frame?.event === "status") {
+      options.onStatus(JSON.parse(frame.data) as LibrarySyncStatus);
+    }
+  };
 
   try {
     while (true) {
@@ -915,24 +905,15 @@ export async function streamSyncRun(
 
       let boundary = buffer.indexOf("\n\n");
       while (boundary !== -1) {
-        const frame = parseSseFrame(buffer.slice(0, boundary));
+        dispatch(parseSseFrame(buffer.slice(0, boundary)));
         buffer = buffer.slice(boundary + 2);
-        if (
-          frame != null &&
-          (frame.event == null || frame.event === "snapshot")
-        ) {
-          options.onSnapshot(JSON.parse(frame.data) as LibrarySyncStatus);
-        }
         boundary = buffer.indexOf("\n\n");
       }
 
       if (done) break;
     }
 
-    const frame = parseSseFrame(buffer.trim());
-    if (frame != null && (frame.event == null || frame.event === "snapshot")) {
-      options.onSnapshot(JSON.parse(frame.data) as LibrarySyncStatus);
-    }
+    dispatch(parseSseFrame(buffer.trim()));
   } finally {
     reader.releaseLock();
   }
