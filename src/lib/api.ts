@@ -417,6 +417,8 @@ export async function fetchActivePlaybacks(): Promise<ActivePlayback[]> {
       sessions.push({
         ...playback.current,
         playback_id: playback.id,
+        client_name: playback.client_name,
+        plugin_id: playback.plugin_id,
         queue_revision: playback.queue_revision,
         connection_id: playback.controller?.id ?? null,
       });
@@ -424,6 +426,20 @@ export async function fetchActivePlaybacks(): Promise<ActivePlayback[]> {
     cursor = page.next_cursor;
   } while (cursor);
   return sessions;
+}
+
+// Every playback with a server-managed queue, newest first.
+export async function fetchQueuePlaybacks(): Promise<PlaybackResponse[]> {
+  const playbacks: PlaybackResponse[] = [];
+  let cursor: string | null | undefined;
+  do {
+    const page = await fetchPlaybacks(undefined, cursor, true);
+    for (const playback of page.items) {
+      if (playback.queue_revision != null) playbacks.push(playback);
+    }
+    cursor = page.next_cursor;
+  } while (cursor);
+  return playbacks;
 }
 
 export function fetchConnections(): Promise<Connection[]> {

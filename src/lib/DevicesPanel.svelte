@@ -6,7 +6,12 @@ www.meshiplaw.com/lyra.
 -->
 
 <script lang="ts">
-  import type { ActivePlayback, Connection, RemoteAction } from "./types";
+  import type {
+    ActivePlayback,
+    Connection,
+    RemoteAction,
+    ResumablePlayback,
+  } from "./types";
   import { coverUrl } from "./api";
   import { getDevices } from "./devices.svelte.ts";
   import { getPlayer } from "./player.svelte.ts";
@@ -71,6 +76,22 @@ www.meshiplaw.com/lyra.
       url: cover ? coverUrl(cover.id) : null,
       blurhash: cover?.blurhash ?? null,
     };
+  }
+
+  function leftBy(p: ResumablePlayback): string {
+    const name =
+      p.client_name?.trim() || (p.plugin_id ? "External player" : "Lyra");
+    return p.plugin_id ? `${name} · via ${p.plugin_id}` : name;
+  }
+
+  function leftAt(p: ResumablePlayback): string {
+    const at = new Date(p.updated_at);
+    return Number.isNaN(at.getTime())
+      ? ""
+      : at.toLocaleString(undefined, {
+          dateStyle: "medium",
+          timeStyle: "short",
+        });
   }
 
   function artistsOf(trackId: string): string {
@@ -438,6 +459,58 @@ www.meshiplaw.com/lyra.
                 {#if devices.errors[c.id]}
                   <div class="px-3 pb-3">{@render errorNote(c.id)}</div>
                 {/if}
+              </li>
+            {/each}
+          </ul>
+        </section>
+      {/if}
+
+      {#if !player.currentTrack && playing.length === 0 && devices.resumable.length > 0}
+        <section>
+          <h3 class={sectionLabel}>Continue</h3>
+          <ul class="space-y-2">
+            {#each devices.resumable as p (p.playback_id)}
+              {@const trackId = p.current?.track_id}
+              <li
+                class="rounded-xl border border-slate-200 px-3 py-2.5 dark:border-neutral-800"
+              >
+                <div class="flex items-center gap-3">
+                  <TrackCover
+                    {...trackId
+                      ? coverOf(trackId)
+                      : { url: null, blurhash: null }}
+                    class="h-10 w-10 rounded"
+                  />
+                  <div class="min-w-0 flex-1">
+                    <p
+                      class="truncate text-sm font-medium text-slate-900 dark:text-neutral-100"
+                    >
+                      {trackId
+                        ? (devices.trackOf(trackId)?.title ?? "Loading track…")
+                        : "Saved queue"}
+                    </p>
+                    <p
+                      class="flex items-center gap-1 truncate text-xs text-slate-500 dark:text-neutral-400"
+                    >
+                      <DeviceIcon
+                        kind={p.plugin_id ? "external" : "connection"}
+                        class="h-3 w-3 shrink-0"
+                      />
+                      <span class="truncate">
+                        {leftBy(p)}{leftAt(p) ? ` · ${leftAt(p)}` : ""}
+                      </span>
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    class={pillButton}
+                    disabled={player.loading}
+                    onclick={() => devices.resume(p.playback_id)}
+                  >
+                    Resume
+                  </button>
+                </div>
+                {@render errorNote(p.playback_id)}
               </li>
             {/each}
           </ul>

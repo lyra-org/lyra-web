@@ -3,10 +3,17 @@
 // You can obtain one here:
 // www.meshiplaw.com/lyra.
 
-import type { ActivePlayback, Connection, TrackResponse } from "./types";
+import type {
+  ActivePlayback,
+  Connection,
+  PlaybackResponse,
+  ResumablePlayback,
+  TrackResponse,
+} from "./types";
 import {
   fetchActivePlaybacks,
   fetchConnections,
+  fetchQueuePlaybacks,
   fetchTrackForRemote,
 } from "./api";
 import { getPlayer } from "./player.svelte.ts";
@@ -33,6 +40,7 @@ const ws = getWebSocket();
 
 let connections = $state<Connection[]>([]);
 let playbacks = $state<ActivePlayback[]>([]);
+let resumable = $state<ResumablePlayback[]>([]);
 let tracks = $state<Record<string, TrackResponse>>({});
 let panelOpen = $state(false);
 // The device this browser handed its playback to, which the player bar
@@ -61,10 +69,37 @@ async function loadTrack(id: string) {
   }
 }
 
+// The newest queue each client left that nothing plays now, other than this
+// browser's own.
+function resumableOf(queues: PlaybackResponse[]): ResumablePlayback[] {
+  const live = new Set(playbacks.map((p) => p.playback_id));
+  const seen = new Set<string>();
+  const kept: ResumablePlayback[] = [];
+  for (const p of queues) {
+    if (live.has(p.id) || p.controller != null) continue;
+    if (p.id === player.playbackId) continue;
+    const client = JSON.stringify([p.plugin_id, p.client_name]);
+    if (seen.has(client)) continue;
+    seen.add(client);
+    kept.push({
+      playback_id: p.id,
+      client_name: p.client_name,
+      plugin_id: p.plugin_id,
+      current: p.current,
+      updated_at: p.updated_at,
+    });
+  }
+  return kept;
+}
+
 async function refreshPlaybacks() {
   try {
     playbacks = await fetchActivePlaybacks();
     for (const p of playbacks) loadTrack(p.track_id);
+    if (panelOpen) {
+      resumable = resumableOf(await fetchQueuePlaybacks());
+      for (const p of resumable) if (p.current) loadTrack(p.current.track_id);
+    }
   } catch (e) {
     console.error("Loading playback failed:", e);
   }
@@ -265,6 +300,20 @@ async function playHere(connectionId: string) {
   refreshPlaybacksSoon();
 }
 
+// Plays a queue nothing plays now here, from where it was left.
+async function resume(playbackId: string) {
+  try {
+    await player.takeOver(playbackId, null, false);
+  } catch (e) {
+    errors = {
+      ...errors,
+      [playbackId]:
+        e instanceof Error ? e.message : "Couldn't play that queue here",
+    };
+  }
+  refreshPlaybacksSoon();
+}
+
 function dismissError(connectionId: string) {
   const { [connectionId]: _, ...rest } = errors;
   errors = rest;
@@ -302,6 +351,10 @@ export function getDevices() {
     get externalPlaybacks() {
       return playbacks.filter((p) => p.plugin_id != null && isActive(p));
     },
+    // Queues left by clients that went away, newest first, one per client.
+    get resumable() {
+      return resumable;
+    },
     get controlled() {
       return controlled();
     },
@@ -330,6 +383,7 @@ export function getDevices() {
     setVolume,
     moveTo,
     playHere,
+    resume,
     dismissError,
   };
 }

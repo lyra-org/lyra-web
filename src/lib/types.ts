@@ -70,6 +70,11 @@ export interface PlaybackResponse {
   // Null for plugin-reported playback without a server-managed queue.
   queue_revision: number | null;
   current: CurrentPlayback | null;
+  // The current play's client and plugin, given even when its track is hidden
+  // or gone and `current` with it.
+  client_name: string | null;
+  // The plugin that reported the play; null for Lyra's own clients.
+  plugin_id: string | null;
   created_at: string;
   updated_at: string;
   controller?: Connection | null;
@@ -78,9 +83,6 @@ export interface PlaybackResponse {
 export interface CurrentPlayback {
   track_id: string;
   play_id: string;
-  client_name: string | null;
-  // The plugin that reported the play; null for Lyra's own clients.
-  plugin_id: string | null;
   position_ms: number;
   state: PlaybackState;
   played_ms: number;
@@ -114,6 +116,9 @@ export interface QueueSnapshot {
 
 export interface QueueResponse extends QueueSnapshot {
   revision: number;
+  // Where to resume the current track: its play's position, or 0 once it
+  // completed or when it moved because the stored one can't be played.
+  position_ms: number;
 }
 
 export type EntityType = "release" | "artist" | "track";
@@ -1025,9 +1030,22 @@ export type ForwardedCommand =
 
 export type OutgoingMessage = ResponseMessage | EventMessage | ForwardedCommand;
 
+// A queue-backed playback nothing plays now, which this browser can resume.
+export interface ResumablePlayback {
+  playback_id: string;
+  client_name: string | null;
+  plugin_id: string | null;
+  // Null when its current track can no longer be seen.
+  current: CurrentPlayback | null;
+  // RFC 3339 UTC timestamp.
+  updated_at: string;
+}
+
 // A playback with a current track, flattened for listing devices.
 export interface ActivePlayback extends CurrentPlayback {
   playback_id: string;
+  client_name: string | null;
+  plugin_id: string | null;
   // Null for plugin-reported playback without a server-managed queue.
   queue_revision: number | null;
   // The connection driving the playback, if any.

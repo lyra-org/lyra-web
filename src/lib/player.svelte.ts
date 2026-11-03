@@ -716,14 +716,18 @@ async function acceptHandoff(
   }
 }
 
-// Plays another device's queue here as this browser's own playback.
+// Plays another playback's queue here as this browser's own playback, from
+// `positionMs`, or else from where the server says its current track was left.
 async function takeOver(
   sourcePlaybackId: string,
-  positionMs: number,
+  positionMs: number | null,
   paused: boolean,
 ) {
   const snapshot = await fetchPlaybackQueue(sourcePlaybackId);
-  await playQueue(snapshot, { positionMs, autoplay: !paused });
+  await playQueue(snapshot, {
+    positionMs: positionMs ?? snapshot.position_ms,
+    autoplay: !paused,
+  });
 }
 
 onForwardedCommand((cmd) => {
@@ -815,6 +819,10 @@ export function getPlayer() {
     },
     get queue() {
       return queue;
+    },
+    // The server playback this browser drives, if any.
+    get playbackId() {
+      return playbackId;
     },
     get upNext() {
       return getUpNext();
