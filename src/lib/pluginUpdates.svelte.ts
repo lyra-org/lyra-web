@@ -8,7 +8,6 @@ import type {
   PluginManifestResponse,
   PluginSourceResponse,
   PreviewedPlugin,
-  ScopeGainResponse,
   UpdatePluginsResponse,
 } from "./types";
 import { fetchPlugins } from "./api";
@@ -70,18 +69,6 @@ export function getPluginUpdates() {
     track,
     clear,
   };
-}
-
-export function describeGain(gain: ScopeGainResponse): string {
-  const reached = [...gain.scopes, ...gain.unresolved_dependencies];
-  const { level } = gain.risk;
-  const risk =
-    level !== gain.previous_risk
-      ? ` (risk rises from ${gain.previous_risk} to ${level})`
-      : level === "standard"
-        ? ""
-        : ` (${level} risk)`;
-  return `${gain.plugin} would newly reach ${reached.join(", ")}${risk}`;
 }
 
 // Why the update to `version` waits. Only `adds_scopes` can be approved.

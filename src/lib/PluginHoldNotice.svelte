@@ -7,7 +7,8 @@ www.meshiplaw.com/lyra.
 
 <script lang="ts">
   import type { PluginHold } from "./types";
-  import { describeGain, describeHold } from "./pluginUpdates.svelte.ts";
+  import { describeHold } from "./pluginUpdates.svelte.ts";
+  import PluginGain from "./PluginGain.svelte";
 
   interface Props {
     hold: PluginHold;
@@ -17,22 +18,13 @@ www.meshiplaw.com/lyra.
   let { hold, version }: Props = $props();
 </script>
 
-<div class="space-y-1 text-sm text-amber-700 dark:text-amber-400">
-  <p>{describeHold(hold, version)}</p>
+<div class="space-y-2 text-sm">
+  <p class="text-amber-700 dark:text-amber-400">
+    {describeHold(hold, version)}
+  </p>
   {#if hold.reason === "adds_scopes"}
-    <ul class="list-disc space-y-1 pl-5">
-      {#each hold.gains as gain (gain.plugin)}
-        <li>
-          {describeGain(gain)}.
-          {#if gain.effects.length > 0}
-            <ul class="list-[circle] pl-5">
-              {#each gain.effects as effect, i (i)}
-                <li>{effect.description}</li>
-              {/each}
-            </ul>
-          {/if}
-        </li>
-      {/each}
-    </ul>
+    {#each hold.gains as gain (gain.plugin)}
+      <PluginGain {gain} />
+    {/each}
   {/if}
 </div>
