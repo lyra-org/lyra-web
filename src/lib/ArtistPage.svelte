@@ -124,10 +124,12 @@ www.meshiplaw.com/lyra.
             />
           {/if}
           {#if coverSrc}
+            <!-- Rounded itself: once the change-cover button fades out,
+                 Chromium can draw the image without the wrapper's clip. -->
             <img
               src={coverSrc}
               alt="Photo of {artist.name}"
-              class="relative h-full w-full object-cover"
+              class="relative h-full w-full rounded-full object-cover"
               onerror={() => (failedSrc = coverSrc)}
             />
           {:else if !cover?.blurhash}
