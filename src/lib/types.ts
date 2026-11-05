@@ -1226,7 +1226,12 @@ export type ServerSettingField = ServerSettingProps &
   );
 
 export interface ServerSettingsResponse {
-  groups: { id: string; label: string; fields: ServerSettingField[] }[];
+  groups: {
+    id: string;
+    label: string;
+    permission: Permission;
+    fields: ServerSettingField[];
+  }[];
   pending_restart: string[];
   boot: { port: number; data_dir: string; db: { kind: string; path: string } };
 }

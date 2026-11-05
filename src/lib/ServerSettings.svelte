@@ -13,12 +13,17 @@ www.meshiplaw.com/lyra.
     updateServerSettings,
     resetServerSettings,
   } from "./api";
+  import { getAuth } from "./auth.svelte.ts";
   import type {
+    Permission,
     ServerSettingsResponse,
     ServerSettingField,
     ServerSettingValue,
   } from "./types";
 
+  type SettingGroup = ServerSettingsResponse["groups"][number];
+
+  const auth = getAuth();
   let { dirty = $bindable(false), busy = $bindable(false) } = $props<{
     dirty?: boolean;
     busy?: boolean;
@@ -31,6 +36,7 @@ www.meshiplaw.com/lyra.
   let resets = $state<Record<string, boolean>>({});
   let changed = $derived(
     settings?.groups
+      .filter(canEdit)
       .flatMap((group) => group.fields)
       .filter(
         (field) =>
@@ -39,12 +45,29 @@ www.meshiplaw.com/lyra.
             drafts[field.key] !== displayValue(field.value, field.type)),
       ) ?? [],
   );
+  // Resetting clears every stored value, so it needs each group holding one.
+  let resetBlocked = $derived(
+    settings?.groups.some(
+      (group) =>
+        !canEdit(group) &&
+        group.fields.some((field) => field.source === "database"),
+    ) ?? false,
+  );
   $effect(() => {
     dirty = changed.length > 0;
   });
 
   const inputClass =
     "w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:ring-2 focus:ring-[#BB7FB5] focus:outline-none disabled:opacity-50 dark:border-neutral-600 dark:bg-[#1b1d1e] dark:text-neutral-100";
+
+  function canEdit(group: SettingGroup): boolean {
+    return auth.hasPermission(group.permission);
+  }
+
+  function permissionLabel(permission: Permission): string {
+    const words = permission.replaceAll("_", " ");
+    return words[0].toUpperCase() + words.slice(1);
+  }
 
   function displayValue(
     value: ServerSettingValue,
@@ -133,7 +156,7 @@ www.meshiplaw.com/lyra.
       if (err.status === 400)
         return "The server rejected these values. Check the field descriptions and try again.";
       if (err.status === 403)
-        return "You need a signed-in session with permission to manage server settings.";
+        return "You need a signed-in session with permission to change these settings.";
     }
     return err instanceof Error
       ? err.message
@@ -162,6 +185,7 @@ www.meshiplaw.com/lyra.
   async function resetAll() {
     if (
       busy ||
+      resetBlocked ||
       !confirm(
         "Reset all stored server settings? Values from config.json will remain in effect; other settings will use their defaults.",
       )
@@ -224,10 +248,11 @@ www.meshiplaw.com/lyra.
         </div>
       {/if}
       {#each settings.groups as group (group.id)}
+        {@const editable = canEdit(group)}
         {@const groupNeedsRestart =
           group.fields.length > 0 &&
           group.fields.every((field) => field.restart_required)}
-        <fieldset class="space-y-5" disabled={busy}>
+        <fieldset class="space-y-5" disabled={busy || !editable}>
           <legend
             class="mb-3 text-sm font-semibold"
             class:sr-only={group.id === "server"}
@@ -236,6 +261,10 @@ www.meshiplaw.com/lyra.
             {#if groupNeedsRestart}<span
                 class="ml-2 text-xs font-normal text-slate-500 dark:text-neutral-400"
                 >Requires restart</span
+              >{/if}
+            {#if !editable}<span
+                class="ml-2 text-xs font-normal text-slate-500 dark:text-neutral-400"
+                >Requires {permissionLabel(group.permission)}</span
               >{/if}
           </legend>
           {#each group.fields as field (field.key)}
@@ -269,7 +298,7 @@ www.meshiplaw.com/lyra.
                   {#if field.restart_required && !groupNeedsRestart}<span
                       >Requires restart</span
                     >{/if}
-                  {#if !field.locked && !resets[field.key] && (field.source === "database" || drafts[field.key] !== displayValue(field.value, field.type))}
+                  {#if editable && !field.locked && !resets[field.key] && (field.source === "database" || drafts[field.key] !== displayValue(field.value, field.type))}
                     <button
                       type="button"
                       onclick={() => resetField(field)}
@@ -338,10 +367,22 @@ www.meshiplaw.com/lyra.
           <button
             type="button"
             onclick={resetAll}
-            disabled={busy}
+            disabled={busy || resetBlocked}
+            aria-describedby={resetBlocked
+              ? "server-settings-reset-blocked"
+              : undefined}
             class="text-sm text-red-600 disabled:opacity-50 dark:text-red-400"
             >Reset all</button
           >
+          {#if resetBlocked}
+            <p
+              id="server-settings-reset-blocked"
+              class="mt-1 text-xs text-slate-500 dark:text-neutral-400"
+            >
+              Some stored settings need a permission you don't have, so you
+              can't reset them.
+            </p>
+          {/if}
         </div>
       </details>
     </div>
