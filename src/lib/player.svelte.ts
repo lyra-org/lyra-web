@@ -212,6 +212,20 @@ function markMissing(id: string) {
   );
 }
 
+// `track` took over `removedId`'s file, and `removedId` is gone. Its audio
+// keeps playing if it is the current track.
+function trackRemapped(track: TrackResponse, removedId: string) {
+  const merged = (t: TrackResponse) =>
+    t.id === track.id ? { ...t, ...track } : t;
+  queue = queue
+    .filter((item) => item.track.id !== removedId)
+    .map((item) => ({ ...item, track: merged(item.track) }));
+  if (!playbackContext) return;
+  playbackContext.tracks = playbackContext.tracks
+    .filter((t) => t.id !== removedId || t.id === currentTrack?.id)
+    .map(merged);
+}
+
 const PLAYING_REPORT_MS = 10_000;
 const PAUSED_REPORT_MS = 30_000;
 
@@ -914,6 +928,7 @@ export function getPlayer() {
       return notice;
     },
     dismissNotice,
+    trackRemapped,
     playTrack,
     handOffTo,
     takeOver,

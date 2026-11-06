@@ -42,6 +42,7 @@ www.meshiplaw.com/lyra.
   import MetadataEditModal from "./MetadataEditModal.svelte";
   import PathMixModal from "./PathMixModal.svelte";
   import RefreshOptionsModal from "./RefreshOptionsModal.svelte";
+  import RemapTrackModal from "./RemapTrackModal.svelte";
   import { refreshEntity } from "./api";
   import TrackMenuItems from "./TrackMenuItems.svelte";
 
@@ -49,15 +50,18 @@ www.meshiplaw.com/lyra.
   interface Props {
     target: TrackMenuTarget | null;
     onclose: () => void;
+    // A remap changed the list.
+    onchanged?: () => void;
   }
 
-  let { target, onclose }: Props = $props();
+  let { target, onclose, onchanged }: Props = $props();
 
   // Outlives the menu, which closes when the modal opens.
   let idsTrack = $state<TrackResponse | null>(null);
   let editTrack = $state<TrackResponse | null>(null);
   let optionsTrack = $state<TrackResponse | null>(null);
   let pathTrack = $state<TrackResponse | null>(null);
+  let remappingTrack = $state<TrackResponse | null>(null);
 </script>
 
 {#if target}
@@ -89,6 +93,10 @@ www.meshiplaw.com/lyra.
           pathTrack = track;
           onclose();
         }}
+        onremap={() => {
+          remappingTrack = track;
+          onclose();
+        }}
       />
     </ContextMenu>
   {/key}
@@ -111,6 +119,14 @@ www.meshiplaw.com/lyra.
 
 {#if pathTrack}
   <PathMixModal from={pathTrack} onclose={() => (pathTrack = null)} />
+{/if}
+
+{#if remappingTrack}
+  <RemapTrackModal
+    track={remappingTrack}
+    onremapped={() => onchanged?.()}
+    onclose={() => (remappingTrack = null)}
+  />
 {/if}
 
 {#if optionsTrack}

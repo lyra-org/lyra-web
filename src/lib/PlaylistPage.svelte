@@ -485,4 +485,8 @@ www.meshiplaw.com/lyra.
   </div>
 {/if}
 
-<TrackMenu target={trackMenu} onclose={() => (trackMenu = null)} />
+<TrackMenu
+  target={trackMenu}
+  onclose={() => (trackMenu = null)}
+  onchanged={() => load(playlistId)}
+/>

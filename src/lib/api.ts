@@ -1161,6 +1161,17 @@ export function fetchTracks(opts?: {
   return get<Page<TrackResponse>>(`/tracks?${params}`, opts?.signal);
 }
 
+// Makes the playable track `targetId` the file of the missing track `id`, which
+// keeps its id and what users attached to it. The target is removed.
+export function remapTrack(
+  id: string,
+  targetId: string,
+): Promise<TrackResponse> {
+  return post<TrackResponse>(`/tracks/${encodeURIComponent(id)}/remap`, {
+    target_id: targetId,
+  });
+}
+
 // The first page of each list for `query`. Each `next_cursor` continues on
 // that type's list endpoint with the same query.
 export function searchLibrary(opts: {

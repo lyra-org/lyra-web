@@ -26,6 +26,7 @@ www.meshiplaw.com/lyra.
     onrefresh: () => void;
     onrefreshoptions: () => void;
     onpath: () => void;
+    onremap: () => void;
   }
 
   let {
@@ -37,12 +38,16 @@ www.meshiplaw.com/lyra.
     onrefresh,
     onrefreshoptions,
     onpath,
+    onremap,
   }: Props = $props();
 
   let trackId = $derived(track.id);
   let canManage = $derived(getAuth().hasPermission("manage_metadata"));
   let canSync = $derived(getAuth().hasPermission("sync_metadata"));
   let missing = $derived(isMissing(track));
+  let canFixMissing = $derived(
+    missing && getAuth().hasPermission("manage_libraries"),
+  );
 
   const player = getPlayer();
   const tagsStore = getTags();
@@ -260,7 +265,7 @@ www.meshiplaw.com/lyra.
     </svg>
   </button>
   <RatingMenuItem targetId={trackId} label={track.title} />
-  {#if canSync || canManage}
+  {#if canSync || canManage || canFixMissing}
     <div
       role="separator"
       class="my-1 h-px bg-slate-100 dark:bg-neutral-700"
@@ -303,6 +308,25 @@ www.meshiplaw.com/lyra.
         />
       </svg>
       Edit metadata…
+    </button>
+  {/if}
+  {#if canFixMissing}
+    <button type="button" class={menuItemClass} onclick={onremap}>
+      <svg
+        class="h-4 w-4 text-slate-400 dark:text-neutral-500"
+        xmlns="http://www.w3.org/2000/svg"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke="currentColor"
+        stroke-width="2"
+      >
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          d="M7.5 21L3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5"
+        />
+      </svg>
+      Remap…
     </button>
   {/if}
 {:else if view === "playlists"}

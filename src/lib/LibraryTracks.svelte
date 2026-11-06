@@ -24,7 +24,7 @@ www.meshiplaw.com/lyra.
   import RatingButton from "./RatingButton.svelte";
   import { getFavoriteState } from "./favorites.svelte.ts";
   import { getRating } from "./ratings.svelte.ts";
-  import { anchorAtPointer } from "./ContextMenu.svelte";
+  import { anchorAtPointer, anchorBelow } from "./ContextMenu.svelte";
   import TrackMenu, { type TrackMenuTarget } from "./TrackMenu.svelte";
 
   interface Props {
@@ -66,6 +66,17 @@ www.meshiplaw.com/lyra.
     trackMenu = { track, anchor: anchorAtPointer(e) };
   }
 
+  function toggleTrackMenu(e: MouseEvent, track: TrackResponse) {
+    e.stopPropagation();
+    trackMenu =
+      trackMenu?.track.id === track.id
+        ? null
+        : { track, anchor: anchorBelow(e.currentTarget as Element) };
+  }
+
+  // Bumped to load the list again after a remap changes it.
+  let revision = $state(0);
+
   function openTrack(track: TrackResponse) {
     if (track.id) window.location.hash = `#/tracks/${track.id}`;
   }
@@ -81,7 +92,7 @@ www.meshiplaw.com/lyra.
 
 <div class="mx-auto max-w-4xl">
   <PaginatedList
-    scope={`${libraryId}/${sort.sortBy}/${sort.sortOrder}/${filter.value}`}
+    scope={`${libraryId}/${sort.sortBy}/${sort.sortOrder}/${filter.value}/${revision}`}
     label="tracks"
     pageSize={100}
     empty={filter.value === "all"
@@ -212,11 +223,13 @@ www.meshiplaw.com/lyra.
                   ? formatDuration(track.duration_ms)
                   : ""}
               </td>
-              <td class="w-10 py-2 pr-3">
+              <td class="w-16 py-2 pr-3 pl-2">
                 {#if track.id}
                   <div
-                    class="flex justify-end opacity-0 group-hover:opacity-100"
-                    class:opacity-100={getFavoriteState(track.id) === true}
+                    class="flex items-center justify-end gap-0.5 opacity-0 group-hover:opacity-100"
+                    class:opacity-100={trackMenu?.track.id === track.id ||
+                      getFavoriteState(track.id) === true ||
+                      isMissing(track)}
                   >
                     <FavoriteButton
                       targetId={track.id}
@@ -224,6 +237,24 @@ www.meshiplaw.com/lyra.
                       size="sm"
                       stopPropagation
                     />
+                    <button
+                      type="button"
+                      class="flex h-6 w-6 items-center justify-center rounded text-slate-400 hover:bg-slate-200 hover:text-slate-600 dark:text-neutral-500 dark:hover:bg-neutral-600 dark:hover:text-neutral-300"
+                      title="Track options"
+                      aria-label="Track options"
+                      onclick={(e) => toggleTrackMenu(e, track)}
+                    >
+                      <svg
+                        class="h-4 w-4"
+                        xmlns="http://www.w3.org/2000/svg"
+                        viewBox="0 0 20 20"
+                        fill="currentColor"
+                      >
+                        <path
+                          d="M10 6a1.5 1.5 0 110-3 1.5 1.5 0 010 3zm0 5.5a1.5 1.5 0 110-3 1.5 1.5 0 010 3zm0 5.5a1.5 1.5 0 110-3 1.5 1.5 0 010 3z"
+                        />
+                      </svg>
+                    </button>
                   </div>
                 {/if}
               </td>
@@ -235,4 +266,8 @@ www.meshiplaw.com/lyra.
   </PaginatedList>
 </div>
 
-<TrackMenu target={trackMenu} onclose={() => (trackMenu = null)} />
+<TrackMenu
+  target={trackMenu}
+  onclose={() => (trackMenu = null)}
+  onchanged={() => revision++}
+/>

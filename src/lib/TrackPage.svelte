@@ -8,11 +8,13 @@ www.meshiplaw.com/lyra.
 <script lang="ts">
   import type { ArtistResponse, CreditType, TrackResponse } from "./types";
   import { fetchTrackDetail } from "./api";
+  import { getAuth } from "./auth.svelte.ts";
   import { getPlayer, isMissing } from "./player.svelte.ts";
   import BlurhashCanvas from "./BlurhashCanvas.svelte";
   import ArtistPortraitCard from "./ArtistPortraitCard.svelte";
   import FavoriteButton from "./FavoriteButton.svelte";
   import RatingButton from "./RatingButton.svelte";
+  import RemapTrackModal from "./RemapTrackModal.svelte";
 
   interface Props {
     trackId: string;
@@ -21,8 +23,10 @@ www.meshiplaw.com/lyra.
   let { trackId }: Props = $props();
 
   const player = getPlayer();
+  const auth = getAuth();
 
   let track = $state<TrackResponse | null>(null);
+  let remapping = $state(false);
   let loading = $state(true);
   let error: string | null = $state(null);
   let coverFailed = $state(false);
@@ -283,6 +287,13 @@ www.meshiplaw.com/lyra.
             class="mt-3 flex flex-wrap items-center gap-2 text-sm text-slate-500 dark:text-neutral-400"
           >
             A sync couldn't find this track's file.
+            {#if auth.hasPermission("manage_libraries")}
+              <button
+                type="button"
+                class="underline hover:text-slate-700 dark:hover:text-neutral-200"
+                onclick={() => (remapping = true)}>Remap…</button
+              >
+            {/if}
           </p>
         {/if}
       </div>
@@ -308,4 +319,12 @@ www.meshiplaw.com/lyra.
       </div>
     {/if}
   </div>
+{/if}
+
+{#if remapping && track}
+  <RemapTrackModal
+    {track}
+    onremapped={() => load(trackId)}
+    onclose={() => (remapping = false)}
+  />
 {/if}
