@@ -7,6 +7,7 @@ import type {
   ArtistRelationType,
   ArtistType,
   CreditType,
+  ManualFill,
   MetadataCreditValue,
   MetadataEntityType,
   MetadataFieldName,
@@ -191,4 +192,42 @@ export function describeField(
     default:
       return [String(value)];
   }
+}
+
+// Credits and relations in a fill sit under their type, so they carry no type
+// of their own.
+interface FilledArtist {
+  artist_id: string;
+  detail?: string | null;
+  attributes?: string | null;
+}
+
+// A manual value a merge fills in, as a name and its lines.
+export function describeFill(
+  fill: ManualFill,
+  artistName: ArtistName,
+): { name: string; lines: string[] } {
+  if (fill.key in NAMES) {
+    const field = fill.key as MetadataFieldName;
+    return {
+      name: NAMES[field],
+      lines: describeField(field, fill.value, artistName),
+    };
+  }
+  return {
+    name: optionLabel([...CREDIT_TYPES, ...RELATION_TYPES], fill.key),
+    lines: (fill.value as FilledArtist[]).map((a) => {
+      const note = a.detail ?? a.attributes;
+      return `${artistName(a.artist_id)}${note ? ` (${note})` : ""}`;
+    }),
+  };
+}
+
+// The artists a preview's fills name, whose names the review needs.
+export function filledArtistIds(fills: ManualFill[]): string[] {
+  return fills.flatMap((fill) =>
+    fill.key in NAMES
+      ? []
+      : (fill.value as FilledArtist[]).map((a) => a.artist_id),
+  );
 }

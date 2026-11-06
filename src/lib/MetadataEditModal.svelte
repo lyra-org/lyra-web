@@ -17,11 +17,13 @@ www.meshiplaw.com/lyra.
     refreshEntity,
   } from "./api";
   import { getAuth } from "./auth.svelte.ts";
+  import { catalogChanged } from "./catalog.svelte.ts";
   import { staleReview, withExpected } from "./metadataChanges";
   import {
     ARTIST_TYPES,
     CREDIT_TYPES,
     describeField,
+    filledArtistIds,
     KINDS,
     NAMES,
     ORDER,
@@ -41,9 +43,12 @@ www.meshiplaw.com/lyra.
     MetadataRelationValue,
     MetadataSnapshot,
     ProviderResponse,
+    ReleaseResponse,
   } from "./types";
   import ArtistPicker from "./ArtistPicker.svelte";
+  import MergeReview from "./MergeReview.svelte";
   import Modal from "./Modal.svelte";
+  import ReleasePicker from "./ReleasePicker.svelte";
 
   interface Props {
     entityId: string;
@@ -93,11 +98,16 @@ www.meshiplaw.com/lyra.
   let inheritedIds = $state<string[]>([]);
   let droppedAliases = $state<string[]>([]);
 
-  let tab = $state<"details" | "ids">("details");
+  // Duplicates to merge into this entity, which always wins, so the page it was
+  // opened from stays.
+  let losers = $state<{ id: string; name: string }[]>([]);
+
+  let tab = $state<"details" | "ids" | "merge">("details");
   let step = $state<"edit" | "review" | "saved">("edit");
   let previews = $state<MetadataChangePreview[]>([]);
   let busy = $state(false);
   let notice = $state<string | null>(null);
+  let merged = false;
 
   let fields = $derived(
     snapshot
@@ -105,6 +115,9 @@ www.meshiplaw.com/lyra.
       : [],
   );
   let noun = $derived(snapshot ? NOUNS[snapshot.entity_type] : "entity");
+  let canMerge = $derived(
+    snapshot?.entity_type === "release" || snapshot?.entity_type === "artist",
+  );
 
   let idGroups = $derived.by(() => {
     const byProvider = new Map<string, ProviderGroup>();
@@ -318,14 +331,25 @@ www.meshiplaw.com/lyra.
     }),
   );
 
+  // Edits run first, so that a merge fills in only what they leave out.
   let changeSet = $derived.by((): MetadataChange[] => [
     ...(edits.length > 0
       ? [{ action: "edit_metadata" as const, entity_id: entityId, edits }]
       : []),
     ...idChanges,
+    ...(losers.length > 0
+      ? [
+          {
+            action: "merge" as const,
+            winner_id: entityId,
+            loser_ids: losers.map((l) => l.id),
+          },
+        ]
+      : []),
   ]);
 
-  let changeCount = $derived(edits.length + idChanges.length);
+  let changeCount = $derived(edits.length + idChanges.length + losers.length);
+  let merging = $derived(losers.length > 0);
 
   let invalidFields = $derived(fields.some((f) => fieldError(f) != null));
   let invalidIds = $derived(ids.some((id) => idError(id) != null));
@@ -344,6 +368,16 @@ www.meshiplaw.com/lyra.
       changed: idChanges.length > 0,
       problem: invalidIds,
     },
+    ...(canMerge
+      ? [
+          {
+            id: "merge" as const,
+            label: "Merge",
+            changed: losers.length > 0,
+            problem: false,
+          },
+        ]
+      : []),
   ]);
 
   function idKey(id: ExternalIdResponse): string {
@@ -387,6 +421,11 @@ www.meshiplaw.com/lyra.
       providers.find((p) => p.provider_id === providerId)?.display_name ??
       providerId
     );
+  }
+
+  function releaseName(release: ReleaseResponse): string {
+    const artists = release.artists?.map((a) => a.name).join(", ");
+    return artists ? `${release.title} · ${artists}` : release.title;
   }
 
   function toggleInherit(field: MetadataFieldName) {
@@ -442,13 +481,21 @@ www.meshiplaw.com/lyra.
     labels = [...labels, { id, name: label.name, catalog_number: null }];
   }
 
+  function showPreviews(next: MetadataChangePreview[]) {
+    previews = next;
+    const fills = next.flatMap((p) =>
+      p.action === "merge" ? p.manual_fills : [],
+    );
+    loadArtistNames(filledArtistIds(fills));
+  }
+
   async function review() {
     if (changeSet.length === 0 || invalid) return;
     busy = true;
     error = null;
     notice = null;
     try {
-      previews = await previewMetadataChanges(changeSet);
+      showPreviews(await previewMetadataChanges(changeSet));
       step = "review";
     } catch (err) {
       error = err instanceof Error ? err.message : "Failed to check the edit";
@@ -463,6 +510,7 @@ www.meshiplaw.com/lyra.
     notice = null;
     try {
       await applyMetadataChanges(withExpected(changeSet, previews));
+      merged = merging;
       await followIds();
     } catch (err) {
       await reviewAgain(err);
@@ -476,7 +524,7 @@ www.meshiplaw.com/lyra.
     try {
       const next = await staleReview(changeSet, failure);
       if (next) {
-        previews = next;
+        showPreviews(next);
         notice =
           "The metadata no longer matches what you reviewed. These are the changes as they stand now.";
       } else {
@@ -499,7 +547,7 @@ www.meshiplaw.com/lyra.
       (c) =>
         c.action === "set_external_id" || c.action === "inherit_external_id",
     );
-    if (!changedIds) return onclose();
+    if (!changedIds) return finish();
     if (!auth.hasPermission("sync_metadata")) {
       notice = `The ${noun}'s metadata follows the new IDs on its next refresh.`;
       step = "saved";
@@ -507,13 +555,18 @@ www.meshiplaw.com/lyra.
     }
     try {
       await refreshEntity(entityId);
-      onclose();
+      finish();
     } catch (err) {
       notice = `Refreshing the ${noun} failed: ${
         err instanceof Error ? err.message : "unknown error"
       }`;
       step = "saved";
     }
+  }
+
+  function finish() {
+    if (merged) catalogChanged();
+    onclose();
   }
 
   function artistName(id: string): string {
@@ -856,7 +909,7 @@ www.meshiplaw.com/lyra.
   width="wide"
   toolbar={snapshot && step === "edit" ? tabBar : undefined}
   onclose={() => {
-    if (!busy) onclose();
+    if (!busy) finish();
   }}
 >
   {#if loading}
@@ -899,7 +952,7 @@ www.meshiplaw.com/lyra.
         </div>
       {/each}
     </div>
-  {:else if snapshot && step === "edit"}
+  {:else if snapshot && step === "edit" && tab === "ids"}
     {#if ids.length === 0}
       <p class="text-sm text-slate-500 dark:text-neutral-400">
         This {noun} has no external IDs.
@@ -1008,6 +1061,43 @@ www.meshiplaw.com/lyra.
         {/each}
       {/each}
     </div>
+  {:else if snapshot && step === "edit"}
+    <div class="space-y-2">
+      <p class="text-sm text-slate-500 dark:text-neutral-400">
+        Duplicates added here merge into this {noun} and are deleted.
+      </p>
+      {#each losers as loser (loser.id)}
+        <div class="flex items-center gap-2">
+          <span
+            class="min-w-0 flex-1 truncate text-sm text-slate-900 dark:text-neutral-100"
+            title={loser.name}>{loser.name}</span
+          >
+          {@render removeButton(`Keep ${loser.name}`, () => {
+            losers = losers.filter((l) => l.id !== loser.id);
+          })}
+        </div>
+      {/each}
+      {#if snapshot.entity_type === "release"}
+        <ReleasePicker
+          placeholder="Find a duplicate album…"
+          exclude={[entityId, ...losers.map((l) => l.id)]}
+          onpick={(release) => {
+            losers = [
+              ...losers,
+              { id: release.id, name: releaseName(release) },
+            ];
+          }}
+        />
+      {:else}
+        <ArtistPicker
+          placeholder="Find a duplicate artist…"
+          exclude={[entityId, ...losers.map((l) => l.id)]}
+          onpick={(artist) => {
+            losers = [...losers, { id: artist.id, name: artist.name }];
+          }}
+        />
+      {/if}
+    </div>
   {:else if snapshot && step === "review"}
     {#if notice}
       <p class="text-sm font-medium text-slate-900 dark:text-neutral-100">
@@ -1049,6 +1139,15 @@ www.meshiplaw.com/lyra.
             [preview.id_value],
             [],
           )}
+        {:else if preview.action === "merge"}
+          <li>
+            <MergeReview
+              {preview}
+              names={Object.fromEntries(losers.map((l) => [l.id, l.name]))}
+              {artistName}
+              {providerName}
+            />
+          </li>
         {/if}
       {/each}
     </ul>
@@ -1100,16 +1199,18 @@ www.meshiplaw.com/lyra.
       <button
         type="button"
         disabled={busy}
-        class="rounded-md bg-[#E6CEE3] px-4 py-1.5 text-sm font-medium text-slate-900 hover:bg-[#d4b5cf] disabled:opacity-50 dark:bg-[#BB7FB5] dark:text-white dark:hover:bg-[#cfa2c9]"
+        class={merging
+          ? "rounded-md bg-red-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-red-700 dark:hover:bg-red-600"
+          : "rounded-md bg-[#E6CEE3] px-4 py-1.5 text-sm font-medium text-slate-900 hover:bg-[#d4b5cf] disabled:opacity-50 dark:bg-[#BB7FB5] dark:text-white dark:hover:bg-[#cfa2c9]"}
         onclick={apply}
       >
-        {busy ? "Saving…" : "Save"}
+        {busy ? "Saving…" : merging ? "Merge" : "Save"}
       </button>
     {:else}
       <button
         type="button"
         class="rounded-md px-4 py-1.5 text-sm text-slate-600 hover:bg-slate-100 dark:text-neutral-300 dark:hover:bg-neutral-700"
-        onclick={onclose}
+        onclick={finish}
       >
         Close
       </button>

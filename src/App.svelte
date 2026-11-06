@@ -29,6 +29,7 @@ www.meshiplaw.com/lyra.
   import SearchResults from "./lib/SearchResults.svelte";
   import { onMount, untrack } from "svelte";
   import { getAuth } from "./lib/auth.svelte.ts";
+  import { catalogRevision } from "./lib/catalog.svelte.ts";
   import { getSetup } from "./lib/setup.svelte.ts";
   import { getPluginUpdates } from "./lib/pluginUpdates.svelte.ts";
   import { getPlayer } from "./lib/player.svelte.ts";
@@ -623,69 +624,71 @@ www.meshiplaw.com/lyra.
       </div>
     </header>
     <section class="mx-auto max-w-7xl px-4 py-6 pb-20 sm:px-6">
-      {#if route.page === "search"}
-        <div id="search-results">
-          {#if !searchQuery.trim()}
-            <p
-              role="status"
-              class="py-12 text-center text-slate-500 dark:text-neutral-400"
-            >
-              Search for albums, artists, and tracks.
-            </p>
-          {:else if !committedSearchQuery}
-            <p
-              role="status"
-              class="py-12 text-center text-slate-500 dark:text-neutral-400"
-            >
-              Searching…
-            </p>
-          {:else}
-            <SearchResults query={committedSearchQuery} />
-          {/if}
-        </div>
-      {:else if route.page === "library"}
-        {#key route.id}
-          <LibraryAlbums libraryId={route.id} />
-        {/key}
-      {:else if route.page === "library_artists"}
-        {#key route.id}
-          <LibraryArtists libraryId={route.id} />
-        {/key}
-      {:else if route.page === "library_tracks"}
-        {#key route.id}
-          <LibraryTracks libraryId={route.id} />
-        {/key}
-      {:else if route.page === "library_genres"}
-        {#key route.id}
-          <LibraryGenres libraryId={route.id} />
-        {/key}
-      {:else if route.page === "track"}
-        {#key route.id}
-          <TrackPage trackId={route.id} />
-        {/key}
-      {:else if route.page === "album"}
-        {#key route.id}
-          <AlbumPage albumId={route.id} />
-        {/key}
-      {:else if route.page === "artist"}
-        {#key route.id}
-          <ArtistPage artistId={route.id} />
-        {/key}
-      {:else if route.page === "genre"}
-        {#key route.id}
-          <GenrePage genreId={route.id} libraryId={currentLibraryId} />
-        {/key}
-      {:else if route.page === "playlists"}
-        <PlaylistList />
-      {:else if route.page === "playlist"}
-        {#key route.id}
-          <PlaylistPage playlistId={route.id} />
-        {/key}
-      {:else if route.page === "now_playing"}
-        <NowPlayingPage />
-      {:else}
-        <LibraryList />
-      {/if}
+      {#key catalogRevision()}
+        {#if route.page === "search"}
+          <div id="search-results">
+            {#if !searchQuery.trim()}
+              <p
+                role="status"
+                class="py-12 text-center text-slate-500 dark:text-neutral-400"
+              >
+                Search for albums, artists, and tracks.
+              </p>
+            {:else if !committedSearchQuery}
+              <p
+                role="status"
+                class="py-12 text-center text-slate-500 dark:text-neutral-400"
+              >
+                Searching…
+              </p>
+            {:else}
+              <SearchResults query={committedSearchQuery} />
+            {/if}
+          </div>
+        {:else if route.page === "library"}
+          {#key route.id}
+            <LibraryAlbums libraryId={route.id} />
+          {/key}
+        {:else if route.page === "library_artists"}
+          {#key route.id}
+            <LibraryArtists libraryId={route.id} />
+          {/key}
+        {:else if route.page === "library_tracks"}
+          {#key route.id}
+            <LibraryTracks libraryId={route.id} />
+          {/key}
+        {:else if route.page === "library_genres"}
+          {#key route.id}
+            <LibraryGenres libraryId={route.id} />
+          {/key}
+        {:else if route.page === "track"}
+          {#key route.id}
+            <TrackPage trackId={route.id} />
+          {/key}
+        {:else if route.page === "album"}
+          {#key route.id}
+            <AlbumPage albumId={route.id} />
+          {/key}
+        {:else if route.page === "artist"}
+          {#key route.id}
+            <ArtistPage artistId={route.id} />
+          {/key}
+        {:else if route.page === "genre"}
+          {#key route.id}
+            <GenrePage genreId={route.id} libraryId={currentLibraryId} />
+          {/key}
+        {:else if route.page === "playlists"}
+          <PlaylistList />
+        {:else if route.page === "playlist"}
+          {#key route.id}
+            <PlaylistPage playlistId={route.id} />
+          {/key}
+        {:else if route.page === "now_playing"}
+          <NowPlayingPage />
+        {:else}
+          <LibraryList />
+        {/if}
+      {/key}
     </section>
     {#if route.page !== "now_playing"}
       <Player />
