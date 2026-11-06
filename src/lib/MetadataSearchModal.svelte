@@ -8,17 +8,21 @@ www.meshiplaw.com/lyra.
 <script lang="ts">
   import { untrack } from "svelte";
   import type {
+    MetadataChange,
     ReleaseResponse,
     ProviderResponse,
     SearchResult,
     SearchEntityType,
   } from "./types";
   import {
+    applyMetadataChanges,
+    fetchExternalIds,
     fetchProviders,
+    previewMetadataChanges,
     searchProvider,
-    setExternalId,
     refreshEntity,
   } from "./api";
+  import { withExpected } from "./metadataChanges";
   import Modal from "./Modal.svelte";
 
   interface Props {
@@ -118,13 +122,36 @@ www.meshiplaw.com/lyra.
   let applyingUrl = $state<string | null>(null);
 
   async function handleApply(result: SearchResult) {
-    if (album.id == null || !selectedProviderId || !result.ids) return;
+    const albumId = album.id;
+    const providerId = selectedProviderId;
+    if (albumId == null || !providerId || !result.ids) return;
     applyingUrl = result.redirect_url;
     try {
-      for (const [idType, idValue] of Object.entries(result.ids)) {
-        await setExternalId(album.id, selectedProviderId, idType, idValue);
+      const current = await fetchExternalIds(albumId);
+      // Setting a manual ID to the value it holds is refused as having no effect.
+      const changes = Object.entries(result.ids)
+        .filter(
+          ([idType, idValue]) =>
+            !current.some(
+              (id) =>
+                id.provider_id === providerId &&
+                id.id_type === idType &&
+                id.source === "manual" &&
+                id.id_value === idValue,
+            ),
+        )
+        .map(([idType, idValue]): MetadataChange => ({
+          action: "set_external_id",
+          entity_id: albumId,
+          provider_id: providerId,
+          id_type: idType,
+          id_value: idValue,
+        }));
+      if (changes.length > 0) {
+        const previews = await previewMetadataChanges(changes);
+        await applyMetadataChanges(withExpected(changes, previews));
       }
-      await refreshEntity(album.id);
+      await refreshEntity(albumId);
       onclose();
     } catch {
       applyingUrl = null;

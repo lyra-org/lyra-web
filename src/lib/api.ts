@@ -34,7 +34,7 @@ import type {
   ExternalIdResponse,
   LabelResponse,
   MetadataChange,
-  MetadataFieldDiff,
+  MetadataChangePreview,
   MetadataSnapshot,
   EntryResponse,
   LibraryAccessResponse,
@@ -125,12 +125,21 @@ export class ApiError extends Error {
   status: number;
   method: string;
   path: string;
-  constructor(status: number, method: string, path: string, message: string) {
+  // The parsed body of a JSON error.
+  body: unknown;
+  constructor(
+    status: number,
+    method: string,
+    path: string,
+    message: string,
+    body?: unknown,
+  ) {
     super(message);
     this.name = "ApiError";
     this.status = status;
     this.method = method;
     this.path = path;
+    this.body = body;
   }
 }
 
@@ -153,6 +162,7 @@ async function handleResponse(
   }
   if (!res.ok) {
     let message = "The request failed.";
+    let json: unknown;
     const contentType = res.headers.get("Content-Type")?.split(";")[0].trim();
     if (contentType === "text/plain") {
       const body = await res.text().catch(() => "");
@@ -161,8 +171,12 @@ async function handleResponse(
           .trim()
           .replace(/^Error:\s*/, "")
           .trim() || message;
+    } else if (contentType === "application/json") {
+      json = await res.json().catch(() => undefined);
+      const reported = (json as { message?: unknown } | undefined)?.message;
+      if (typeof reported === "string" && reported) message = reported;
     }
-    throw new ApiError(res.status, method, path, message);
+    throw new ApiError(res.status, method, path, message, json);
   }
 }
 
@@ -717,29 +731,6 @@ export function fetchExternalIds(
   return get<ExternalIdResponse[]>(`/entities/${entityId}/external-ids`);
 }
 
-export function setExternalId(
-  entityId: string,
-  providerId: string,
-  idType: string,
-  idValue: string,
-): Promise<ExternalIdResponse> {
-  return put<ExternalIdResponse>(
-    `/entities/${entityId}/external-ids/${encodeURIComponent(providerId)}/${encodeURIComponent(idType)}`,
-    { id_value: idValue },
-  );
-}
-
-// Removes a manual external ID so the provider's value takes effect again.
-export function inheritExternalId(
-  entityId: string,
-  providerId: string,
-  idType: string,
-): Promise<void> {
-  return del<void>(
-    `/entities/${entityId}/external-ids/${encodeURIComponent(providerId)}/${encodeURIComponent(idType)}`,
-  );
-}
-
 // Metadata editing
 
 export function fetchEntityMetadata(
@@ -748,26 +739,21 @@ export function fetchEntityMetadata(
   return get<MetadataSnapshot>(`/entities/${entityId}/metadata`);
 }
 
-export function previewEntityMetadata(
-  entityId: string,
+export async function previewMetadataChanges(
   changes: MetadataChange[],
-): Promise<MetadataFieldDiff[]> {
-  return post<MetadataFieldDiff[]>(`/entities/${entityId}/metadata/preview`, {
-    changes,
-  });
+): Promise<MetadataChangePreview[]> {
+  const { results } = await post<{ results: MetadataChangePreview[] }>(
+    "/metadata/changes/preview",
+    { changes },
+  );
+  return results;
 }
 
-// Fails with 409 when the metadata no longer matches `expected`, the diff a
-// preview returned.
-export function applyEntityMetadata(
-  entityId: string,
+// Applies the set in order, or none of it. Each change needs its `expected`.
+export function applyMetadataChanges(
   changes: MetadataChange[],
-  expected: MetadataFieldDiff[],
-): Promise<MetadataSnapshot> {
-  return patch<MetadataSnapshot>(`/entities/${entityId}/metadata`, {
-    changes,
-    expected,
-  });
+): Promise<unknown> {
+  return post<unknown>("/metadata/changes", { changes });
 }
 
 export function fetchArtistSummary(id: string): Promise<ArtistResponse> {

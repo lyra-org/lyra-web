@@ -308,7 +308,8 @@ export interface ExternalIdResponse {
   provider_id: string;
   id_type: string;
   id_value: string;
-  source: "manual" | "resolved";
+  // `alias` is a value kept from a merged duplicate, which still finds the entity.
+  source: "manual" | "resolved" | "alias";
   // The provider's value beneath a manual one.
   resolved_value?: string;
 }
@@ -349,7 +350,7 @@ export interface MetadataSnapshot {
   fields: Partial<Record<MetadataFieldName, MetadataFieldState>>;
 }
 
-export type MetadataChange =
+export type MetadataFieldEdit =
   | { field: MetadataFieldName; operation: "set"; value: unknown }
   | { field: MetadataFieldName; operation: "inherit" };
 
@@ -358,6 +359,92 @@ export interface MetadataFieldDiff {
   before: MetadataFieldState;
   after: MetadataFieldState;
 }
+
+export interface ExternalIdState {
+  id_value: string;
+  source: "manual" | "resolved";
+  resolved_value?: string;
+}
+
+interface ExternalIdTarget {
+  entity_id: string;
+  provider_id: string;
+  id_type: string;
+}
+
+// A manual value a merge's winner takes from a loser. `key` is a field, credit
+// type or relation type.
+export interface ManualFill {
+  key: string;
+  value: unknown;
+}
+
+// One operation of a change set. `expected` is what its preview reported, which
+// applying requires.
+export type MetadataChange =
+  | {
+      action: "edit_metadata";
+      entity_id: string;
+      edits: MetadataFieldEdit[];
+      expected?: MetadataFieldDiff[];
+    }
+  | (ExternalIdTarget & {
+      action: "set_external_id";
+      id_value: string;
+      expected?: ExternalIdState | null;
+    })
+  | (ExternalIdTarget & {
+      action: "inherit_external_id";
+      expected?: ExternalIdState;
+    })
+  | (ExternalIdTarget & {
+      action: "remove_external_id_alias";
+      id_value: string;
+    })
+  | {
+      action: "merge";
+      winner_id: string;
+      loser_ids: string[];
+      expected?: ManualFill[];
+    };
+
+export interface MergePreview {
+  winner_id: string;
+  kind: "artist" | "release" | "genre" | "label";
+  // A kind counts only what it has; the rest stay 0.
+  counts: {
+    losers: number;
+    releases: number;
+    tracks: number;
+    relatives: number;
+  };
+  // The differing external IDs the winner keeps as aliases.
+  kept_external_ids: {
+    provider_id: string;
+    id_type: string;
+    id_value: string;
+  }[];
+  track_collisions: { disc: number; track: number }[];
+  locked_ids: string[];
+  manual_fills: ManualFill[];
+}
+
+export type MetadataChangePreview =
+  | { action: "edit_metadata"; entity_id: string; diff: MetadataFieldDiff[] }
+  | (ExternalIdTarget & {
+      action: "set_external_id";
+      id_value: string;
+      current: ExternalIdState | null;
+    })
+  | (ExternalIdTarget & {
+      action: "inherit_external_id";
+      current: ExternalIdState;
+    })
+  | (ExternalIdTarget & {
+      action: "remove_external_id_alias";
+      id_value: string;
+    })
+  | ({ action: "merge" } & MergePreview);
 
 export type ReleaseType =
   | "album"

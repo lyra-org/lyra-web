@@ -5,175 +5,42 @@ You can obtain one here:
 www.meshiplaw.com/lyra.
 -->
 
-<script module lang="ts">
-  import type {
-    ArtistRelationType,
-    ArtistType,
-    CreditType,
-    MetadataEntityType,
-    MetadataFieldName,
-    ReleaseType,
-  } from "./types";
-
-  type FieldKind =
-    | "text"
-    | "textarea"
-    | "date"
-    | "number"
-    | "release_type"
-    | "artist_type"
-    | "genres"
-    | "labels"
-    | "credits"
-    | "relations";
-
-  const KINDS: Record<MetadataFieldName, FieldKind> = {
-    release_title: "text",
-    track_title: "text",
-    artist_name: "text",
-    sort_title: "text",
-    sort_name: "text",
-    description: "textarea",
-    release_type: "release_type",
-    artist_type: "artist_type",
-    release_date: "date",
-    year: "number",
-    disc: "number",
-    disc_total: "number",
-    track: "number",
-    track_total: "number",
-    genres: "genres",
-    labels: "labels",
-    credits: "credits",
-    relations: "relations",
-  };
-
-  const NAMES: Record<MetadataFieldName, string> = {
-    release_title: "Title",
-    track_title: "Title",
-    artist_name: "Name",
-    sort_title: "Sort title",
-    sort_name: "Sort name",
-    description: "Description",
-    release_type: "Type",
-    artist_type: "Type",
-    release_date: "Release date",
-    year: "Year",
-    disc: "Disc",
-    disc_total: "Disc total",
-    track: "Track",
-    track_total: "Track total",
-    genres: "Genres",
-    labels: "Labels",
-    credits: "Credits",
-    relations: "Related artists",
-  };
-
-  // Fields that must keep a value.
-  const REQUIRED: MetadataFieldName[] = [
-    "release_title",
-    "track_title",
-    "artist_name",
-  ];
-
-  const ORDER: Record<MetadataEntityType, MetadataFieldName[]> = {
-    release: [
-      "release_title",
-      "sort_title",
-      "release_type",
-      "release_date",
-      "description",
-      "genres",
-      "labels",
-      "credits",
-    ],
-    track: [
-      "track_title",
-      "sort_title",
-      "year",
-      "disc",
-      "disc_total",
-      "track",
-      "track_total",
-      "credits",
-    ],
-    artist: [
-      "artist_name",
-      "sort_name",
-      "artist_type",
-      "description",
-      "relations",
-    ],
-  };
-
-  const RELEASE_TYPES: [ReleaseType, string][] = [
-    ["album", "Album"],
-    ["single", "Single"],
-    ["ep", "EP"],
-    ["compilation", "Compilation"],
-    ["soundtrack", "Soundtrack"],
-    ["live", "Live"],
-    ["remix", "Remix"],
-    ["broadcast", "Broadcast"],
-    ["other", "Other"],
-    ["unknown", "Unknown"],
-  ];
-
-  const ARTIST_TYPES: [ArtistType, string][] = [
-    ["person", "Person"],
-    ["group", "Group"],
-    ["character", "Character"],
-    ["orchestra", "Orchestra"],
-    ["choir", "Choir"],
-  ];
-
-  const CREDIT_TYPES: [CreditType, string][] = [
-    ["artist", "Artist"],
-    ["vocalist", "Vocalist"],
-    ["instrumentalist", "Instrumentalist"],
-    ["composer", "Composer"],
-    ["lyricist", "Lyricist"],
-    ["arranger", "Arranger"],
-    ["writer", "Writer"],
-    ["producer", "Producer"],
-    ["conductor", "Conductor"],
-    ["engineer", "Engineer"],
-    ["mixer", "Mixer"],
-    ["remixer", "Remixer"],
-  ];
-
-  // Relations point into the edited artist, so each names the related artist's
-  // role toward it.
-  const RELATION_TYPES: [ArtistRelationType, string][] = [
-    ["member_of", "Member"],
-    ["voice_actor", "Voice actor"],
-  ];
-
-  function optionLabel<T extends string>(
-    options: [T, string][],
-    value: unknown,
-  ): string {
-    return options.find(([v]) => v === value)?.[1] ?? String(value);
-  }
-</script>
-
 <script lang="ts">
   import {
-    ApiError,
-    applyEntityMetadata,
+    applyMetadataChanges,
     fetchArtistSummary,
     fetchEntityMetadata,
+    fetchExternalIds,
     fetchLabels,
-    previewEntityMetadata,
+    fetchProviders,
+    previewMetadataChanges,
+    refreshEntity,
   } from "./api";
+  import { getAuth } from "./auth.svelte.ts";
+  import { staleReview, withExpected } from "./metadataChanges";
+  import {
+    ARTIST_TYPES,
+    CREDIT_TYPES,
+    describeField,
+    KINDS,
+    NAMES,
+    ORDER,
+    RELATION_TYPES,
+    RELEASE_TYPES,
+    REQUIRED,
+  } from "./metadataFields";
   import type {
+    ExternalIdResponse,
     LabelResponse,
     MetadataChange,
+    MetadataChangePreview,
     MetadataCreditValue,
-    MetadataFieldDiff,
+    MetadataFieldEdit,
+    MetadataFieldName,
     MetadataLabelValue,
     MetadataRelationValue,
     MetadataSnapshot,
+    ProviderResponse,
   } from "./types";
   import ArtistPicker from "./ArtistPicker.svelte";
   import Modal from "./Modal.svelte";
@@ -181,11 +48,20 @@ www.meshiplaw.com/lyra.
   interface Props {
     entityId: string;
     onclose: () => void;
-    // Called with the saved metadata after an edit applies.
-    onsaved?: (snapshot: MetadataSnapshot) => void;
   }
 
-  let { entityId, onclose, onsaved }: Props = $props();
+  let { entityId, onclose }: Props = $props();
+
+  interface ProviderGroup {
+    providerId: string;
+    displayName: string;
+    position: number;
+    ids: ExternalIdResponse[];
+  }
+
+  const NOUNS = { release: "album", artist: "artist", track: "track" } as const;
+
+  const auth = getAuth();
 
   const inputClass =
     "w-full rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-sm text-slate-900 focus:border-slate-500 focus:ring-1 focus:ring-slate-500 focus:outline-none disabled:opacity-50 dark:border-neutral-600 dark:bg-[#1b1d1e] dark:text-neutral-100 dark:placeholder:text-neutral-500 dark:focus:border-neutral-400 dark:focus:ring-neutral-400";
@@ -209,8 +85,17 @@ www.meshiplaw.com/lyra.
   let allLabels = $state<LabelResponse[]>([]);
   let artistNames = $state<Record<string, string>>({});
 
-  let step = $state<"edit" | "review">("edit");
-  let diff = $state<MetadataFieldDiff[]>([]);
+  let ids = $state<ExternalIdResponse[]>([]);
+  let providers = $state<ProviderResponse[]>([]);
+  // Drafts of the manual and resolved IDs, by idKey.
+  let idDrafts = $state<Record<string, string>>({});
+  // Manual IDs to hand back to the provider.
+  let inheritedIds = $state<string[]>([]);
+  let droppedAliases = $state<string[]>([]);
+
+  let tab = $state<"details" | "ids">("details");
+  let step = $state<"edit" | "review" | "saved">("edit");
+  let previews = $state<MetadataChangePreview[]>([]);
   let busy = $state(false);
   let notice = $state<string | null>(null);
 
@@ -219,6 +104,36 @@ www.meshiplaw.com/lyra.
       ? ORDER[snapshot.entity_type].filter((f) => snapshot!.fields[f])
       : [],
   );
+  let noun = $derived(snapshot ? NOUNS[snapshot.entity_type] : "entity");
+
+  let idGroups = $derived.by(() => {
+    const byProvider = new Map<string, ProviderGroup>();
+    const sorted = [...ids].sort(
+      (a, b) =>
+        a.id_type.localeCompare(b.id_type) ||
+        Number(a.source === "alias") - Number(b.source === "alias"),
+    );
+    for (const id of sorted) {
+      let group = byProvider.get(id.provider_id);
+      if (!group) {
+        const provider = providers.find(
+          (p) => p.provider_id === id.provider_id,
+        );
+        group = {
+          providerId: id.provider_id,
+          displayName: provider?.display_name ?? id.provider_id,
+          position: provider?.position ?? Infinity,
+          ids: [],
+        };
+        byProvider.set(id.provider_id, group);
+      }
+      group.ids.push(id);
+    }
+    return [...byProvider.values()].sort(
+      (a, b) =>
+        a.position - b.position || a.displayName.localeCompare(b.displayName),
+    );
+  });
 
   $effect(() => {
     load(entityId);
@@ -228,9 +143,18 @@ www.meshiplaw.com/lyra.
     loading = true;
     error = null;
     try {
-      const loaded = await fetchEntityMetadata(id);
+      const [loaded, loadedIds, loadedProviders] = await Promise.all([
+        fetchEntityMetadata(id),
+        fetchExternalIds(id),
+        fetchProviders(),
+      ]);
       snapshot = loaded;
       reset(loaded);
+      ids = loadedIds;
+      providers = loadedProviders;
+      idDrafts = Object.fromEntries(
+        loadedIds.map((entry) => [idKey(entry), entry.id_value]),
+      );
       if (loaded.fields.labels) {
         fetchLabels()
           .then((list) => (allLabels = list))
@@ -357,15 +281,113 @@ www.meshiplaw.com/lyra.
     return null;
   }
 
-  let changes = $derived.by((): MetadataChange[] =>
-    fields.flatMap((field): MetadataChange[] => {
+  let edits = $derived.by((): MetadataFieldEdit[] =>
+    fields.flatMap((field): MetadataFieldEdit[] => {
       if (inherit.includes(field)) return [{ field, operation: "inherit" }];
       if (!isEdited(field)) return [];
       return [{ field, operation: "set", value: draftValue(field) }];
     }),
   );
 
-  let invalid = $derived(fields.some((f) => fieldError(f) != null));
+  let idChanges = $derived(
+    ids.flatMap((id): MetadataChange[] => {
+      const key = idKey(id);
+      const target = {
+        entity_id: entityId,
+        provider_id: id.provider_id,
+        id_type: id.id_type,
+      };
+      if (id.source === "alias") {
+        return droppedAliases.includes(key)
+          ? [
+              {
+                ...target,
+                action: "remove_external_id_alias",
+                id_value: id.id_value,
+              },
+            ]
+          : [];
+      }
+      if (inheritedIds.includes(key)) {
+        return [{ ...target, action: "inherit_external_id" }];
+      }
+      const value = idDrafts[key].trim();
+      return value && value !== id.id_value
+        ? [{ ...target, action: "set_external_id", id_value: value }]
+        : [];
+    }),
+  );
+
+  let changeSet = $derived.by((): MetadataChange[] => [
+    ...(edits.length > 0
+      ? [{ action: "edit_metadata" as const, entity_id: entityId, edits }]
+      : []),
+    ...idChanges,
+  ]);
+
+  let changeCount = $derived(edits.length + idChanges.length);
+
+  let invalidFields = $derived(fields.some((f) => fieldError(f) != null));
+  let invalidIds = $derived(ids.some((id) => idError(id) != null));
+  let invalid = $derived(invalidFields || invalidIds);
+
+  let tabs = $derived([
+    {
+      id: "details" as const,
+      label: "Details",
+      changed: edits.length > 0,
+      problem: invalidFields,
+    },
+    {
+      id: "ids" as const,
+      label: "External IDs",
+      changed: idChanges.length > 0,
+      problem: invalidIds,
+    },
+  ]);
+
+  function idKey(id: ExternalIdResponse): string {
+    const key = `${id.provider_id}/${id.id_type}`;
+    return id.source === "alias" ? `${key}/${id.id_value}` : key;
+  }
+
+  // An unmatched ID holds an empty value, which may stay empty.
+  function idError(id: ExternalIdResponse): string | null {
+    if (id.source === "alias" || inheritedIds.includes(idKey(id))) return null;
+    return id.id_value !== "" && !idDrafts[idKey(id)].trim()
+      ? "Can't be blank"
+      : null;
+  }
+
+  function isIdEdited(id: ExternalIdResponse): boolean {
+    const key = idKey(id);
+    if (id.source === "alias") return droppedAliases.includes(key);
+    return idDrafts[key].trim() !== id.id_value;
+  }
+
+  function toggleInheritId(id: ExternalIdResponse) {
+    const key = idKey(id);
+    if (inheritedIds.includes(key)) {
+      inheritedIds = inheritedIds.filter((k) => k !== key);
+      return;
+    }
+    idDrafts[key] = id.id_value;
+    inheritedIds = [...inheritedIds, key];
+  }
+
+  function toggleAlias(id: ExternalIdResponse) {
+    const key = idKey(id);
+    droppedAliases = droppedAliases.includes(key)
+      ? droppedAliases.filter((k) => k !== key)
+      : [...droppedAliases, key];
+  }
+
+  function providerName(providerId: string): string {
+    return (
+      providers.find((p) => p.provider_id === providerId)?.display_name ??
+      providerId
+    );
+  }
 
   function toggleInherit(field: MetadataFieldName) {
     if (inherit.includes(field)) {
@@ -421,12 +443,12 @@ www.meshiplaw.com/lyra.
   }
 
   async function review() {
-    if (changes.length === 0 || invalid) return;
+    if (changeSet.length === 0 || invalid) return;
     busy = true;
     error = null;
     notice = null;
     try {
-      diff = await previewEntityMetadata(entityId, changes);
+      previews = await previewMetadataChanges(changeSet);
       step = "review";
     } catch (err) {
       error = err instanceof Error ? err.message : "Failed to check the edit";
@@ -440,28 +462,57 @@ www.meshiplaw.com/lyra.
     error = null;
     notice = null;
     try {
-      const saved = await applyEntityMetadata(entityId, changes, diff);
-      onsaved?.(saved);
-      onclose();
+      await applyMetadataChanges(withExpected(changeSet, previews));
+      await followIds();
     } catch (err) {
-      if (err instanceof ApiError && err.status === 409) {
-        // Someone else changed the metadata; show what this edit does now.
-        try {
-          diff = await previewEntityMetadata(entityId, changes);
-          notice =
-            "The metadata changed while you were reviewing. These are the changes as they stand now.";
-        } catch (previewErr) {
-          step = "edit";
-          error =
-            previewErr instanceof Error
-              ? previewErr.message
-              : "Failed to check the edit";
-        }
-      } else {
-        error = err instanceof Error ? err.message : "Failed to save";
-      }
+      await reviewAgain(err);
     } finally {
       busy = false;
+    }
+  }
+
+  // Shows what the set does now when something it expected no longer holds.
+  async function reviewAgain(failure: unknown) {
+    try {
+      const next = await staleReview(changeSet, failure);
+      if (next) {
+        previews = next;
+        notice =
+          "The metadata no longer matches what you reviewed. These are the changes as they stand now.";
+      } else {
+        error = failure instanceof Error ? failure.message : "Failed to save";
+      }
+    } catch (previewErr) {
+      step = "edit";
+      error =
+        previewErr instanceof Error
+          ? previewErr.message
+          : "Failed to check the edit";
+    }
+  }
+
+  // Metadata follows the IDs in effect, so a change to them needs a refresh.
+  // That takes its own permission; without it, the metadata catches up on the
+  // next refresh.
+  async function followIds() {
+    const changedIds = changeSet.some(
+      (c) =>
+        c.action === "set_external_id" || c.action === "inherit_external_id",
+    );
+    if (!changedIds) return onclose();
+    if (!auth.hasPermission("sync_metadata")) {
+      notice = `The ${noun}'s metadata follows the new IDs on its next refresh.`;
+      step = "saved";
+      return;
+    }
+    try {
+      await refreshEntity(entityId);
+      onclose();
+    } catch (err) {
+      notice = `Refreshing the ${noun} failed: ${
+        err instanceof Error ? err.message : "unknown error"
+      }`;
+      step = "saved";
     }
   }
 
@@ -469,35 +520,9 @@ www.meshiplaw.com/lyra.
     return artistNames[id] ?? "Unknown artist";
   }
 
-  // A readable form of a field value for the review step.
-  function describe(field: MetadataFieldName, value: unknown): string[] {
-    if (value == null || (Array.isArray(value) && value.length === 0)) {
-      return [];
-    }
-    switch (KINDS[field]) {
-      case "release_type":
-        return [optionLabel(RELEASE_TYPES, value)];
-      case "artist_type":
-        return [optionLabel(ARTIST_TYPES, value)];
-      case "genres":
-        return [(value as string[]).join(", ")];
-      case "labels":
-        return (value as MetadataLabelValue[]).map((l) =>
-          l.catalog_number ? `${l.name} · ${l.catalog_number}` : l.name,
-        );
-      case "credits":
-        return (value as MetadataCreditValue[]).map(
-          (c) =>
-            `${artistName(c.artist_id)} · ${optionLabel(CREDIT_TYPES, c.type)}${c.detail ? ` (${c.detail})` : ""}`,
-        );
-      case "relations":
-        return (value as MetadataRelationValue[]).map(
-          (r) =>
-            `${artistName(r.artist_id)} · ${optionLabel(RELATION_TYPES, r.type)}${r.attributes ? ` (${r.attributes})` : ""}`,
-        );
-      default:
-        return [String(value)];
-    }
+  function idValueLines(value: string | undefined): string[] {
+    if (value == null) return [];
+    return [value || "Unmatched"];
   }
 </script>
 
@@ -515,6 +540,135 @@ www.meshiplaw.com/lyra.
       />
     </svg>
   </button>
+{/snippet}
+
+{#snippet resetButton(
+  active: boolean,
+  title: string,
+  label: string,
+  onclick: () => void,
+)}
+  <button
+    type="button"
+    class="flex h-7 w-7 items-center justify-center rounded text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:text-neutral-500 dark:hover:bg-neutral-700 dark:hover:text-neutral-300"
+    class:text-[#BB7FB5]={active}
+    {title}
+    aria-label={label}
+    {onclick}
+  >
+    <svg
+      class="h-4 w-4"
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+      stroke-width="2"
+    >
+      <path
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        d="M3 12a9 9 0 109-9 9.75 9.75 0 00-6.74 2.74L3 8M3 3v5h5"
+      />
+    </svg>
+  </button>
+{/snippet}
+
+{#snippet rowLabel(
+  name: string,
+  edited: boolean,
+  marked: boolean,
+  badge: string | null,
+)}
+  <div
+    class="flex h-[2.125rem] flex-wrap content-center items-center gap-x-1.5 gap-y-0.5 text-sm"
+    class:text-slate-500={!edited}
+    class:dark:text-neutral-400={!edited}
+    class:font-medium={edited}
+    class:text-slate-900={edited}
+    class:dark:text-white={edited}
+  >
+    <!-- As tall as an input, so the label centers on the control's first
+    line. The badge drops to its own line when the label leaves no room,
+    and the pair then spreads evenly above and below. -->
+    <span class="flex min-w-0 items-center gap-1.5 whitespace-nowrap">
+      {#if marked}
+        <span
+          class="h-1.5 w-1.5 shrink-0 rounded-full bg-[#BB7FB5]"
+          aria-hidden="true"
+        ></span>
+      {/if}
+      <span class="truncate" title={name}>{name}</span>
+    </span>
+    {#if badge}
+      <span
+        class="rounded bg-[#E6CEE3] px-1.5 text-xs font-normal text-slate-900 dark:bg-[#BB7FB5] dark:text-white"
+        >{badge}</span
+      >
+    {/if}
+  </div>
+{/snippet}
+
+{#snippet tabBar()}
+  <div
+    class="inline-flex rounded-md border border-slate-300 bg-white p-0.5 text-xs dark:border-neutral-700 dark:bg-[#1b1d1e]"
+    role="tablist"
+    aria-label="What to edit"
+  >
+    {#each tabs as option (option.id)}
+      {@const active = tab === option.id}
+      <button
+        type="button"
+        role="tab"
+        aria-selected={active}
+        class="flex items-center gap-1.5 rounded px-3 py-1 font-medium transition-colors"
+        class:bg-[#E6CEE3]={active}
+        class:text-slate-900={active}
+        class:dark:bg-[#BB7FB5]={active}
+        class:dark:text-white={active}
+        class:text-slate-600={!active && !option.problem}
+        class:dark:text-neutral-400={!active && !option.problem}
+        class:text-red-600={!active && option.problem}
+        class:dark:text-red-400={!active && option.problem}
+        onclick={() => (tab = option.id)}
+      >
+        {option.label}
+        {#if option.changed}
+          <span
+            class="h-1.5 w-1.5 rounded-full bg-[#BB7FB5]"
+            class:dark:bg-white={active}
+            aria-label="Changed"
+          ></span>
+        {/if}
+      </button>
+    {/each}
+  </div>
+{/snippet}
+
+{#snippet diffRow(
+  name: string,
+  note: string | null,
+  before: string[],
+  after: string[],
+)}
+  <li class="grid grid-cols-[9rem_1fr] gap-x-3 text-sm">
+    <span class="break-words text-slate-500 dark:text-neutral-400">{name}</span>
+    <div class="min-w-0">
+      {#each before as line, i (i)}
+        <p
+          class="break-words text-slate-400 line-through dark:text-neutral-500"
+        >
+          {line}
+        </p>
+      {/each}
+      {#each after as line, i (i)}
+        <p class="break-words text-slate-900 dark:text-neutral-100">{line}</p>
+      {:else}
+        <p class="text-slate-900 italic dark:text-neutral-100">Removed</p>
+      {/each}
+      {#if note}
+        <p class="text-xs text-slate-500 dark:text-neutral-400">{note}</p>
+      {/if}
+    </div>
+  </li>
 {/snippet}
 
 {#snippet control(field: MetadataFieldName)}
@@ -700,46 +854,26 @@ www.meshiplaw.com/lyra.
 <Modal
   title="Edit metadata"
   width="wide"
+  toolbar={snapshot && step === "edit" ? tabBar : undefined}
   onclose={() => {
     if (!busy) onclose();
   }}
 >
   {#if loading}
     <p class="text-sm text-slate-500 dark:text-neutral-400">Loading…</p>
-  {:else if snapshot && step === "edit"}
+  {:else if snapshot && step === "edit" && tab === "details"}
     <!-- One grid for all rows, so they share column widths. -->
     <div class="grid grid-cols-[8rem_1fr_2rem] items-start gap-x-3 gap-y-3">
       {#each fields as field (field)}
         {@const edited = isEdited(field)}
         {@const problem = fieldError(field)}
         <div class="contents">
-          <div
-            class="flex h-[2.125rem] flex-wrap content-center items-center gap-x-1.5 gap-y-0.5 text-sm"
-            class:text-slate-500={!edited}
-            class:dark:text-neutral-400={!edited}
-            class:font-medium={edited}
-            class:text-slate-900={edited}
-            class:dark:text-white={edited}
-          >
-            <!-- As tall as an input, so the label centers on the control's first
-            line. The badge drops to its own line when the label leaves no room,
-            and the pair then spreads evenly above and below. -->
-            <span class="flex items-center gap-1.5 whitespace-nowrap">
-              {#if edited || inherit.includes(field)}
-                <span
-                  class="h-1.5 w-1.5 shrink-0 rounded-full bg-[#BB7FB5]"
-                  aria-hidden="true"
-                ></span>
-              {/if}
-              {NAMES[field]}
-            </span>
-            {#if isManual(field) && !inherit.includes(field)}
-              <span
-                class="rounded bg-[#E6CEE3] px-1.5 text-xs font-normal text-slate-900 dark:bg-[#BB7FB5] dark:text-white"
-                >Manual</span
-              >
-            {/if}
-          </div>
+          {@render rowLabel(
+            NAMES[field],
+            edited,
+            edited || inherit.includes(field),
+            isManual(field) && !inherit.includes(field) ? "Manual" : null,
+          )}
           <div class="min-w-0">
             {@render control(field)}
             {#if problem}
@@ -750,82 +884,181 @@ www.meshiplaw.com/lyra.
           </div>
           <div class="pt-0.5">
             {#if isManual(field)}
-              <button
-                type="button"
-                class="flex h-7 w-7 items-center justify-center rounded text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:text-neutral-500 dark:hover:bg-neutral-700 dark:hover:text-neutral-300"
-                class:text-[#BB7FB5]={inherit.includes(field)}
-                title={inherit.includes(field)
+              {@render resetButton(
+                inherit.includes(field),
+                inherit.includes(field)
                   ? "Keep the manual value"
-                  : "Drop the manual value and use tags and providers"}
-                aria-label={inherit.includes(field)
+                  : "Drop the manual value and use tags and providers",
+                inherit.includes(field)
                   ? `Keep the manual ${NAMES[field].toLowerCase()}`
-                  : `Reset ${NAMES[field].toLowerCase()}`}
-                onclick={() => toggleInherit(field)}
-              >
-                <svg
-                  class="h-4 w-4"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  stroke-width="2"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    d="M3 12a9 9 0 109-9 9.75 9.75 0 00-6.74 2.74L3 8M3 3v5h5"
-                  />
-                </svg>
-              </button>
+                  : `Reset ${NAMES[field].toLowerCase()}`,
+                () => toggleInherit(field),
+              )}
             {/if}
           </div>
         </div>
       {/each}
     </div>
+  {:else if snapshot && step === "edit"}
+    {#if ids.length === 0}
+      <p class="text-sm text-slate-500 dark:text-neutral-400">
+        This {noun} has no external IDs.
+      </p>
+    {/if}
+    <div class="grid grid-cols-[8rem_1fr_2rem] items-start gap-x-3 gap-y-3">
+      {#each idGroups as group (group.providerId)}
+        <h4
+          class="col-span-full -mb-1 text-sm font-medium text-slate-700 dark:text-neutral-200"
+        >
+          {group.displayName}
+        </h4>
+        {#each group.ids as id (idKey(id))}
+          {@const key = idKey(id)}
+          {@const inherited = inheritedIds.includes(key)}
+          {@const dropped = droppedAliases.includes(key)}
+          {@const edited = isIdEdited(id)}
+          {@const problem = idError(id)}
+          <div class="contents">
+            {@render rowLabel(
+              id.id_type,
+              edited,
+              edited || inherited,
+              id.source === "alias"
+                ? "Alias"
+                : id.source === "manual" && !inherited
+                  ? "Manual"
+                  : null,
+            )}
+            <div class="min-w-0">
+              {#if id.source === "alias"}
+                <p
+                  class="px-2.5 py-1.5 font-mono text-xs break-all text-slate-900 dark:text-neutral-100"
+                  class:line-through={dropped}
+                  title="Kept from a merged duplicate; it still finds this {noun}"
+                >
+                  {id.id_value}
+                </p>
+                {#if dropped}
+                  <p
+                    class="px-2.5 text-xs text-slate-400 dark:text-neutral-500"
+                  >
+                    Will stop finding this {noun}
+                  </p>
+                {/if}
+              {:else if inherited}
+                <p
+                  class="rounded-md border border-dashed border-slate-300 px-2.5 py-1.5 text-sm text-slate-500 italic dark:border-neutral-600 dark:text-neutral-400"
+                >
+                  {id.resolved_value != null
+                    ? "Will use the provider's value"
+                    : "Will be removed; the provider has none"}
+                </p>
+              {:else}
+                <input
+                  type="text"
+                  aria-label="{group.displayName} {id.id_type}"
+                  class="{inputClass} font-mono !text-xs"
+                  placeholder={id.id_value === "" ? "Unmatched" : ""}
+                  bind:value={idDrafts[key]}
+                />
+              {/if}
+              {#if problem}
+                <p class="mt-1 text-xs text-red-600 dark:text-red-400">
+                  {problem}
+                </p>
+              {/if}
+              {#if id.source !== "alias" && (id.resolved_value != null || edited)}
+                <p
+                  class="mt-1 font-mono text-xs break-all text-slate-400 dark:text-neutral-500"
+                >
+                  Provider: {(id.resolved_value ?? id.id_value) || "Unmatched"}
+                </p>
+              {/if}
+            </div>
+            <div class="pt-0.5">
+              {#if id.source === "manual"}
+                {@render resetButton(
+                  inherited,
+                  inherited
+                    ? "Keep the manual ID"
+                    : id.resolved_value != null
+                      ? "Drop the manual ID and use the provider's"
+                      : "Drop the manual ID; the provider has none",
+                  inherited
+                    ? `Keep the manual ${id.id_type}`
+                    : `Reset ${id.id_type}`,
+                  () => toggleInheritId(id),
+                )}
+              {:else if id.source === "alias"}
+                {#if dropped}
+                  {@render resetButton(
+                    true,
+                    "Keep this alias",
+                    `Keep the ${id.id_type} alias`,
+                    () => toggleAlias(id),
+                  )}
+                {:else}
+                  {@render removeButton(`Remove the ${id.id_type} alias`, () =>
+                    toggleAlias(id),
+                  )}
+                {/if}
+              {/if}
+            </div>
+          </div>
+        {/each}
+      {/each}
+    </div>
   {:else if snapshot && step === "review"}
     {#if notice}
-      <p
-        class="rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:bg-amber-900/30 dark:text-amber-200"
-      >
+      <p class="text-sm font-medium text-slate-900 dark:text-neutral-100">
         {notice}
       </p>
     {/if}
     <ul class="space-y-3">
-      {#each diff as entry (entry.field)}
-        {@const before = describe(entry.field, entry.before.value)}
-        {@const after = describe(entry.field, entry.after.value)}
-        <li class="text-sm">
-          <div class="flex items-center gap-2">
-            <span class="font-medium text-slate-900 dark:text-neutral-100"
-              >{NAMES[entry.field]}</span
-            >
-            {#if entry.before.source !== entry.after.source}
-              <span class="text-xs text-slate-500 dark:text-neutral-400">
-                {entry.after.source === "manual"
-                  ? "becomes manual"
-                  : "back to tags and providers"}
-              </span>
-            {/if}
-          </div>
-          <div class="mt-1 grid grid-cols-[1fr_auto_1fr] gap-2">
-            <div
-              class="rounded bg-slate-50 px-2 py-1 text-slate-500 dark:bg-neutral-800 dark:text-neutral-400"
-            >
-              {#each before as line, i (i)}<p class="break-words">
-                  {line}
-                </p>{:else}<p class="italic">Empty</p>{/each}
-            </div>
-            <span class="pt-1 text-slate-400 dark:text-neutral-500">→</span>
-            <div
-              class="rounded bg-[#E6CEE3]/40 px-2 py-1 text-slate-900 dark:bg-[#BB7FB5]/20 dark:text-neutral-100"
-            >
-              {#each after as line, i (i)}<p class="break-words">
-                  {line}
-                </p>{:else}<p class="italic">Empty</p>{/each}
-            </div>
-          </div>
-        </li>
+      {#each previews as preview, i (i)}
+        {#if preview.action === "edit_metadata"}
+          {#each preview.diff as entry (entry.field)}
+            {@render diffRow(
+              NAMES[entry.field],
+              entry.after.source === "resolved" &&
+                entry.before.source === "manual"
+                ? "Back to tags and providers"
+                : null,
+              describeField(entry.field, entry.before.value, artistName),
+              describeField(entry.field, entry.after.value, artistName),
+            )}
+          {/each}
+        {:else if preview.action === "set_external_id"}
+          {@render diffRow(
+            `${providerName(preview.provider_id)} ${preview.id_type}`,
+            null,
+            idValueLines(preview.current?.id_value),
+            [preview.id_value],
+          )}
+        {:else if preview.action === "inherit_external_id"}
+          {@render diffRow(
+            `${providerName(preview.provider_id)} ${preview.id_type}`,
+            "Back to the provider",
+            idValueLines(preview.current.id_value),
+            idValueLines(preview.current.resolved_value),
+          )}
+        {:else if preview.action === "remove_external_id_alias"}
+          {@render diffRow(
+            `${providerName(preview.provider_id)} ${preview.id_type}`,
+            "Alias",
+            [preview.id_value],
+            [],
+          )}
+        {/if}
       {/each}
     </ul>
+  {:else if step === "saved"}
+    <p class="text-sm text-slate-900 dark:text-neutral-100">
+      Your changes are saved.
+    </p>
+    {#if notice}
+      <p class="text-sm text-slate-600 dark:text-neutral-300">{notice}</p>
+    {/if}
   {/if}
   {#if error}
     <p class="text-sm text-red-600 dark:text-red-400">{error}</p>
@@ -842,17 +1075,17 @@ www.meshiplaw.com/lyra.
       </button>
       <button
         type="button"
-        disabled={busy || changes.length === 0 || invalid}
+        disabled={busy || changeSet.length === 0 || invalid}
         class="rounded-md bg-[#E6CEE3] px-4 py-1.5 text-sm font-medium text-slate-900 hover:bg-[#d4b5cf] disabled:opacity-50 dark:bg-[#BB7FB5] dark:text-white dark:hover:bg-[#cfa2c9]"
         onclick={review}
       >
         {busy
           ? "Checking…"
-          : changes.length === 0
+          : changeCount === 0
             ? "Review changes"
-            : `Review ${changes.length} ${changes.length === 1 ? "change" : "changes"}`}
+            : `Review ${changeCount} ${changeCount === 1 ? "change" : "changes"}`}
       </button>
-    {:else}
+    {:else if step === "review"}
       <button
         type="button"
         disabled={busy}
@@ -866,11 +1099,19 @@ www.meshiplaw.com/lyra.
       </button>
       <button
         type="button"
-        disabled={busy || diff.length === 0}
+        disabled={busy}
         class="rounded-md bg-[#E6CEE3] px-4 py-1.5 text-sm font-medium text-slate-900 hover:bg-[#d4b5cf] disabled:opacity-50 dark:bg-[#BB7FB5] dark:text-white dark:hover:bg-[#cfa2c9]"
         onclick={apply}
       >
         {busy ? "Saving…" : "Save"}
+      </button>
+    {:else}
+      <button
+        type="button"
+        class="rounded-md px-4 py-1.5 text-sm text-slate-600 hover:bg-slate-100 dark:text-neutral-300 dark:hover:bg-neutral-700"
+        onclick={onclose}
+      >
+        Close
       </button>
     {/if}
   {/snippet}

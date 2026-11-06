@@ -38,7 +38,6 @@ www.meshiplaw.com/lyra.
 
 <script lang="ts">
   import ContextMenu from "./ContextMenu.svelte";
-  import ExternalIdsModal from "./ExternalIdsModal.svelte";
   import MetadataEditModal from "./MetadataEditModal.svelte";
   import PathMixModal from "./PathMixModal.svelte";
   import PurgeMissingModal from "./PurgeMissingModal.svelte";
@@ -60,7 +59,6 @@ www.meshiplaw.com/lyra.
   let { target, libraryId, onclose, onchanged }: Props = $props();
 
   // Outlives the menu, which closes when the modal opens.
-  let idsTrack = $state<TrackResponse | null>(null);
   let editTrack = $state<TrackResponse | null>(null);
   let optionsTrack = $state<TrackResponse | null>(null);
   let pathTrack = $state<TrackResponse | null>(null);
@@ -76,10 +74,6 @@ www.meshiplaw.com/lyra.
         {track}
         context={context ?? soloContext(track)}
         {onclose}
-        onexternalids={() => {
-          idsTrack = track;
-          onclose();
-        }}
         onedit={() => {
           editTrack = track;
           onclose();
@@ -110,14 +104,6 @@ www.meshiplaw.com/lyra.
       />
     </ContextMenu>
   {/key}
-{/if}
-
-{#if idsTrack}
-  <ExternalIdsModal
-    entityId={idsTrack.id}
-    noun="track"
-    onclose={() => (idsTrack = null)}
-  />
 {/if}
 
 {#if editTrack}

@@ -15,7 +15,6 @@ www.meshiplaw.com/lyra.
     type MenuAnchor,
   } from "./ContextMenu.svelte";
   import CoverManagerModal from "./CoverManagerModal.svelte";
-  import ExternalIdsModal from "./ExternalIdsModal.svelte";
   import MetadataEditModal from "./MetadataEditModal.svelte";
   import RatingMenuItem from "./RatingMenuItem.svelte";
   import RefreshMenuItem from "./RefreshMenuItem.svelte";
@@ -34,7 +33,6 @@ www.meshiplaw.com/lyra.
   let canSync = $derived(auth.hasPermission("sync_metadata"));
 
   let anchor = $state<MenuAnchor | null>(null);
-  let showIds = $state(false);
   let showEdit = $state(false);
   let showOptions = $state(false);
   let showCovers = $state(false);
@@ -43,11 +41,6 @@ www.meshiplaw.com/lyra.
   export function open(e: MouseEvent) {
     e.preventDefault();
     anchor = anchorAtPointer(e);
-  }
-
-  function handleExternalIds() {
-    anchor = null;
-    showIds = true;
   }
 
   // The refresh returns once the server has refreshed the artist and synced
@@ -87,28 +80,6 @@ www.meshiplaw.com/lyra.
       />
     {/if}
     {#if canManage}
-      <button
-        type="button"
-        role="menuitem"
-        class={menuItemClass}
-        onclick={handleExternalIds}
-      >
-        <svg
-          class="h-4 w-4 text-slate-400 dark:text-neutral-500"
-          xmlns="http://www.w3.org/2000/svg"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-          stroke-width="2"
-        >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"
-          />
-        </svg>
-        External IDs…
-      </button>
       <button
         type="button"
         role="menuitem"
@@ -161,14 +132,6 @@ www.meshiplaw.com/lyra.
       </button>
     {/if}
   </ContextMenu>
-{/if}
-
-{#if showIds}
-  <ExternalIdsModal
-    entityId={artistId}
-    noun="artist"
-    onclose={() => (showIds = false)}
-  />
 {/if}
 
 {#if showEdit}
