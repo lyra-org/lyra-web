@@ -365,19 +365,25 @@ export function replaceReleaseChains(
 
 export function fetchGenres(opts?: {
   libraryId?: string;
+  query?: string;
+  signal?: AbortSignal;
   sortBy?: string;
   sortOrder?: "ascending" | "descending";
   cursor?: string;
   limit?: number;
 }): Promise<Page<GenreResponse>> {
   const params = new URLSearchParams({ inc: "covers" });
+  if (opts?.query != null) params.set("query", opts.query);
   if (opts?.libraryId) params.set("library_id", opts.libraryId);
   if (opts?.sortBy) params.set("sort_by", opts.sortBy);
   if (opts?.sortOrder) params.set("sort_order", opts.sortOrder);
   if (opts?.limit != null) params.set("limit", String(opts.limit));
   if (opts?.cursor) params.set("cursor", opts.cursor);
   const query = params.toString();
-  return get<Page<GenreResponse>>(`/genres${query ? `?${query}` : ""}`);
+  return get<Page<GenreResponse>>(
+    `/genres${query ? `?${query}` : ""}`,
+    opts?.signal,
+  );
 }
 
 export function fetchGenre(

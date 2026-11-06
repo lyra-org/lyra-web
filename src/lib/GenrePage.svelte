@@ -8,6 +8,7 @@ www.meshiplaw.com/lyra.
 <script lang="ts">
   import type { GenreResponse } from "./types";
   import { fetchGenre, fetchReleases } from "./api";
+  import { getAuth } from "./auth.svelte.ts";
   import { genreGradient, genreCoverObjectPosition } from "./genreStyle";
   import BlurhashCanvas from "./BlurhashCanvas.svelte";
   import SortControls from "./SortControls.svelte";
@@ -20,6 +21,7 @@ www.meshiplaw.com/lyra.
   } from "./sort.svelte.ts";
   import PaginatedList from "./PaginatedList.svelte";
   import AlbumCard from "./AlbumCard.svelte";
+  import GenreMergeModal from "./GenreMergeModal.svelte";
 
   interface Props {
     genreId: string;
@@ -31,6 +33,9 @@ www.meshiplaw.com/lyra.
   let genre = $state<GenreResponse | null>(null);
   let loading = $state(true);
   let error: string | null = $state(null);
+  let merging = $state(false);
+
+  const auth = getAuth();
 
   let heroGradient = $derived(
     genre ? genreGradient(genre.id ?? genre.name) : "",
@@ -125,6 +130,15 @@ www.meshiplaw.com/lyra.
         <h2 class="text-3xl font-bold text-slate-900 dark:text-neutral-100">
           {genre.name}
         </h2>
+        {#if auth.hasPermission("manage_metadata")}
+          <button
+            type="button"
+            class="mt-2 self-start rounded-md px-2 py-1 text-sm text-slate-500 hover:bg-slate-100 hover:text-slate-700 dark:text-neutral-400 dark:hover:bg-neutral-800 dark:hover:text-neutral-200"
+            onclick={() => (merging = true)}
+          >
+            Merge duplicates…
+          </button>
+        {/if}
       </div>
     </div>
 
@@ -215,4 +229,8 @@ www.meshiplaw.com/lyra.
       </PaginatedList>
     </div>
   </div>
+{/if}
+
+{#if merging && genre}
+  <GenreMergeModal {genre} onclose={() => (merging = false)} />
 {/if}
