@@ -25,6 +25,11 @@ www.meshiplaw.com/lyra.
     row,
   }: Props = $props();
 
+  const GAP = 4;
+  const MARGIN = 8;
+  const MAX_HEIGHT = 224;
+
+  let field: HTMLInputElement;
   let query = $state("");
   let results = $state<T[]>([]);
   let open = $state(false);
@@ -59,6 +64,35 @@ www.meshiplaw.com/lyra.
     open = false;
   }
 
+  // The results float in the top layer, so that they don't make the dialog
+  // around the picker scroll to fit them.
+  function float(list: HTMLElement) {
+    function place() {
+      const rect = field.getBoundingClientRect();
+      const below = window.innerHeight - rect.bottom - GAP - MARGIN;
+      const above = rect.top - GAP - MARGIN;
+      const up = below < MAX_HEIGHT && above > below;
+      list.style.left = `${rect.left}px`;
+      list.style.width = `${rect.width}px`;
+      list.style.top = up ? "auto" : `${rect.bottom + GAP}px`;
+      list.style.bottom = up
+        ? `${window.innerHeight - rect.top + GAP}px`
+        : "auto";
+      list.style.maxHeight = `${Math.min(MAX_HEIGHT, up ? above : below)}px`;
+    }
+
+    list.showPopover();
+    place();
+    window.addEventListener("scroll", place, true);
+    window.addEventListener("resize", place);
+    return {
+      destroy() {
+        window.removeEventListener("scroll", place, true);
+        window.removeEventListener("resize", place);
+      },
+    };
+  }
+
   function handleKeydown(e: KeyboardEvent) {
     if (!open || shown.length === 0) return;
     if (e.key === "ArrowDown") {
@@ -80,6 +114,7 @@ www.meshiplaw.com/lyra.
 
 <div class="relative">
   <input
+    bind:this={field}
     type="search"
     {placeholder}
     bind:value={query}
@@ -94,7 +129,9 @@ www.meshiplaw.com/lyra.
   />
   {#if open && shown.length > 0}
     <ul
-      class="absolute inset-x-0 top-full z-10 mt-1 max-h-56 overflow-y-auto rounded-md bg-white py-1 shadow-lg ring-1 ring-black/5 dark:bg-[#26292a] dark:ring-white/10"
+      popover="manual"
+      use:float
+      class="fixed right-auto m-0 overflow-y-auto rounded-md border-0 bg-white p-0 py-1 shadow-lg ring-1 ring-black/5 dark:bg-[#26292a] dark:ring-white/10"
     >
       {#each shown as item, i (item.id)}
         <li>
