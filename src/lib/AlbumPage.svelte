@@ -8,7 +8,7 @@ www.meshiplaw.com/lyra.
 <script lang="ts">
   import type { ArtistResponse, ReleaseResponse, TrackResponse } from "./types";
   import { fetchRelease } from "./api";
-  import { getPlayer } from "./player.svelte.ts";
+  import { getPlayer, isMissing, MISSING_HINT } from "./player.svelte.ts";
   import { getTags, tagChipClasses } from "./tags.svelte.ts";
   import { getAuth } from "./auth.svelte.ts";
   import BlurhashCanvas from "./BlurhashCanvas.svelte";
@@ -298,11 +298,15 @@ www.meshiplaw.com/lyra.
             <tbody>
               {#each tracks as track}
                 <tr
-                  class="group cursor-pointer border-b border-slate-100 last:border-b-0 hover:bg-slate-50 dark:border-neutral-900 dark:hover:bg-neutral-700/50"
+                  class="group border-b border-slate-100 last:border-b-0 hover:bg-slate-50 dark:border-neutral-900 dark:hover:bg-neutral-700/50"
+                  class:cursor-pointer={!isMissing(track)}
+                  title={isMissing(track) ? MISSING_HINT : undefined}
                   class:bg-slate-100={player.isCurrentTrack(track)}
                   class:dark:bg-neutral-700={player.isCurrentTrack(track)}
                   onclick={() =>
-                    albumContext && player.playTrack(track, albumContext)}
+                    albumContext &&
+                    !isMissing(track) &&
+                    player.playTrack(track, albumContext)}
                   oncontextmenu={(e) => openTrackMenu(e, track)}
                 >
                   <td
@@ -334,6 +338,8 @@ www.meshiplaw.com/lyra.
                           clip-rule="evenodd"
                         />
                       </svg>
+                    {:else if isMissing(track)}
+                      {track.track ?? ""}
                     {:else}
                       <span class="group-hover:hidden">{track.track ?? ""}</span
                       >
@@ -360,7 +366,9 @@ www.meshiplaw.com/lyra.
                     class:dark:text-neutral-100={!player.isCurrentTrack(track)}
                   >
                     <span class="inline-flex flex-wrap items-center gap-1.5">
-                      <span>{track.title}</span>
+                      <span class:opacity-60={isMissing(track)}
+                        >{track.title}</span
+                      >
                       {#if chainTitles[track.id]}
                         <svg
                           class="h-3.5 w-3.5 shrink-0 text-slate-400 dark:text-neutral-500"

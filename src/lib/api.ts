@@ -284,17 +284,22 @@ const ARTIST_LIST_INC = "covers";
 const TRACK_LIST_INC = "releases,artists,release_covers";
 
 // Narrows a track, release or artist list by the user's favorites, listens or
-// ratings.
+// ratings, or by whether it can play. `available: false` keeps the tracks that
+// can't, and the releases and artists holding one.
 export interface ListFilter {
   favorite?: boolean;
   listened?: boolean;
   rated?: boolean;
+  available?: boolean;
 }
 
 function setListFilter(params: URLSearchParams, filter?: ListFilter) {
   if (filter?.favorite != null) params.set("favorite", String(filter.favorite));
   if (filter?.listened != null) params.set("listened", String(filter.listened));
   if (filter?.rated != null) params.set("rated", String(filter.rated));
+  if (filter?.available != null) {
+    params.set("available", String(filter.available));
+  }
 }
 
 export function fetchReleases(opts?: {

@@ -144,6 +144,22 @@ www.meshiplaw.com/lyra.
   onkeydown={(e) => e.key === "Escape" && (pickerOpen = false)}
 />
 
+{#if player.notice}
+  <div
+    role="status"
+    class="fixed bottom-24 left-1/2 z-50 flex max-w-[calc(100%-2rem)] -translate-x-1/2 items-center gap-3 rounded-md bg-slate-900 px-3 py-2 text-sm text-white shadow-lg dark:bg-neutral-700"
+  >
+    <span class="min-w-0">{player.notice}</span>
+    <button
+      type="button"
+      class="shrink-0 text-xs text-slate-300 underline hover:text-white"
+      onclick={player.dismissNotice}
+    >
+      Dismiss
+    </button>
+  </div>
+{/if}
+
 {#if player.currentTrack || remote}
   <!-- svelte-ignore a11y_click_events_have_key_events -->
   <!-- svelte-ignore a11y_no_static_element_interactions -->

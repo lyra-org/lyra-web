@@ -9,7 +9,7 @@ www.meshiplaw.com/lyra.
   import type { PlaylistResponse, TagColor, TrackResponse } from "./types";
   import type { PlaybackContext } from "./player.svelte.ts";
   import { addPlaylistTracks, fetchPlaylists, fetchAllPages } from "./api";
-  import { getPlayer } from "./player.svelte.ts";
+  import { getPlayer, isMissing } from "./player.svelte.ts";
   import { getAuth } from "./auth.svelte.ts";
   import { mixSupport } from "./mixOptions";
   import { menuItemClass } from "./ContextMenu.svelte";
@@ -42,6 +42,7 @@ www.meshiplaw.com/lyra.
   let trackId = $derived(track.id);
   let canManage = $derived(getAuth().hasPermission("manage_metadata"));
   let canSync = $derived(getAuth().hasPermission("sync_metadata"));
+  let missing = $derived(isMissing(track));
 
   const player = getPlayer();
   const tagsStore = getTags();
@@ -149,7 +150,9 @@ www.meshiplaw.com/lyra.
 {#if view === "main"}
   <button
     type="button"
-    class="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm text-slate-700 hover:bg-slate-100 dark:text-neutral-200 dark:hover:bg-neutral-600"
+    disabled={missing}
+    title={missing ? "This track's file is missing" : undefined}
+    class="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-transparent dark:text-neutral-200 dark:hover:bg-neutral-600 dark:disabled:hover:bg-transparent"
     onclick={handleAddToQueue}
   >
     <svg
@@ -168,7 +171,7 @@ www.meshiplaw.com/lyra.
     </svg>
     Add to queue
   </button>
-  {#if pathSupported}
+  {#if pathSupported && !missing}
     <button type="button" class={menuItemClass} onclick={onpath}>
       <svg
         class="h-4 w-4 text-slate-400 dark:text-neutral-500"

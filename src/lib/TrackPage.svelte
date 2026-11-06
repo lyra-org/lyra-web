@@ -8,7 +8,7 @@ www.meshiplaw.com/lyra.
 <script lang="ts">
   import type { ArtistResponse, CreditType, TrackResponse } from "./types";
   import { fetchTrackDetail } from "./api";
-  import { getPlayer } from "./player.svelte.ts";
+  import { getPlayer, isMissing } from "./player.svelte.ts";
   import BlurhashCanvas from "./BlurhashCanvas.svelte";
   import ArtistPortraitCard from "./ArtistPortraitCard.svelte";
   import FavoriteButton from "./FavoriteButton.svelte";
@@ -238,7 +238,8 @@ www.meshiplaw.com/lyra.
           <button
             type="button"
             class="inline-flex items-center gap-2 rounded-full bg-[#E6CEE3] px-5 py-2 text-sm font-medium text-slate-900 shadow-sm hover:bg-[#d4b5cf] disabled:opacity-50 dark:bg-[#BB7FB5] dark:text-white dark:hover:bg-[#cfa2c9]"
-            disabled={player.loading && player.isCurrentTrack(track)}
+            disabled={isMissing(track) ||
+              (player.loading && player.isCurrentTrack(track))}
             onclick={handlePlay}
           >
             {#if player.isCurrentTrack(track) && player.playing}
@@ -276,6 +277,14 @@ www.meshiplaw.com/lyra.
             <RatingButton targetId={track.id} label={track.title} />
           {/if}
         </div>
+
+        {#if isMissing(track)}
+          <p
+            class="mt-3 flex flex-wrap items-center gap-2 text-sm text-slate-500 dark:text-neutral-400"
+          >
+            A sync couldn't find this track's file.
+          </p>
+        {/if}
       </div>
     </div>
 

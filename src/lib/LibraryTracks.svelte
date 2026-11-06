@@ -18,7 +18,7 @@ www.meshiplaw.com/lyra.
   } from "./sort.svelte.ts";
   import PaginatedList from "./PaginatedList.svelte";
   import { fetchTracks } from "./api";
-  import { getPlayer } from "./player.svelte.ts";
+  import { getPlayer, isMissing, MISSING_HINT } from "./player.svelte.ts";
   import BlurhashCanvas from "./BlurhashCanvas.svelte";
   import FavoriteButton from "./FavoriteButton.svelte";
   import RatingButton from "./RatingButton.svelte";
@@ -117,6 +117,7 @@ www.meshiplaw.com/lyra.
               class="group cursor-pointer border-b border-slate-100 last:border-b-0 hover:bg-slate-50 dark:border-neutral-900 dark:hover:bg-neutral-700/50"
               class:bg-slate-100={player.isCurrentTrack(track)}
               class:dark:bg-neutral-700={player.isCurrentTrack(track)}
+              title={isMissing(track) ? MISSING_HINT : undefined}
               onclick={() => openTrack(track)}
               oncontextmenu={(e) => openTrackMenu(e, track)}
             >
@@ -167,7 +168,7 @@ www.meshiplaw.com/lyra.
                 class:text-slate-900={!player.isCurrentTrack(track)}
                 class:dark:text-neutral-100={!player.isCurrentTrack(track)}
               >
-                <span>{track.title}</span>
+                <span class:opacity-60={isMissing(track)}>{track.title}</span>
                 <span
                   class="block text-xs font-normal text-slate-400 dark:text-neutral-500"
                 >

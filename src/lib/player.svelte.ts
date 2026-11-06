@@ -59,6 +59,10 @@ let shuffle = $state(false);
 let shuffledIds = $state<string[]>([]);
 let queue = $state<QueuedItem[]>([]);
 let skippedUpNextIds = $state<Set<string>>(new Set());
+// Why the last track didn't play. It can outlive the player bar, which goes
+// when nothing is left to play.
+let notice = $state<string | null>(null);
+let noticeTimer: ReturnType<typeof setTimeout> | null = null;
 // The server playback this browser drives. It is kept across tracks and
 // queue changes, which replace its queue.
 let playbackId: string | null = null;
@@ -111,6 +115,14 @@ function shuffleTracksFrom(
   return [...head, ...rest.flat()];
 }
 
+export const MISSING_HINT =
+  "A sync couldn't find this track's file, so it can't play.";
+
+// Whether a sync found the track's files gone, so that playing it can't work.
+export function isMissing(track: TrackResponse): boolean {
+  return track.available === false;
+}
+
 function isSkipped(track: TrackResponse): boolean {
   return !!track.id && skippedUpNextIds.has(track.id);
 }
@@ -126,7 +138,7 @@ function contextUpcomingTracks(): TrackResponse[] {
       const id = shuffledIds[i];
       if (skippedUpNextIds.has(id)) continue;
       const track = playbackContext.tracks.find((t) => t.id === id);
-      if (track) upcoming.push(track);
+      if (track && !isMissing(track)) upcoming.push(track);
     }
     return upcoming;
   }
@@ -134,7 +146,9 @@ function contextUpcomingTracks(): TrackResponse[] {
   const currentId = currentTrack.id;
   const idx = playbackContext.tracks.findIndex((t) => t.id === currentId);
   if (idx < 0) return [];
-  return playbackContext.tracks.slice(idx + 1).filter((t) => !isSkipped(t));
+  return playbackContext.tracks
+    .slice(idx + 1)
+    .filter((t) => !isSkipped(t) && !isMissing(t));
 }
 
 function getUpNext(): UpNextItem[] {
@@ -157,6 +171,45 @@ function getUpNext(): UpNextItem[] {
 
 function nextContextTrack(): TrackResponse | null {
   return contextUpcomingTracks()[0] ?? null;
+}
+
+function previousContextTrack(): TrackResponse | null {
+  if (!currentTrack || !playbackContext) return null;
+  const { tracks } = playbackContext;
+  const order =
+    shuffle && shuffledIds.length > 0 ? shuffledIds : tracks.map((t) => t.id);
+  for (let i = order.indexOf(currentTrack.id) - 1; i >= 0; i--) {
+    const track = tracks.find((t) => t.id === order[i]);
+    if (track && !isMissing(track)) return track;
+  }
+  return null;
+}
+
+const NOTICE_MS = 6_000;
+
+function showNotice(message: string) {
+  notice = message;
+  if (noticeTimer != null) clearTimeout(noticeTimer);
+  noticeTimer = setTimeout(dismissNotice, NOTICE_MS);
+}
+
+function dismissNotice() {
+  notice = null;
+  if (noticeTimer != null) clearTimeout(noticeTimer);
+  noticeTimer = null;
+}
+
+function missingNotice(track: TrackResponse): string {
+  return `${track.title ? `“${track.title}”` : "This track"} can't play: its file is missing.`;
+}
+
+// Learned from the server, so the rest of this queue passes over the track.
+function markMissing(id: string) {
+  queue = queue.filter((item) => item.track.id !== id);
+  if (!playbackContext) return;
+  playbackContext.tracks = playbackContext.tracks.map((t) =>
+    t.id === id ? { ...t, available: false } : t,
+  );
 }
 
 const PLAYING_REPORT_MS = 10_000;
@@ -415,6 +468,7 @@ async function playTrackInternal(
   }
   const trackPlayId = options.playId ?? makePlayId();
   playId = trackPlayId;
+  let started = false;
 
   try {
     const [playbackUrl] = await Promise.all([
@@ -428,7 +482,6 @@ async function playTrackInternal(
     audio.src = playbackUrl.stream_url;
     if (options.positionMs) await seekOnceLoaded(options.positionMs / 1000);
     if (playId !== trackPlayId) return;
-    let started = false;
     if (options.autoplay !== false) {
       try {
         await audio.play();
@@ -447,12 +500,45 @@ async function playTrackInternal(
     startReportInterval();
   } catch (e) {
     console.error("Playback failed:", e);
+    if (playId === trackPlayId && !started) abandonStart(track, e, options);
   } finally {
     if (playId === trackPlayId) loading = false;
   }
 }
 
+// Leaves nothing playing, since the bar already shows `track`. A track the
+// server can't play is passed over, unless it was to start paused or to
+// complete a handoff, which the next track couldn't.
+function abandonStart(
+  track: TrackResponse,
+  error: unknown,
+  options: StartOptions,
+) {
+  playId = null;
+  loading = false;
+  playing = false;
+  audio.pause();
+  audio.removeAttribute("src");
+  audio.load();
+
+  const unplayable =
+    error instanceof ApiError && (error.status === 410 || error.status === 404);
+  if (!unplayable) {
+    showNotice(
+      `${track.title ? `“${track.title}”` : "This track"} failed to play.`,
+    );
+    return;
+  }
+  showNotice(missingNotice(track));
+  markMissing(track.id);
+  if (options.autoplay !== false && !options.handoffToken) nextTrack();
+}
+
 async function playTrack(track: TrackResponse, context: PlaybackContext) {
+  if (isMissing(track)) {
+    showNotice(missingNotice(track));
+    return;
+  }
   skippedUpNextIds = new Set();
   if (shuffle && track.id) {
     shuffledIds = shuffleTracksFrom(context.tracks, track.id);
@@ -475,14 +561,17 @@ function toggleShuffle() {
 
 function togglePlayback() {
   if (audio.paused) {
-    audio.play();
+    resume();
   } else {
     audio.pause();
   }
 }
 
+// A track that failed to start has no audio to resume, so it starts again.
 function resume() {
-  if (currentTrack) audio.play();
+  if (!currentTrack) return;
+  if (audio.hasAttribute("src")) audio.play();
+  else if (playbackContext) playTrackInternal(currentTrack, playbackContext);
 }
 
 function pause() {
@@ -509,6 +598,10 @@ function nextTrack() {
 
 function addToQueue(track: TrackResponse, context: PlaybackContext) {
   if (!track.id) return;
+  if (isMissing(track)) {
+    showNotice(missingNotice(track));
+    return;
+  }
   if (currentTrack == null) {
     playTrack(track, context);
     return;
@@ -553,21 +646,8 @@ function clearUpNext() {
 }
 
 function prevTrack() {
-  if (!currentTrack || !playbackContext) return;
-  if (shuffle && shuffledIds.length > 0) {
-    const idx = shuffledIds.indexOf(currentTrack.id);
-    if (idx <= 0) return;
-    const prev = playbackContext.tracks.find(
-      (t) => t.id === shuffledIds[idx - 1],
-    );
-    if (prev) playTrackInternal(prev, playbackContext);
-    return;
-  }
-  const idx = playbackContext.tracks.findIndex(
-    (t) => t.id === currentTrack!.id,
-  );
-  if (idx <= 0) return;
-  playTrackInternal(playbackContext.tracks[idx - 1], playbackContext);
+  const prev = previousContextTrack();
+  if (prev && playbackContext) playTrackInternal(prev, playbackContext);
 }
 
 // Resolves once the server has the final "stopped" report. The playback
@@ -830,6 +910,10 @@ export function getPlayer() {
     get upNext() {
       return getUpNext();
     },
+    get notice() {
+      return notice;
+    },
+    dismissNotice,
     playTrack,
     handOffTo,
     takeOver,

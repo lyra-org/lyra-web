@@ -18,6 +18,7 @@ www.meshiplaw.com/lyra.
   import BlurhashCanvas from "./BlurhashCanvas.svelte";
   import { shownCover } from "./covers.svelte.ts";
   import { anchorAtPointer } from "./ContextMenu.svelte";
+  import { isMissing, MISSING_HINT } from "./player.svelte.ts";
   import TrackMenu, { type TrackMenuTarget } from "./TrackMenu.svelte";
   import PaginatedList from "./PaginatedList.svelte";
   import type { LibrarySearchResponse, TrackResponse } from "./types";
@@ -167,6 +168,7 @@ www.meshiplaw.com/lyra.
               href={track.id
                 ? `#/tracks/${encodeURIComponent(track.id)}`
                 : undefined}
+              title={isMissing(track) ? MISSING_HINT : undefined}
               oncontextmenu={(e) => openTrackMenu(e, track)}
               class="flex items-center gap-3 rounded px-3 py-2 hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-[#BB7FB5] dark:hover:bg-neutral-700/50"
             >
@@ -197,6 +199,7 @@ www.meshiplaw.com/lyra.
               <div class="min-w-0 flex-1">
                 <div
                   class="truncate text-sm text-slate-900 dark:text-neutral-100"
+                  class:opacity-60={isMissing(track)}
                 >
                   {track.title}
                 </div>

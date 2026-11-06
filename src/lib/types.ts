@@ -34,6 +34,9 @@ export interface TrackResponse {
   duration_ms?: number;
   sort_title?: string;
   year?: number;
+  // False once a sync finds none of the track's files: it stays listed, but
+  // playing it answers 410. Absent on a placeholder for a hidden track.
+  available?: boolean;
   releases?: ReleaseResponse[];
   artists?: ArtistResponse[];
   chain?: TrackChainPosition;
@@ -145,6 +148,7 @@ export interface ReleaseResponse {
   description?: string;
   genres?: string[];
   sort_title?: string;
+  available?: boolean;
   artists?: ArtistResponse[];
   tracks?: TrackResponse[];
   entries?: EntryResponse[];
@@ -159,6 +163,7 @@ export interface GenreResponse extends GenreSummary {
   parents?: GenreSummary[];
   children?: GenreSummary[];
   cover?: CoverResponse | null;
+  available?: boolean;
 }
 
 export interface EntryResponse {
@@ -480,6 +485,7 @@ export interface ArtistResponse {
   description?: string | null;
   cover?: CoverResponse | null;
   credit?: ArtistCreditResponse | null;
+  available?: boolean;
   relations?: ArtistRelationResponse[];
   releases?: ReleaseResponse[];
   tracks?: TrackResponse[];
