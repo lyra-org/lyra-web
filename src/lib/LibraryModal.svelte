@@ -25,6 +25,9 @@ www.meshiplaw.com/lyra.
   let directory = $state(untrack(() => library?.directory ?? ""));
   let language = $state(untrack(() => library?.language ?? ""));
   let country = $state(untrack(() => library?.country ?? ""));
+  let purgeAfterDays = $state<number | null>(
+    untrack(() => library?.purge_missing_after_days ?? null),
+  );
   let saving = $state(false);
   let error = $state<string | null>(null);
 
@@ -39,6 +42,7 @@ www.meshiplaw.com/lyra.
           name: name.trim(),
           language: language.trim() || null,
           country: country.trim() || null,
+          purge_missing_after_days: purgeAfterDays,
         });
         onsave(result);
       } else {
@@ -129,6 +133,30 @@ www.meshiplaw.com/lyra.
         />
       </div>
     </div>
+
+    {#if isEdit}
+      <div>
+        <label
+          for="lib-purge"
+          class="mb-1 block text-sm font-medium text-slate-700 dark:text-neutral-300"
+          >Purge missing tracks after (days)</label
+        >
+        <input
+          id="lib-purge"
+          type="number"
+          min="1"
+          max="3650"
+          step="1"
+          bind:value={purgeAfterDays}
+          placeholder="Never"
+          class="w-full rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-900 focus:border-slate-500 focus:ring-1 focus:ring-slate-500 focus:outline-none dark:border-neutral-600 dark:bg-[#1b1d1e] dark:text-neutral-100 dark:placeholder:text-neutral-500 dark:focus:border-neutral-400 dark:focus:ring-neutral-400"
+        />
+        <p class="mt-1 text-xs text-slate-500 dark:text-neutral-400">
+          A sync purges them this long after their file went missing. Leave
+          empty to keep them until you purge them.
+        </p>
+      </div>
+    {/if}
 
     {#if error}
       <p class="text-sm text-red-600 dark:text-red-400">{error}</p>

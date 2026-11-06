@@ -808,9 +808,22 @@ export function updateLibrary(
     name?: string | null;
     language?: string | null;
     country?: string | null;
+    purge_missing_after_days?: number | null;
   },
 ): Promise<LibraryResponse> {
   return patch<LibraryResponse>(`/libraries/${id}`, data);
+}
+
+// Purges the named missing tracks, or without any every missing file of the
+// library and the tracks only they hold.
+export function purgeLibrary(
+  id: string,
+  trackIds?: string[],
+): Promise<LibrarySyncStartResponse> {
+  return post<LibrarySyncStartResponse>(
+    `/libraries/${encodeURIComponent(id)}/purge`,
+    trackIds ? { track_ids: trackIds } : {},
+  );
 }
 
 export function fetchLibraryAccess(
@@ -896,6 +909,22 @@ function normalizeSseBuffer(buffer: string): string {
 // Follows the sync status of every library the caller can see: first each
 // one's current status, then every change. Resolves when the server ends the
 // stream; there is no resume cursor, so a new call starts over.
+// Resolves once the run has ended, however it went, or the feed has failed.
+// The feed opens with each library's current status, so a run that ended
+// before this connected still resolves it.
+export async function waitForSyncRun(runId: string): Promise<void> {
+  const controller = new AbortController();
+  const active = ["queued", "planning", "running", "cancelling"];
+  await streamSyncEvents({
+    signal: controller.signal,
+    onStatus: (status) => {
+      if (status.run.id === runId && !active.includes(status.run.status)) {
+        controller.abort();
+      }
+    },
+  }).catch(() => {});
+}
+
 export async function streamSyncEvents(
   options: SyncEventsOptions,
 ): Promise<void> {

@@ -41,20 +41,23 @@ www.meshiplaw.com/lyra.
   import ExternalIdsModal from "./ExternalIdsModal.svelte";
   import MetadataEditModal from "./MetadataEditModal.svelte";
   import PathMixModal from "./PathMixModal.svelte";
+  import PurgeMissingModal from "./PurgeMissingModal.svelte";
   import RefreshOptionsModal from "./RefreshOptionsModal.svelte";
   import RemapTrackModal from "./RemapTrackModal.svelte";
-  import { refreshEntity } from "./api";
+  import { refreshEntity, waitForSyncRun } from "./api";
   import TrackMenuItems from "./TrackMenuItems.svelte";
 
   // One instance serves a whole list; the target says which track and where.
   interface Props {
     target: TrackMenuTarget | null;
+    // The library the list shows; a track can be purged only from within one.
+    libraryId?: string;
     onclose: () => void;
-    // A remap changed the list.
+    // A remap or purge changed the list.
     onchanged?: () => void;
   }
 
-  let { target, onclose, onchanged }: Props = $props();
+  let { target, libraryId, onclose, onchanged }: Props = $props();
 
   // Outlives the menu, which closes when the modal opens.
   let idsTrack = $state<TrackResponse | null>(null);
@@ -62,6 +65,7 @@ www.meshiplaw.com/lyra.
   let optionsTrack = $state<TrackResponse | null>(null);
   let pathTrack = $state<TrackResponse | null>(null);
   let remappingTrack = $state<TrackResponse | null>(null);
+  let purgingTrack = $state<TrackResponse | null>(null);
 </script>
 
 {#if target}
@@ -97,6 +101,12 @@ www.meshiplaw.com/lyra.
           remappingTrack = track;
           onclose();
         }}
+        onpurge={libraryId != null
+          ? () => {
+              purgingTrack = track;
+              onclose();
+            }
+          : undefined}
       />
     </ContextMenu>
   {/key}
@@ -126,6 +136,18 @@ www.meshiplaw.com/lyra.
     track={remappingTrack}
     onremapped={() => onchanged?.()}
     onclose={() => (remappingTrack = null)}
+  />
+{/if}
+
+{#if purgingTrack && libraryId != null}
+  <PurgeMissingModal
+    {libraryId}
+    track={purgingTrack}
+    onstarted={async ({ run }) => {
+      if (run.run.id != null) await waitForSyncRun(run.run.id);
+      onchanged?.();
+    }}
+    onclose={() => (purgingTrack = null)}
   />
 {/if}
 

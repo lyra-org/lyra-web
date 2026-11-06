@@ -74,7 +74,7 @@ www.meshiplaw.com/lyra.
         : { track, anchor: anchorBelow(e.currentTarget as Element) };
   }
 
-  // Bumped to load the list again after a remap changes it.
+  // Bumped to load the list again after a remap or purge changes it.
   let revision = $state(0);
 
   function openTrack(track: TrackResponse) {
@@ -268,6 +268,7 @@ www.meshiplaw.com/lyra.
 
 <TrackMenu
   target={trackMenu}
+  {libraryId}
   onclose={() => (trackMenu = null)}
   onchanged={() => revision++}
 />

@@ -410,6 +410,9 @@ export interface LibraryResponse {
   directory?: string | null;
   language?: string | null;
   country?: string | null;
+  // Whole days a file stays missing before a sync purges its tracks; absent
+  // when they stay until purged by hand.
+  purge_missing_after_days?: number | null;
 }
 
 export interface LibraryAccessResponse {
@@ -558,7 +561,10 @@ export type LibrarySyncRunStatus =
   | "succeeded"
   | "failed";
 
-export type LibrarySyncRunKind = "library_sync" | "library_refresh";
+export type LibrarySyncRunKind =
+  | "library_sync"
+  | "library_refresh"
+  | "library_purge";
 
 export type LibrarySyncProgressMode =
   | "indeterminate"
@@ -576,7 +582,8 @@ export type LibrarySyncStage =
   | "local_cover_metadata"
   | "lyrics"
   | "provider_cover"
-  | "cleanup";
+  | "cleanup"
+  | "purge";
 
 export interface LibrarySyncRun {
   status: LibrarySyncRunStatus;

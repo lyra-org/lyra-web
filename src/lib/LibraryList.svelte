@@ -7,7 +7,11 @@ www.meshiplaw.com/lyra.
 
 <script lang="ts">
   import { onMount } from "svelte";
-  import type { LibraryResponse, LibrarySyncStatus } from "./types";
+  import type {
+    LibraryResponse,
+    LibrarySyncRunKind,
+    LibrarySyncStatus,
+  } from "./types";
   import {
     ApiError,
     cancelSyncRun,
@@ -21,6 +25,7 @@ www.meshiplaw.com/lyra.
   import LibraryModal from "./LibraryModal.svelte";
   import LibraryRunOptionsModal from "./LibraryRunOptionsModal.svelte";
   import Modal from "./Modal.svelte";
+  import PurgeMissingModal from "./PurgeMissingModal.svelte";
 
   const SYNC_RETRY_BASE_MS = 1_000;
   const SYNC_RETRY_MAX_MS = 60_000;
@@ -42,6 +47,7 @@ www.meshiplaw.com/lyra.
   let actioningId = $state<string | null>(null);
   let deleteError = $state<string | null>(null);
   let deletingLibrary = $state<LibraryResponse | null>(null);
+  let purgingLibrary = $state<(LibraryResponse & { id: string }) | null>(null);
   let runOptions = $state<{
     library: LibraryResponse & { id: string };
     run: "sync" | "refresh";
@@ -125,6 +131,19 @@ www.meshiplaw.com/lyra.
     lyrics: "Refreshing lyrics",
     provider_cover: "Refreshing covers",
     cleanup: "Cleaning up",
+    purge: "Purging",
+  };
+
+  const runVerbs: Record<LibrarySyncRunKind, string> = {
+    library_sync: "Syncing",
+    library_refresh: "Refreshing",
+    library_purge: "Purging",
+  };
+
+  const runNouns: Record<LibrarySyncRunKind, string> = {
+    library_sync: "sync",
+    library_refresh: "refresh",
+    library_purge: "purge",
   };
 
   function settledUnits(s: LibrarySyncStatus): number {
@@ -185,15 +204,13 @@ www.meshiplaw.com/lyra.
     if (!isActiveSync(s) || !s) return null;
     if (s.run.status === "cancelling") return "Cancelling";
 
-    const verb = s.run.kind === "library_refresh" ? "Refreshing" : "Syncing";
+    const verb = runVerbs[s.run.kind];
     if (s.current) {
       return stageLabels[s.current.stage] ?? verb;
     }
 
     if (s.run.status === "planning" || s.progress.mode === "estimating") {
-      return s.run.kind === "library_refresh"
-        ? "Planning refresh"
-        : "Planning sync";
+      return `Planning ${runNouns[s.run.kind]}`;
     }
     return verb;
   }
@@ -229,6 +246,14 @@ www.meshiplaw.com/lyra.
     e.stopPropagation();
     openMenuId = null;
     modalLibrary = lib;
+  }
+
+  function handlePurge(lib: LibraryResponse, e: MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    openMenuId = null;
+    const id = lib.id;
+    if (id != null) purgingLibrary = { ...lib, id };
   }
 
   function handleDelete(lib: LibraryResponse, e: MouseEvent) {
@@ -410,9 +435,7 @@ www.meshiplaw.com/lyra.
                       <span
                         >{completion != null &&
                         status?.run.status !== "cancelling"
-                          ? status?.run.kind === "library_refresh"
-                            ? "Refreshing"
-                            : "Syncing"
+                          ? status && runVerbs[status.run.kind]
                           : label}</span
                       >
                       {#if completion != null && status?.run.status !== "cancelling"}
@@ -529,6 +552,29 @@ www.meshiplaw.com/lyra.
                         />
                       </svg>
                       Edit
+                    </button>
+                    <button
+                      type="button"
+                      role="menuitem"
+                      disabled={isRunning}
+                      class="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-transparent dark:text-neutral-200 dark:hover:bg-neutral-600 dark:disabled:hover:bg-transparent"
+                      onclick={(e) => handlePurge(lib, e)}
+                    >
+                      <svg
+                        class="h-4 w-4 text-slate-400 dark:text-neutral-500"
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        stroke-width="2"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          d="M7 21l-4.3-4.3c-1-1-1-2.5 0-3.4l9.6-9.6c1-1 2.5-1 3.4 0l5.6 5.6c1 1 1 2.5 0 3.4L13 21M22 21H7M5 11l9 9"
+                        />
+                      </svg>
+                      Purge missing
                     </button>
                     <div
                       class={[
@@ -733,6 +779,15 @@ www.meshiplaw.com/lyra.
       >
     {/snippet}
   </Modal>
+{/if}
+
+{#if purgingLibrary}
+  <PurgeMissingModal
+    libraryId={purgingLibrary.id}
+    libraryName={purgingLibrary.name}
+    onstarted={(response) => applySyncStatus(response.run)}
+    onclose={() => (purgingLibrary = null)}
+  />
 {/if}
 
 {#if runOptions}
