@@ -10,7 +10,7 @@ www.meshiplaw.com/lyra.
   import { fetchTrackDetail } from "./api";
   import { getAuth } from "./auth.svelte.ts";
   import { getPlayer, isMissing } from "./player.svelte.ts";
-  import BlurhashCanvas from "./BlurhashCanvas.svelte";
+  import CoverImage from "./CoverImage.svelte";
   import ArtistPortraitCard from "./ArtistPortraitCard.svelte";
   import FavoriteButton from "./FavoriteButton.svelte";
   import RatingButton from "./RatingButton.svelte";
@@ -29,12 +29,8 @@ www.meshiplaw.com/lyra.
   let remapping = $state(false);
   let loading = $state(true);
   let error: string | null = $state(null);
-  let coverFailed = $state(false);
 
   let release = $derived(track?.releases?.[0] ?? null);
-  let coverSrc = $derived(
-    release?.cover && !coverFailed ? release.cover.url : null,
-  );
 
   const CREDIT_ORDER: CreditType[] = [
     "artist",
@@ -116,7 +112,6 @@ www.meshiplaw.com/lyra.
     loading = true;
     error = null;
     track = null;
-    coverFailed = false;
     try {
       track = await fetchTrackDetail(id);
     } catch (e) {
@@ -145,43 +140,12 @@ www.meshiplaw.com/lyra.
   <div class="mx-auto max-w-4xl">
     <div class="flex flex-col gap-6 sm:flex-row">
       <div class="w-full shrink-0 sm:w-64">
-        <div
-          class="relative aspect-square w-full overflow-hidden rounded-lg bg-slate-200 shadow-md dark:bg-neutral-600 dark:shadow-black/40"
-        >
-          {#if release?.cover?.blurhash}
-            <BlurhashCanvas
-              hash={release.cover.blurhash}
-              class="absolute inset-0 h-full w-full object-cover"
-            />
-          {/if}
-          {#if coverSrc}
-            <img
-              src={coverSrc}
-              alt="Cover for {release?.title ?? track.title}"
-              class="relative h-full w-full object-cover"
-              onerror={() => (coverFailed = true)}
-            />
-          {:else if !release?.cover?.blurhash}
-            <div
-              class="flex h-full w-full items-center justify-center text-slate-400 dark:text-neutral-500"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                class="h-16 w-16"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                stroke-width="1.5"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"
-                />
-              </svg>
-            </div>
-          {/if}
-        </div>
+        <CoverImage
+          cover={release?.cover}
+          alt="Cover for {release?.title ?? track.title}"
+          class="aspect-square w-full rounded-lg shadow-md dark:shadow-black/40"
+          iconClass="h-16 w-16"
+        />
       </div>
 
       <div class="flex flex-col justify-end">

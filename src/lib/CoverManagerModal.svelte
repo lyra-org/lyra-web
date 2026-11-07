@@ -362,7 +362,7 @@ www.meshiplaw.com/lyra.
                 <img
                   src={c.cover.url}
                   alt="{sourceLabel(c)} cover"
-                  class="relative h-full w-full object-cover"
+                  class="relative h-full w-full object-cover text-transparent"
                 />
               {:else}
                 <div
@@ -546,7 +546,7 @@ www.meshiplaw.com/lyra.
                     <img
                       src={candidate.url}
                       alt="{providerName(result.provider_id)} image {i + 1}"
-                      class="h-full w-full object-cover transition-transform group-hover:scale-105"
+                      class="h-full w-full object-cover text-transparent transition-transform group-hover:scale-105"
                       loading="lazy"
                       referrerpolicy="no-referrer"
                     />

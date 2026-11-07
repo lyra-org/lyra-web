@@ -17,7 +17,7 @@ www.meshiplaw.com/lyra.
   import { getPlayer } from "./player.svelte.ts";
   import CloseButton from "./CloseButton.svelte";
   import DeviceIcon from "./DeviceIcon.svelte";
-  import TrackCover from "./TrackCover.svelte";
+  import CoverImage from "./CoverImage.svelte";
   import VolumeControl from "./VolumeControl.svelte";
 
   let { onclose }: { onclose: () => void } = $props();
@@ -273,11 +273,7 @@ www.meshiplaw.com/lyra.
   artists: string,
 )}
   <div class="flex items-center gap-3 px-3 pt-3">
-    <TrackCover
-      url={cover.url}
-      blurhash={cover.blurhash}
-      class="h-12 w-12 rounded-md"
-    />
+    <CoverImage {cover} class="h-12 w-12 rounded-md" />
     <div class="min-w-0 flex-1">
       <p
         class="truncate text-sm font-medium text-slate-900 dark:text-neutral-100"
@@ -475,10 +471,8 @@ www.meshiplaw.com/lyra.
                 class="rounded-xl border border-slate-200 px-3 py-2.5 dark:border-neutral-800"
               >
                 <div class="flex items-center gap-3">
-                  <TrackCover
-                    {...trackId
-                      ? coverOf(trackId)
-                      : { url: null, blurhash: null }}
+                  <CoverImage
+                    cover={trackId ? coverOf(trackId) : null}
                     class="h-10 w-10 rounded"
                   />
                   <div class="min-w-0 flex-1">
@@ -605,8 +599,8 @@ www.meshiplaw.com/lyra.
               <li
                 class="flex items-center gap-3 rounded-xl border border-slate-200 px-3 py-2.5 dark:border-neutral-800"
               >
-                <TrackCover
-                  {...coverOf(p.track_id)}
+                <CoverImage
+                  cover={coverOf(p.track_id)}
                   class="h-10 w-10 rounded"
                 />
                 <div class="min-w-0 flex-1">

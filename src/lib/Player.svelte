@@ -12,7 +12,7 @@ www.meshiplaw.com/lyra.
   import DeviceIcon from "./DeviceIcon.svelte";
   import DevicePicker from "./DevicePicker.svelte";
   import FavoriteButton from "./FavoriteButton.svelte";
-  import TrackCover from "./TrackCover.svelte";
+  import CoverImage from "./CoverImage.svelte";
   import VolumeControl from "./VolumeControl.svelte";
 
   const player = getPlayer();
@@ -192,7 +192,7 @@ www.meshiplaw.com/lyra.
     <div class="flex items-center gap-4 px-4 py-2">
       <!-- Left: cover + track info -->
       <div class="flex min-w-0 flex-1 items-center gap-3">
-        <TrackCover url={cover.url} blurhash={cover.blurhash} />
+        <CoverImage {cover} class="h-10 w-10 rounded" />
         <div class="min-w-0">
           <p
             class="truncate text-sm font-medium text-slate-900 dark:text-neutral-100"

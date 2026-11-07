@@ -15,7 +15,7 @@ www.meshiplaw.com/lyra.
   } from "./api";
   import AlbumCard from "./AlbumCard.svelte";
   import ArtistCard from "./ArtistCard.svelte";
-  import BlurhashCanvas from "./BlurhashCanvas.svelte";
+  import CoverImage from "./CoverImage.svelte";
   import { shownCover } from "./covers.svelte.ts";
   import { anchorAtPointer } from "./ContextMenu.svelte";
   import { isMissing, MISSING_HINT } from "./player.svelte.ts";
@@ -172,30 +172,12 @@ www.meshiplaw.com/lyra.
               oncontextmenu={(e) => openTrackMenu(e, track)}
               class="flex items-center gap-3 rounded px-3 py-2 hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-[#BB7FB5] dark:hover:bg-neutral-700/50"
             >
-              <div
-                class="relative h-10 w-10 shrink-0 overflow-hidden rounded bg-slate-200 dark:bg-neutral-600"
-              >
-                {#if cover?.blurhash}
-                  <BlurhashCanvas
-                    hash={cover.blurhash}
-                    class="absolute inset-0 h-full w-full object-cover"
-                  />
-                {/if}
-                {#if cover?.url}
-                  <img
-                    src={cover.url}
-                    alt=""
-                    loading="lazy"
-                    class="relative h-full w-full object-cover"
-                  />
-                {:else if !cover?.blurhash}
-                  <span
-                    aria-hidden="true"
-                    class="flex h-full items-center justify-center text-lg text-slate-400 dark:text-neutral-500"
-                    >♫</span
-                  >
-                {/if}
-              </div>
+              <CoverImage
+                {cover}
+                class="h-10 w-10 rounded"
+                iconClass="h-4 w-4"
+                lazy
+              />
               <div class="min-w-0 flex-1">
                 <div
                   class="truncate text-sm text-slate-900 dark:text-neutral-100"

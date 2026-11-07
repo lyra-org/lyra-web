@@ -9,7 +9,7 @@ www.meshiplaw.com/lyra.
   import { getPlayer } from "./player.svelte.ts";
   import { fetchLyrics } from "./api";
   import type { LyricsResponse } from "./types";
-  import BlurhashCanvas from "./BlurhashCanvas.svelte";
+  import CoverImage from "./CoverImage.svelte";
   import FavoriteButton from "./FavoriteButton.svelte";
   import RatingButton from "./RatingButton.svelte";
   import VolumeControl from "./VolumeControl.svelte";
@@ -20,8 +20,6 @@ www.meshiplaw.com/lyra.
   let lyricsLoading = $state(false);
   let lineEls = $state<(HTMLElement | null)[]>([]);
 
-  let coverSrc = $derived(player.currentCover.url);
-  let coverBlurhash = $derived(player.currentCover.blurhash);
   let artistNames = $derived(player.currentArtistNames);
   let track = $derived(
     player.playbackContext?.tracks.find(
@@ -134,42 +132,11 @@ www.meshiplaw.com/lyra.
     <section
       class="flex flex-col items-center gap-5 border-b border-slate-100 pb-8 dark:border-neutral-800"
     >
-      <div
-        class="relative h-56 w-56 shrink-0 overflow-hidden rounded-lg bg-slate-200 shadow-md sm:h-64 sm:w-64 dark:bg-neutral-700 dark:shadow-black/40"
-      >
-        {#if coverBlurhash}
-          <BlurhashCanvas
-            hash={coverBlurhash}
-            class="absolute inset-0 h-full w-full object-cover"
-          />
-        {/if}
-        {#if coverSrc}
-          <img
-            src={coverSrc}
-            alt=""
-            class="relative h-full w-full object-cover"
-          />
-        {:else if !coverBlurhash}
-          <div
-            class="flex h-full w-full items-center justify-center text-slate-400 dark:text-neutral-500"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              class="h-16 w-16"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              stroke-width="1.5"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"
-              />
-            </svg>
-          </div>
-        {/if}
-      </div>
+      <CoverImage
+        cover={player.currentCover}
+        class="h-56 w-56 rounded-lg shadow-md sm:h-64 sm:w-64 dark:shadow-black/40"
+        iconClass="h-16 w-16"
+      />
 
       <div class="flex flex-col items-center text-center">
         <div class="flex items-center gap-2">

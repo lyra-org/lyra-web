@@ -8,7 +8,7 @@ www.meshiplaw.com/lyra.
 <script lang="ts">
   import type { ArtistResponse } from "./types";
   import ArtistMenu from "./ArtistMenu.svelte";
-  import BlurhashCanvas from "./BlurhashCanvas.svelte";
+  import CoverImage from "./CoverImage.svelte";
   import { shownCover } from "./covers.svelte.ts";
 
   interface Props {
@@ -19,8 +19,6 @@ www.meshiplaw.com/lyra.
 
   let menu = $state<ArtistMenu>();
   let cover = $derived(shownCover(artist.id, artist.cover));
-  let failedSrc = $state<string | null>(null);
-  let coverSrc = $derived(cover && cover.url !== failedSrc ? cover.url : null);
 </script>
 
 <a
@@ -28,44 +26,15 @@ www.meshiplaw.com/lyra.
   class="group flex flex-col items-center"
   oncontextmenu={(e) => menu?.open(e)}
 >
-  <div
-    class="relative aspect-square w-full overflow-hidden rounded-full bg-slate-200 shadow-sm transition-shadow group-hover:shadow-md dark:bg-neutral-600 dark:shadow-black/30"
-  >
-    {#if cover?.blurhash}
-      <BlurhashCanvas
-        hash={cover.blurhash}
-        class="absolute inset-0 h-full w-full object-cover"
-      />
-    {/if}
-    {#if coverSrc}
-      <img
-        src={coverSrc}
-        alt="Photo of {artist.name}"
-        class="relative h-full w-full object-cover transition-transform group-hover:scale-105"
-        loading="lazy"
-        onerror={() => (failedSrc = coverSrc)}
-      />
-    {:else if !cover?.blurhash}
-      <div
-        class="flex h-full w-full items-center justify-center text-slate-400 dark:text-neutral-500"
-      >
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          class="h-12 w-12"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-          stroke-width="1.5"
-        >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-          />
-        </svg>
-      </div>
-    {/if}
-  </div>
+  <CoverImage
+    {cover}
+    alt="Photo of {artist.name}"
+    class="aspect-square w-full rounded-full shadow-sm transition-shadow group-hover:shadow-md dark:shadow-black/30"
+    imageClass="group-hover:scale-105"
+    icon="person"
+    iconClass="h-12 w-12"
+    lazy
+  />
   <div class="mt-2 w-full px-1 text-center">
     <h3
       class="truncate text-sm font-semibold text-slate-900 dark:text-neutral-100"

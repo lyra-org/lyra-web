@@ -9,7 +9,7 @@ www.meshiplaw.com/lyra.
   import type { ArtistRelationResponse, ArtistResponse } from "./types";
   import { fetchArtist } from "./api";
   import { getAuth } from "./auth.svelte.ts";
-  import BlurhashCanvas from "./BlurhashCanvas.svelte";
+  import CoverImage from "./CoverImage.svelte";
   import DescriptionSection from "./DescriptionSection.svelte";
   import ChangeCoverButton from "./ChangeCoverButton.svelte";
   import CoverManagerModal from "./CoverManagerModal.svelte";
@@ -33,8 +33,6 @@ www.meshiplaw.com/lyra.
   let showCovers = $state(false);
 
   let cover = $derived(artist ? shownCover(artist.id, artist.cover) : null);
-  let failedSrc = $state<string | null>(null);
-  let coverSrc = $derived(cover && cover.url !== failedSrc ? cover.url : null);
 
   let sortedReleases = $derived.by(() => {
     const releases = artist?.releases ?? [];
@@ -114,45 +112,16 @@ www.meshiplaw.com/lyra.
     <!-- Header -->
     <div class="flex flex-col gap-6 sm:flex-row sm:items-end">
       <div class="group relative w-48 shrink-0 sm:w-56">
-        <div
-          class="relative aspect-square w-full overflow-hidden rounded-full bg-slate-200 shadow-md dark:bg-neutral-600 dark:shadow-black/40"
-        >
-          {#if cover?.blurhash}
-            <BlurhashCanvas
-              hash={cover.blurhash}
-              class="absolute inset-0 h-full w-full object-cover"
-            />
-          {/if}
-          {#if coverSrc}
-            <!-- Rounded itself: once the change-cover button fades out,
-                 Chromium can draw the image without the wrapper's clip. -->
-            <img
-              src={coverSrc}
-              alt="Photo of {artist.name}"
-              class="relative h-full w-full rounded-full object-cover"
-              onerror={() => (failedSrc = coverSrc)}
-            />
-          {:else if !cover?.blurhash}
-            <div
-              class="flex h-full w-full items-center justify-center text-slate-400 dark:text-neutral-500"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                class="h-16 w-16"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                stroke-width="1.5"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                />
-              </svg>
-            </div>
-          {/if}
-        </div>
+        <!-- imageClass rounds the image itself: once the change-cover button
+             fades out, Chromium can draw it without the wrapper's clip. -->
+        <CoverImage
+          {cover}
+          alt="Photo of {artist.name}"
+          class="aspect-square w-full rounded-full shadow-md dark:shadow-black/40"
+          imageClass="rounded-full"
+          icon="person"
+          iconClass="h-16 w-16"
+        />
         {#if canManage && artist.id}
           <ChangeCoverButton
             class="right-3 bottom-3"

@@ -17,7 +17,7 @@ www.meshiplaw.com/lyra.
 <script lang="ts">
   import { refreshEntity } from "./api";
   import { getAuth } from "./auth.svelte.ts";
-  import BlurhashCanvas from "./BlurhashCanvas.svelte";
+  import CoverImage from "./CoverImage.svelte";
   import CoverManagerModal from "./CoverManagerModal.svelte";
   import { reloadShownCover, shownCover } from "./covers.svelte.ts";
   import ContextMenu, {
@@ -42,8 +42,6 @@ www.meshiplaw.com/lyra.
   const auth = getAuth();
 
   let cover = $derived(shownCover(album.id, album.cover));
-  let failedSrc = $state<string | null>(null);
-  let coverSrc = $derived(cover && cover.url !== failedSrc ? cover.url : null);
   let artistNames = $derived(
     album.artists?.map((a) => a.name).join(", ") ?? "Unknown Artist",
   );
@@ -107,44 +105,14 @@ www.meshiplaw.com/lyra.
   <article
     class="group relative cursor-pointer overflow-hidden rounded-lg bg-white shadow-sm transition-shadow hover:shadow-md dark:bg-[#1b1d1e] dark:shadow-black/30"
   >
-    <div
-      class="relative aspect-square w-full overflow-hidden bg-slate-200 dark:bg-neutral-600"
-    >
-      {#if cover?.blurhash}
-        <BlurhashCanvas
-          hash={cover.blurhash}
-          class="absolute inset-0 h-full w-full object-cover"
-        />
-      {/if}
-      {#if coverSrc}
-        <img
-          src={coverSrc}
-          alt="Cover for {album.title}"
-          class="relative h-full w-full object-cover transition-transform group-hover:scale-105"
-          loading="lazy"
-          onerror={() => (failedSrc = coverSrc)}
-        />
-      {:else if !cover?.blurhash}
-        <div
-          class="flex h-full w-full items-center justify-center text-slate-400 dark:text-neutral-500"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            class="h-12 w-12"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            stroke-width="1.5"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"
-            />
-          </svg>
-        </div>
-      {/if}
-    </div>
+    <CoverImage
+      {cover}
+      alt="Cover for {album.title}"
+      class="aspect-square w-full"
+      imageClass="group-hover:scale-105"
+      iconClass="h-12 w-12"
+      lazy
+    />
 
     {#if hasMenu}
       <button

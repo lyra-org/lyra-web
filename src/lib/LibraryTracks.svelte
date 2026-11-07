@@ -19,7 +19,7 @@ www.meshiplaw.com/lyra.
   import PaginatedList from "./PaginatedList.svelte";
   import { fetchTracks } from "./api";
   import { getPlayer, isMissing, MISSING_HINT } from "./player.svelte.ts";
-  import BlurhashCanvas from "./BlurhashCanvas.svelte";
+  import CoverImage from "./CoverImage.svelte";
   import FavoriteButton from "./FavoriteButton.svelte";
   import RatingButton from "./RatingButton.svelte";
   import { getFavoriteState } from "./favorites.svelte.ts";
@@ -133,43 +133,12 @@ www.meshiplaw.com/lyra.
               oncontextmenu={(e) => openTrackMenu(e, track)}
             >
               <td class="w-14 py-2 pr-3 pl-3">
-                <div
-                  class="relative h-10 w-10 overflow-hidden rounded bg-slate-200 dark:bg-neutral-600"
-                >
-                  {#if cover?.blurhash}
-                    <BlurhashCanvas
-                      hash={cover.blurhash}
-                      class="absolute inset-0 h-full w-full object-cover"
-                    />
-                  {/if}
-                  {#if cover?.url}
-                    <img
-                      src={cover.url}
-                      alt=""
-                      class="relative h-full w-full object-cover"
-                      loading="lazy"
-                    />
-                  {:else if !cover?.blurhash}
-                    <div
-                      class="flex h-full w-full items-center justify-center text-slate-400 dark:text-neutral-500"
-                    >
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        class="h-4 w-4"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                        stroke-width="1.5"
-                      >
-                        <path
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"
-                        />
-                      </svg>
-                    </div>
-                  {/if}
-                </div>
+                <CoverImage
+                  {cover}
+                  class="h-10 w-10 rounded"
+                  iconClass="h-4 w-4"
+                  lazy
+                />
               </td>
               <td
                 class="py-2 text-sm"

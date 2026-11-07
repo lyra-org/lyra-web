@@ -11,7 +11,7 @@ www.meshiplaw.com/lyra.
   import { getPlayer, isMissing, MISSING_HINT } from "./player.svelte.ts";
   import { getTags, tagChipClasses } from "./tags.svelte.ts";
   import { getAuth } from "./auth.svelte.ts";
-  import BlurhashCanvas from "./BlurhashCanvas.svelte";
+  import CoverImage from "./CoverImage.svelte";
   import DescriptionSection from "./DescriptionSection.svelte";
   import ChangeCoverButton from "./ChangeCoverButton.svelte";
   import CoverManagerModal from "./CoverManagerModal.svelte";
@@ -39,8 +39,6 @@ www.meshiplaw.com/lyra.
   let showCovers = $state(false);
 
   let cover = $derived(album ? shownCover(album.id, album.cover) : null);
-  let failedSrc = $state<string | null>(null);
-  let coverSrc = $derived(cover && cover.url !== failedSrc ? cover.url : null);
   let releaseYear = $derived(
     album?.release_date ? album.release_date.slice(0, 4) : null,
   );
@@ -187,43 +185,12 @@ www.meshiplaw.com/lyra.
     <!-- Header -->
     <div class="flex flex-col gap-6 sm:flex-row">
       <div class="group relative w-full shrink-0 sm:w-64">
-        <div
-          class="relative aspect-square w-full overflow-hidden rounded-lg bg-slate-200 shadow-md dark:bg-neutral-600 dark:shadow-black/40"
-        >
-          {#if cover?.blurhash}
-            <BlurhashCanvas
-              hash={cover.blurhash}
-              class="absolute inset-0 h-full w-full object-cover"
-            />
-          {/if}
-          {#if coverSrc}
-            <img
-              src={coverSrc}
-              alt="Cover for {album.title}"
-              class="relative h-full w-full object-cover"
-              onerror={() => (failedSrc = coverSrc)}
-            />
-          {:else if !cover?.blurhash}
-            <div
-              class="flex h-full w-full items-center justify-center text-slate-400 dark:text-neutral-500"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                class="h-16 w-16"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                stroke-width="1.5"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"
-                />
-              </svg>
-            </div>
-          {/if}
-        </div>
+        <CoverImage
+          {cover}
+          alt="Cover for {album.title}"
+          class="aspect-square w-full rounded-lg shadow-md dark:shadow-black/40"
+          iconClass="h-16 w-16"
+        />
         {#if canManage && album.id}
           <ChangeCoverButton
             class="right-2 bottom-2"
