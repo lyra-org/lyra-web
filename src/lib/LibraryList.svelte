@@ -124,8 +124,8 @@ www.meshiplaw.com/lyra.
   const stageLabels: Record<string, string> = {
     discover: "Discovering",
     entry_sync: "Scanning",
-    metadata_parse: "Reading metadata",
-    metadata_apply: "Updating library",
+    metadata_parse: "Importing metadata",
+    metadata_apply: "Importing metadata",
     provider_refresh: "Refreshing metadata",
     local_cover_metadata: "Reading covers",
     lyrics: "Refreshing lyrics",
