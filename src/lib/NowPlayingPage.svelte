@@ -7,18 +7,13 @@ www.meshiplaw.com/lyra.
 
 <script lang="ts">
   import { getPlayer } from "./player.svelte.ts";
-  import { fetchLyrics } from "./api";
-  import type { LyricsResponse } from "./types";
   import CoverImage from "./CoverImage.svelte";
   import FavoriteButton from "./FavoriteButton.svelte";
+  import LyricsPanel from "./LyricsPanel.svelte";
   import RatingButton from "./RatingButton.svelte";
   import VolumeControl from "./VolumeControl.svelte";
 
   const player = getPlayer();
-
-  let lyrics = $state<LyricsResponse | null>(null);
-  let lyricsLoading = $state(false);
-  let lineEls = $state<(HTMLElement | null)[]>([]);
 
   let artistNames = $derived(player.currentArtistNames);
   let track = $derived(
@@ -35,59 +30,9 @@ www.meshiplaw.com/lyra.
     return primary.length > 0 ? primary : credits;
   });
 
-  let lyricLines = $derived(lyrics?.lines ?? []);
-  let isSynced = $derived(lyricLines.length > 0);
-  let currentMs = $derived(player.currentTime * 1000);
-
-  let activeLineIndex = $derived.by(() => {
-    if (!isSynced) return -1;
-    let idx = -1;
-    for (let i = 0; i < lyricLines.length; i++) {
-      if (lyricLines[i].ts_ms <= currentMs) idx = i;
-      else break;
-    }
-    return idx;
-  });
-
   let progressPct = $derived(
     player.duration > 0 ? (player.currentTime / player.duration) * 100 : 0,
   );
-
-  $effect(() => {
-    const id = player.currentTrack?.id;
-    if (!id) {
-      lyrics = null;
-      lyricsLoading = false;
-      lineEls = [];
-      return;
-    }
-    let cancelled = false;
-    lyrics = null;
-    lineEls = [];
-    lyricsLoading = true;
-    fetchLyrics(id)
-      .then((res) => {
-        if (!cancelled) lyrics = res;
-      })
-      .catch(() => {
-        if (!cancelled) lyrics = null;
-      })
-      .finally(() => {
-        if (!cancelled) lyricsLoading = false;
-      });
-    return () => {
-      cancelled = true;
-    };
-  });
-
-  $effect(() => {
-    const idx = activeLineIndex;
-    if (idx < 0) return;
-    const el = lineEls[idx];
-    if (el) {
-      el.scrollIntoView({ block: "center", behavior: "smooth" });
-    }
-  });
 
   function formatTime(s: number): string {
     if (!Number.isFinite(s) || s < 0) return "0:00";
@@ -108,10 +53,6 @@ www.meshiplaw.com/lyra.
     const rect = bar.getBoundingClientRect();
     const ratio = (e.clientX - rect.left) / rect.width;
     player.seek(ratio * player.duration);
-  }
-
-  function seekTo(ms: number) {
-    player.seek(ms / 1000);
   }
 </script>
 
@@ -349,49 +290,9 @@ www.meshiplaw.com/lyra.
 
     <!-- Lyrics + Up Next -->
     <section class="mt-8 grid gap-8 lg:grid-cols-2">
-      <!-- Lyrics -->
-      <div class="flex flex-col">
-        <h2
-          class="text-sm font-semibold tracking-wide text-slate-500 uppercase dark:text-neutral-400"
-        >
-          Lyrics
-        </h2>
-        <div class="mt-3 max-h-[60vh] overflow-y-auto pr-2">
-          {#if lyricsLoading}
-            <p
-              class="py-8 text-center text-sm text-slate-400 dark:text-neutral-500"
-            >
-              Loading lyrics...
-            </p>
-          {:else if !lyrics}
-            <p
-              class="py-8 text-center text-sm text-slate-400 dark:text-neutral-500"
-            >
-              No lyrics available
-            </p>
-          {:else if isSynced}
-            <div class="flex flex-col items-center gap-0.5 text-center">
-              {#each lyricLines as line, i (i)}
-                <button
-                  type="button"
-                  bind:this={lineEls[i]}
-                  onclick={() => seekTo(line.ts_ms)}
-                  class="block w-full max-w-md cursor-pointer rounded-md px-2 py-1.5 text-base leading-snug text-slate-900 transition-opacity duration-700 ease-out hover:bg-slate-100/60 dark:text-neutral-100 dark:hover:bg-neutral-800/60"
-                  class:opacity-100={i === activeLineIndex}
-                  class:opacity-60={activeLineIndex < 0}
-                  class:opacity-30={i !== activeLineIndex &&
-                    activeLineIndex >= 0}
-                >
-                  {line.text || "‧"}
-                </button>
-              {/each}
-            </div>
-          {:else}
-            <pre
-              class="font-sans text-sm leading-relaxed whitespace-pre-wrap text-slate-600 dark:text-neutral-300">{lyrics.plain_text}</pre>
-          {/if}
-        </div>
-      </div>
+      {#if player.currentTrack.id}
+        <LyricsPanel trackId={player.currentTrack.id} />
+      {/if}
 
       <!-- Up Next -->
       <div class="flex flex-col">
