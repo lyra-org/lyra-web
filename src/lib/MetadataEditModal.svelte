@@ -37,6 +37,7 @@ www.meshiplaw.com/lyra.
     MetadataChange,
     MetadataChangePreview,
     MetadataCreditValue,
+    MetadataFieldDiff,
     MetadataFieldEdit,
     MetadataFieldName,
     MetadataLabelValue,
@@ -275,6 +276,16 @@ www.meshiplaw.com/lyra.
   function loadedValue(field: MetadataFieldName): unknown {
     const value = snapshot?.fields[field]?.value ?? null;
     return Array.isArray(value) ? editValue(field, value) : value;
+  }
+
+  function sourceNote(
+    entry: MetadataFieldDiff,
+    unchanged: boolean,
+  ): string | null {
+    if (entry.before.source === "manual" && entry.after.source === "resolved") {
+      return "Back to tags and providers";
+    }
+    return unchanged ? "Stops following tags and providers" : null;
   }
 
   function isEdited(field: MetadataFieldName): boolean {
@@ -1121,13 +1132,15 @@ www.meshiplaw.com/lyra.
       {#each previews as preview, i (i)}
         {#if preview.action === "edit_metadata"}
           {#each preview.diff as entry (entry.field)}
+            {@const unchanged =
+              JSON.stringify(entry.before.value) ===
+              JSON.stringify(entry.after.value)}
             {@render diffRow(
               NAMES[entry.field],
-              entry.after.source === "resolved" &&
-                entry.before.source === "manual"
-                ? "Back to tags and providers"
-                : null,
-              describeField(entry.field, entry.before.value, artistName),
+              sourceNote(entry, unchanged),
+              unchanged
+                ? []
+                : describeField(entry.field, entry.before.value, artistName),
               describeField(entry.field, entry.after.value, artistName),
             )}
           {/each}
