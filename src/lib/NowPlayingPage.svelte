@@ -291,7 +291,10 @@ www.meshiplaw.com/lyra.
     <!-- Lyrics + Up Next -->
     <section class="mt-8 grid gap-8 lg:grid-cols-2">
       {#if player.currentTrack.id}
-        <LyricsPanel trackId={player.currentTrack.id} />
+        <LyricsPanel
+          trackId={player.currentTrack.id}
+          title={player.currentTrack.title}
+        />
       {/if}
 
       <!-- Up Next -->

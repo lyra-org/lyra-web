@@ -607,6 +607,29 @@ export interface LyricsResponse {
   lines?: LyricsLineResponse[];
 }
 
+export type LyricsScope = LyricsResponse["scope"];
+
+export interface LyricsCandidateSummaryResponse {
+  id: string;
+  provider_id?: string | null;
+  provider_lyrics_id?: string | null;
+  language: string;
+  scope: LyricsScope;
+  source: LyricsResponse["source"];
+  lrc_available: boolean;
+  has_word_cues: boolean;
+  updated_at: string;
+}
+
+export interface LyricsCandidatesResponse {
+  items: LyricsCandidateSummaryResponse[];
+}
+
+export interface LyricsRefreshResponse {
+  failed_providers: string[];
+  in_progress_providers: string[];
+}
+
 export type TagColor =
   | "red"
   | "orange"

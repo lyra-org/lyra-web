@@ -38,6 +38,7 @@ www.meshiplaw.com/lyra.
 
 <script lang="ts">
   import ContextMenu from "./ContextMenu.svelte";
+  import LyricsModal from "./LyricsModal.svelte";
   import MetadataEditModal from "./MetadataEditModal.svelte";
   import PathMixModal from "./PathMixModal.svelte";
   import PurgeMissingModal from "./PurgeMissingModal.svelte";
@@ -60,6 +61,7 @@ www.meshiplaw.com/lyra.
 
   // Outlives the menu, which closes when the modal opens.
   let editTrack = $state<TrackResponse | null>(null);
+  let lyricsTrack = $state<TrackResponse | null>(null);
   let optionsTrack = $state<TrackResponse | null>(null);
   let pathTrack = $state<TrackResponse | null>(null);
   let remappingTrack = $state<TrackResponse | null>(null);
@@ -76,6 +78,10 @@ www.meshiplaw.com/lyra.
         {onclose}
         onedit={() => {
           editTrack = track;
+          onclose();
+        }}
+        onlyrics={() => {
+          lyricsTrack = track;
           onclose();
         }}
         onrefresh={() => {
@@ -110,6 +116,14 @@ www.meshiplaw.com/lyra.
   <MetadataEditModal
     entityId={editTrack.id}
     onclose={() => (editTrack = null)}
+  />
+{/if}
+
+{#if lyricsTrack}
+  <LyricsModal
+    trackId={lyricsTrack.id}
+    title={lyricsTrack.title}
+    onclose={() => (lyricsTrack = null)}
   />
 {/if}
 

@@ -73,7 +73,10 @@ import type {
   UpdatePluginsResponse,
   Page,
   PlaybackUrlResponse,
+  LyricsCandidatesResponse,
+  LyricsRefreshResponse,
   LyricsResponse,
+  LyricsScope,
   MixRequest,
   MixersResponse,
 } from "./types";
@@ -1220,6 +1223,51 @@ export async function fetchLyrics(
   if (res.status === 404 || res.status === 406) return null;
   await handleResponse(res, "GET", `/tracks/${trackId}/lyrics`);
   return parseBody<LyricsResponse>(res);
+}
+
+export function fetchLyricsCandidates(
+  trackId: string,
+): Promise<LyricsCandidatesResponse> {
+  return get<LyricsCandidatesResponse>(`/tracks/${trackId}/lyrics/candidates`);
+}
+
+const LRC_TIMESTAMP_LINE = /^\[\d+:\d{2}(\.\d{2,3})?\]/m;
+
+/** Replaces the lyrics of `scope`. A timed `text` is sent as LRC. */
+export async function saveLyrics(
+  trackId: string,
+  scope: LyricsScope,
+  text: string,
+  language: string,
+): Promise<LyricsResponse> {
+  const query = language ? `?language=${encodeURIComponent(language)}` : "";
+  const path = `/tracks/${trackId}/lyrics/${scope}${query}`;
+  const res = await fetch(`${BASE}${path}`, {
+    method: "PUT",
+    headers: authHeaders({
+      "Content-Type": LRC_TIMESTAMP_LINE.test(text)
+        ? "application/lrc"
+        : "text/plain",
+    }),
+    body: text,
+  });
+  await handleResponse(res, "PUT", path);
+  return parseBody<LyricsResponse>(res);
+}
+
+export function deleteLyrics(
+  trackId: string,
+  scope: LyricsScope,
+): Promise<void> {
+  return del<void>(`/tracks/${trackId}/lyrics/${scope}`);
+}
+
+/** Asks every lyrics provider for the track again, waiting for all of them. */
+export function refreshLyrics(trackId: string): Promise<LyricsRefreshResponse> {
+  return post<LyricsRefreshResponse>(
+    `/tracks/${trackId}/lyrics/refresh`,
+    undefined,
+  );
 }
 
 // Entries

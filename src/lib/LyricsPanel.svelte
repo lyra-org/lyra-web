@@ -8,15 +8,22 @@ www.meshiplaw.com/lyra.
 <script lang="ts">
   import { fly } from "svelte/transition";
   import { fetchLyrics } from "./api";
-  import { isSynced, plainLyrics } from "./lyrics";
+  import {
+    isSynced,
+    lyricsProviderNames,
+    lyricsSourceLabel,
+    plainLyrics,
+  } from "./lyrics";
+  import LyricsModal from "./LyricsModal.svelte";
   import { getPlayer } from "./player.svelte.ts";
   import type { LyricsResponse } from "./types";
 
   interface Props {
     trackId: string;
+    title: string;
   }
 
-  let { trackId }: Props = $props();
+  let { trackId, title }: Props = $props();
 
   const SCROLL_KEYS = new Set([
     "ArrowUp",
@@ -33,6 +40,9 @@ www.meshiplaw.com/lyra.
   let loading = $state(true);
   let failed = $state(false);
   let revision = $state(0);
+  let providerNames = $state<Record<string, string>>({});
+  // Snapshotted so the editor stays on its track when playback moves on.
+  let managing = $state<{ trackId: string; title: string } | null>(null);
   let scroller = $state<HTMLElement>();
   let lineEls = $state<(HTMLElement | null)[]>([]);
   let following = $state(true);
@@ -91,8 +101,17 @@ www.meshiplaw.com/lyra.
 
   $effect(locateActiveLine);
 
+  lyricsProviderNames().then(
+    (names) => (providerNames = names),
+    () => {},
+  );
+
   function reload() {
     revision += 1;
+  }
+
+  function manage() {
+    managing = { trackId, title };
   }
 
   function locateActiveLine() {
@@ -131,11 +150,20 @@ www.meshiplaw.com/lyra.
 </script>
 
 <div class="flex flex-col">
-  <h2
-    class="text-sm font-semibold tracking-wide text-slate-500 uppercase dark:text-neutral-400"
-  >
-    Lyrics
-  </h2>
+  <div class="flex items-baseline justify-between gap-3">
+    <h2
+      class="text-sm font-semibold tracking-wide text-slate-500 uppercase dark:text-neutral-400"
+    >
+      Lyrics
+    </h2>
+    <button
+      type="button"
+      class="text-xs text-slate-500 hover:text-slate-700 dark:text-neutral-400 dark:hover:text-neutral-200"
+      onclick={manage}
+    >
+      Manage
+    </button>
+  </div>
   <div class="relative mt-3">
     <!-- svelte-ignore a11y_no_static_element_interactions -->
     <div
@@ -168,11 +196,18 @@ www.meshiplaw.com/lyra.
           </button>
         </div>
       {:else if !lyrics}
-        <p
+        <div
           class="py-8 text-center text-sm text-slate-400 dark:text-neutral-500"
         >
-          No lyrics available
-        </p>
+          <p>No lyrics available</p>
+          <button
+            type="button"
+            class="mt-2 underline hover:text-slate-700 dark:hover:text-neutral-200"
+            onclick={manage}
+          >
+            Find or add lyrics
+          </button>
+        </div>
       {:else if showTimed}
         <div class="flex flex-col items-center gap-0.5 text-center">
           {#each lines as line, i (i)}
@@ -229,4 +264,18 @@ www.meshiplaw.com/lyra.
       </div>
     {/if}
   </div>
+  {#if lyrics}
+    <p class="mt-2 text-xs text-slate-400 dark:text-neutral-500">
+      {lyricsSourceLabel(lyrics, providerNames)}
+    </p>
+  {/if}
 </div>
+
+{#if managing}
+  <LyricsModal
+    trackId={managing.trackId}
+    title={managing.title}
+    onchanged={reload}
+    onclose={() => (managing = null)}
+  />
+{/if}
