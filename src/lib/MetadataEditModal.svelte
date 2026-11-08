@@ -225,53 +225,66 @@ www.meshiplaw.com/lyra.
     return t === "" ? null : t;
   }
 
-  // The value an edit would send, in the form the server compares.
-  function draftValue(field: MetadataFieldName): unknown {
+  // A value as an edit would send it. Loaded lists pass through here too, so
+  // comparing them with a draft can't trip over their shape or key order.
+  function editValue(field: MetadataFieldName, value: unknown): unknown {
     switch (KINDS[field]) {
       case "number": {
-        const t = trimmed(text[field]);
+        const t = trimmed(value == null ? null : String(value));
         return t == null ? null : Number(t);
       }
       case "genres":
-        return genres;
+        return value;
       case "labels":
-        return labels.map((l) => ({
+        return (value as MetadataLabelValue[]).map((l) => ({
           id: l.id,
           catalog_number: trimmed(l.catalog_number),
         }));
       case "credits":
-        return credits.map((c) => ({
+        return (value as MetadataCreditValue[]).map((c) => ({
           artist_id: c.artist_id,
           type: c.type,
           detail: trimmed(c.detail),
         }));
       case "relations":
-        return relations.map((r) => ({
+        return (value as MetadataRelationValue[]).map((r) => ({
           artist_id: r.artist_id,
           type: r.type,
           attributes: trimmed(r.attributes),
         }));
       default:
-        return trimmed(text[field]);
+        return trimmed(value as string | null | undefined);
+    }
+  }
+
+  function draftValue(field: MetadataFieldName): unknown {
+    switch (KINDS[field]) {
+      case "genres":
+        return editValue(field, genres);
+      case "labels":
+        return editValue(field, labels);
+      case "credits":
+        return editValue(field, credits);
+      case "relations":
+        return editValue(field, relations);
+      default:
+        return editValue(field, text[field]);
     }
   }
 
   function loadedValue(field: MetadataFieldName): unknown {
     const value = snapshot?.fields[field]?.value ?? null;
-    if (KINDS[field] === "labels") {
-      return (value as MetadataLabelValue[]).map((l) => ({
-        id: l.id,
-        catalog_number: l.catalog_number,
-      }));
-    }
-    return value;
+    return Array.isArray(value) ? editValue(field, value) : value;
   }
 
   function isEdited(field: MetadataFieldName): boolean {
-    return (
-      !inherit.includes(field) &&
-      JSON.stringify(draftValue(field)) !== JSON.stringify(loadedValue(field))
-    );
+    if (inherit.includes(field)) return false;
+    const loaded = loadedValue(field);
+    // An untouched box is no edit, even if trimming would change what it holds.
+    if (!Array.isArray(loaded) && text[field] === String(loaded ?? "")) {
+      return false;
+    }
+    return JSON.stringify(draftValue(field)) !== JSON.stringify(loaded);
   }
 
   function isManual(field: MetadataFieldName): boolean {
