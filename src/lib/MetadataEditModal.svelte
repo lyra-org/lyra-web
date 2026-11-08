@@ -74,7 +74,7 @@ www.meshiplaw.com/lyra.
   const smallInputClass =
     "min-w-0 rounded-md border border-slate-300 bg-white px-2 py-1 text-sm text-slate-900 focus:border-slate-500 focus:outline-none dark:border-neutral-600 dark:bg-[#1b1d1e] dark:text-neutral-100 dark:placeholder:text-neutral-500 dark:focus:border-neutral-400";
 
-  let snapshot = $state<MetadataSnapshot | null>(null);
+  let snapshot = $state.raw<MetadataSnapshot | null>(null);
   let loading = $state(true);
   let error = $state<string | null>(null);
 
