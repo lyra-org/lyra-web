@@ -49,7 +49,9 @@ www.meshiplaw.com/lyra.
   let activeLineAt = $state<"above" | "below" | "here">("here");
 
   let lines = $derived(lyrics?.lines ?? []);
-  let showTimed = $derived(lyrics != null && isSynced(lyrics));
+  let showTimed = $derived(
+    lyrics != null && isSynced(lyrics) && player.currentTrack?.id === trackId,
+  );
   let activeLine = $derived.by(() => {
     if (!showTimed) return -1;
     const currentMs = player.currentTime * 1000;

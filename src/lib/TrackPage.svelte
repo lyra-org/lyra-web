@@ -13,6 +13,7 @@ www.meshiplaw.com/lyra.
   import CoverImage from "./CoverImage.svelte";
   import ArtistPortraitCard from "./ArtistPortraitCard.svelte";
   import FavoriteButton from "./FavoriteButton.svelte";
+  import LyricsPanel from "./LyricsPanel.svelte";
   import RatingButton from "./RatingButton.svelte";
   import RemapTrackModal from "./RemapTrackModal.svelte";
 
@@ -280,6 +281,12 @@ www.meshiplaw.com/lyra.
             />
           {/each}
         </div>
+      </div>
+    {/if}
+
+    {#if track.id}
+      <div class="mt-8">
+        <LyricsPanel trackId={track.id} title={track.title} />
       </div>
     {/if}
   </div>
