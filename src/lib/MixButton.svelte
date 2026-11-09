@@ -51,7 +51,7 @@ www.meshiplaw.com/lyra.
 {#if variant === "icon"}
   <button
     type="button"
-    class="flex h-8 w-8 items-center justify-center rounded-full text-slate-500 hover:bg-slate-100 hover:text-slate-700 disabled:opacity-50 dark:text-neutral-400 dark:hover:bg-neutral-700 dark:hover:text-neutral-200 {className}"
+    class="flex h-10 w-10 items-center justify-center rounded-full text-slate-500 hover:bg-slate-100 hover:text-slate-700 disabled:opacity-50 sm:h-8 sm:w-8 dark:text-neutral-400 dark:hover:bg-neutral-700 dark:hover:text-neutral-200 {className}"
     disabled={loading}
     aria-label={iconLabel}
     title={iconLabel}

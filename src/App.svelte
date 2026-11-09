@@ -42,6 +42,11 @@ www.meshiplaw.com/lyra.
   import { endSession } from "./lib/api";
   import MixButton from "./lib/MixButton.svelte";
   import HeaderMixMenu from "./lib/HeaderMixMenu.svelte";
+  import ContextMenu, {
+    anchorBelow,
+    type MenuAnchor,
+  } from "./lib/ContextMenu.svelte";
+  import MenuItem from "./lib/MenuItem.svelte";
   import { headerMixForRoute } from "./lib/headerMix.svelte.ts";
   import { pushEntry, replaceEntry, restoreScroll } from "./lib/history.ts";
   import logo from "./assets/logo.svg";
@@ -83,6 +88,7 @@ www.meshiplaw.com/lyra.
 
   let hash = $state(window.location.hash);
   let settingsOpen = $state(false);
+  let moreAnchor = $state<MenuAnchor | null>(null);
   let searchQuery = $state("");
   let committedSearchQuery = $state("");
 
@@ -318,6 +324,24 @@ www.meshiplaw.com/lyra.
     route.page === "playlists" || route.page === "playlist",
   );
 
+  function libraryHref(suffix: string): string {
+    return currentLibraryId != null
+      ? `#/libraries/${currentLibraryId}${suffix}`
+      : "#/";
+  }
+
+  let navItems = $derived([
+    { label: "Albums", href: libraryHref(""), active: isLibrarySection },
+    {
+      label: "Artists",
+      href: libraryHref("/artists"),
+      active: isArtistSection,
+    },
+    { label: "Tracks", href: libraryHref("/tracks"), active: isTracksSection },
+    { label: "Genres", href: libraryHref("/genres"), active: isGenreSection },
+    { label: "Playlists", href: "#/playlists", active: isPlaylistSection },
+  ]);
+
   let themeLabel = $derived(
     theme.mode === "system"
       ? "Theme: system (click for light)"
@@ -338,7 +362,7 @@ www.meshiplaw.com/lyra.
     type="button"
     aria-label={themeLabel}
     title={themeLabel}
-    class="flex h-8 w-8 items-center justify-center rounded-full text-slate-500 hover:bg-slate-100 hover:text-slate-700 dark:text-neutral-400 dark:hover:bg-neutral-700 dark:hover:text-neutral-200"
+    class="flex h-10 w-10 items-center justify-center rounded-full text-slate-500 hover:bg-slate-100 hover:text-slate-700 sm:h-8 sm:w-8 dark:text-neutral-400 dark:hover:bg-neutral-700 dark:hover:text-neutral-200"
     onclick={() => theme.cycle()}
   >
     {#if theme.mode === "system"}
@@ -453,7 +477,7 @@ www.meshiplaw.com/lyra.
 {:else}
   <main class="min-h-screen bg-white dark:bg-[#1b1d1e]">
     <header
-      class="relative flex flex-wrap items-center gap-4 bg-slate-50 px-6 py-4 dark:bg-[#181a1b]"
+      class="relative flex flex-wrap items-center gap-x-2 gap-y-1 bg-slate-50 px-4 py-2 sm:gap-4 sm:px-6 sm:py-4 dark:bg-[#181a1b]"
     >
       <a href="#/">
         <img src={logo} alt="Lyra" class="h-10 w-10 scale-175" />
@@ -466,79 +490,32 @@ www.meshiplaw.com/lyra.
         />
       {:else if route.page !== "libraries"}
         <nav
-          class="order-last flex w-full gap-6 overflow-x-auto sm:justify-center xl:pointer-events-none xl:absolute xl:inset-x-0 xl:order-none xl:w-auto"
+          class="order-last -mb-2 flex w-full gap-6 overflow-x-auto sm:mb-0 sm:justify-center xl:pointer-events-none xl:absolute xl:inset-x-0 xl:order-none xl:w-auto"
         >
-          <div class="pointer-events-auto flex shrink-0 gap-6">
-            <a
-              href={currentLibraryId != null
-                ? `#/libraries/${currentLibraryId}`
-                : "#/"}
-              class="text-xl font-semibold transition-colors"
-              class:text-slate-900={isLibrarySection}
-              class:dark:text-neutral-100={isLibrarySection}
-              class:text-slate-400={!isLibrarySection}
-              class:dark:text-neutral-500={!isLibrarySection}
-              class:hover:text-slate-600={!isLibrarySection}
-              class:dark:hover:text-neutral-300={!isLibrarySection}>Albums</a
-            >
-            <a
-              href={currentLibraryId != null
-                ? `#/libraries/${currentLibraryId}/artists`
-                : "#/"}
-              class="text-xl font-semibold transition-colors"
-              class:text-slate-900={isArtistSection}
-              class:dark:text-neutral-100={isArtistSection}
-              class:text-slate-400={!isArtistSection}
-              class:dark:text-neutral-500={!isArtistSection}
-              class:hover:text-slate-600={!isArtistSection}
-              class:dark:hover:text-neutral-300={!isArtistSection}>Artists</a
-            >
-            <a
-              href={currentLibraryId != null
-                ? `#/libraries/${currentLibraryId}/tracks`
-                : "#/"}
-              class="text-xl font-semibold transition-colors"
-              class:text-slate-900={isTracksSection}
-              class:dark:text-neutral-100={isTracksSection}
-              class:text-slate-400={!isTracksSection}
-              class:dark:text-neutral-500={!isTracksSection}
-              class:hover:text-slate-600={!isTracksSection}
-              class:dark:hover:text-neutral-300={!isTracksSection}>Tracks</a
-            >
-            <a
-              href={currentLibraryId != null
-                ? `#/libraries/${currentLibraryId}/genres`
-                : "#/"}
-              class="text-xl font-semibold transition-colors"
-              class:text-slate-900={isGenreSection}
-              class:dark:text-neutral-100={isGenreSection}
-              class:text-slate-400={!isGenreSection}
-              class:dark:text-neutral-500={!isGenreSection}
-              class:hover:text-slate-600={!isGenreSection}
-              class:dark:hover:text-neutral-300={!isGenreSection}>Genres</a
-            >
-            <a
-              href="#/playlists"
-              class="text-xl font-semibold transition-colors"
-              class:text-slate-900={isPlaylistSection}
-              class:dark:text-neutral-100={isPlaylistSection}
-              class:text-slate-400={!isPlaylistSection}
-              class:dark:text-neutral-500={!isPlaylistSection}
-              class:hover:text-slate-600={!isPlaylistSection}
-              class:dark:hover:text-neutral-300={!isPlaylistSection}
-              >Playlists</a
-            >
+          <div
+            class="pointer-events-auto flex w-full sm:w-auto sm:shrink-0 sm:gap-6"
+          >
+            {#each navItems as item (item.label)}
+              <a
+                href={item.href}
+                aria-current={item.active ? "page" : undefined}
+                class="flex-auto border-b-2 py-2.5 text-center text-sm font-semibold transition-colors sm:flex-none sm:border-0 sm:py-0 sm:text-xl {item.active
+                  ? 'border-[#BB7FB5] text-slate-900 dark:text-neutral-100'
+                  : 'border-transparent text-slate-400 hover:text-slate-600 dark:text-neutral-500 dark:hover:text-neutral-300'}"
+                >{item.label}</a
+              >
+            {/each}
           </div>
         </nav>
       {/if}
-      <div class="ml-auto flex items-center gap-2">
+      <div class="ml-auto flex items-center gap-0.5 sm:gap-2">
         <button
           type="button"
           aria-label="Search your music"
           title={searchOpen ? "Close search" : "Search your music"}
           aria-expanded={searchOpen}
           aria-controls={searchOpen ? "search-results" : undefined}
-          class="flex h-8 w-8 items-center justify-center rounded-full text-slate-500 hover:bg-slate-100 hover:text-slate-700 dark:text-neutral-400 dark:hover:bg-neutral-700 dark:hover:text-neutral-200"
+          class="flex h-10 w-10 items-center justify-center rounded-full text-slate-500 hover:bg-slate-100 hover:text-slate-700 sm:h-8 sm:w-8 dark:text-neutral-400 dark:hover:bg-neutral-700 dark:hover:text-neutral-200"
           onclick={() => (searchOpen ? closeSearch() : openSearch())}
         >
           <svg
@@ -565,7 +542,9 @@ www.meshiplaw.com/lyra.
           />
           <HeaderMixMenu config={headerMix} />
         {/if}
-        {@render themeToggle()}
+        <div class="hidden sm:block">
+          {@render themeToggle()}
+        </div>
         <button
           type="button"
           aria-label={devices.controlled
@@ -574,7 +553,7 @@ www.meshiplaw.com/lyra.
           title={devices.controlled
             ? `Playing on ${devices.deviceName(devices.controlled)}`
             : "Devices"}
-          class="relative flex h-8 w-8 items-center justify-center rounded-full text-slate-500 hover:bg-slate-100 hover:text-slate-700 dark:text-neutral-400 dark:hover:bg-neutral-700 dark:hover:text-neutral-200"
+          class="relative flex h-10 w-10 items-center justify-center rounded-full text-slate-500 hover:bg-slate-100 hover:text-slate-700 sm:h-8 sm:w-8 dark:text-neutral-400 dark:hover:bg-neutral-700 dark:hover:text-neutral-200"
           onclick={() => devices.openPanel()}
         >
           <DeviceIcon kind="devices" class="h-5 w-5" />
@@ -594,7 +573,7 @@ www.meshiplaw.com/lyra.
             ? `Open settings (${pluginUpdates.awaitingApproval} plugin update${pluginUpdates.awaitingApproval === 1 ? "" : "s"} waiting for approval)`
             : "Open settings"}
           title="Settings"
-          class="relative flex h-8 w-8 items-center justify-center rounded-full text-slate-500 hover:bg-slate-100 hover:text-slate-700 dark:text-neutral-400 dark:hover:bg-neutral-700 dark:hover:text-neutral-200"
+          class="relative hidden h-8 w-8 items-center justify-center rounded-full text-slate-500 hover:bg-slate-100 hover:text-slate-700 sm:flex dark:text-neutral-400 dark:hover:bg-neutral-700 dark:hover:text-neutral-200"
           onclick={() => (settingsOpen = true)}
         >
           <svg
@@ -620,12 +599,68 @@ www.meshiplaw.com/lyra.
           {/if}
         </button>
         <button
-          class="text-sm text-slate-500 hover:text-slate-700 dark:text-neutral-400 dark:hover:text-neutral-200"
+          class="hidden text-sm text-slate-500 hover:text-slate-700 sm:block dark:text-neutral-400 dark:hover:text-neutral-200"
           disabled={loggingOut}
           onclick={logOut}
         >
           Log out
         </button>
+        <button
+          type="button"
+          aria-label={pluginUpdates.awaitingApproval > 0
+            ? `More options (${pluginUpdates.awaitingApproval} plugin update${pluginUpdates.awaitingApproval === 1 ? "" : "s"} waiting for approval)`
+            : "More options"}
+          title="More"
+          aria-haspopup="menu"
+          aria-expanded={moreAnchor != null}
+          class="relative flex h-10 w-10 items-center justify-center rounded-full text-slate-500 hover:bg-slate-100 hover:text-slate-700 sm:hidden dark:text-neutral-400 dark:hover:bg-neutral-700 dark:hover:text-neutral-200"
+          onclick={(e) =>
+            (moreAnchor = moreAnchor ? null : anchorBelow(e.currentTarget))}
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            class="h-5 w-5"
+            viewBox="0 0 24 24"
+            fill="currentColor"
+            aria-hidden="true"
+          >
+            <circle cx="12" cy="5" r="1.75" />
+            <circle cx="12" cy="12" r="1.75" />
+            <circle cx="12" cy="19" r="1.75" />
+          </svg>
+          {#if pluginUpdates.awaitingApproval > 0}
+            <span
+              class="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-[#BB7FB5] ring-2 ring-slate-50 dark:ring-[#181a1b]"
+            ></span>
+          {/if}
+        </button>
+        {#if moreAnchor}
+          <ContextMenu anchor={moreAnchor} onclose={() => (moreAnchor = null)}>
+            <MenuItem onclick={() => theme.cycle()}
+              >Theme: {theme.mode}</MenuItem
+            >
+            <MenuItem
+              onclick={() => {
+                moreAnchor = null;
+                settingsOpen = true;
+              }}
+            >
+              Settings
+              {#if pluginUpdates.awaitingApproval > 0}
+                <span
+                  class="ml-auto flex h-4 min-w-4 items-center justify-center rounded-full bg-[#E6CEE3] px-1 text-[10px] font-semibold text-slate-900 dark:bg-[#BB7FB5] dark:text-white"
+                  >{pluginUpdates.awaitingApproval}</span
+                >
+              {/if}
+            </MenuItem>
+            <MenuItem
+              onclick={() => {
+                moreAnchor = null;
+                logOut();
+              }}>Log out</MenuItem
+            >
+          </ContextMenu>
+        {/if}
       </div>
     </header>
     <section class="mx-auto max-w-7xl px-4 py-6 pb-20 sm:px-6">

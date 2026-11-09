@@ -26,7 +26,7 @@ www.meshiplaw.com/lyra.
   }
 
   export const menuItemClass =
-    "flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm text-slate-700 hover:bg-slate-100 disabled:opacity-50 dark:text-neutral-200 dark:hover:bg-neutral-600";
+    "flex w-full items-center gap-2 px-3 py-2.5 text-left sm:py-1.5 text-sm text-slate-700 hover:bg-slate-100 disabled:opacity-50 dark:text-neutral-200 dark:hover:bg-neutral-600";
 </script>
 
 <script lang="ts">

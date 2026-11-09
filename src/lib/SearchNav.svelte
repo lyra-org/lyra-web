@@ -77,7 +77,7 @@ www.meshiplaw.com/lyra.
     aria-label="Close search"
     onclick={closeSearch}
     onkeydown={handleEscape}
-    class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-slate-500 hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-[#BB7FB5] dark:text-neutral-400 dark:hover:bg-neutral-700"
+    class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-slate-500 hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-[#BB7FB5] sm:h-8 sm:w-8 dark:text-neutral-400 dark:hover:bg-neutral-700"
   >
     <svg
       aria-hidden="true"
