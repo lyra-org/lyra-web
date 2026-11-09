@@ -733,6 +733,20 @@ export interface LibrarySyncStatus {
   sequence: number;
 }
 
+// One unit of a run's work that failed. A unit is not always one file.
+export interface LibrarySyncFailure {
+  stage: LibrarySyncStage;
+  type: string;
+  entity_type?: string | null;
+  entity_id?: string | null;
+  entity_title?: string | null;
+  provider_id?: string | null;
+  source_dir?: string | null;
+  message: string;
+  // RFC 3339 timestamp.
+  failed_at: string;
+}
+
 // The covers a refresh or sync fetches: none, only where none is set (the
 // server's default), or replacing the ones already set.
 export type CoverUpdate = "skip" | "missing" | "replace";

@@ -7,11 +7,7 @@ www.meshiplaw.com/lyra.
 
 <script lang="ts">
   import { onMount } from "svelte";
-  import type {
-    LibraryResponse,
-    LibrarySyncRunKind,
-    LibrarySyncStatus,
-  } from "./types";
+  import type { LibraryResponse, LibrarySyncStatus } from "./types";
   import {
     ApiError,
     cancelSyncRun,
@@ -22,7 +18,17 @@ www.meshiplaw.com/lyra.
     streamSyncEvents,
   } from "./api";
   import { getAuth } from "./auth.svelte.ts";
+  import {
+    failedItems,
+    isActiveSync,
+    runOutcome,
+    runVerbs,
+    syncCompletion,
+    syncLabel,
+    timeAgo,
+  } from "./librarySync";
   import LibraryModal from "./LibraryModal.svelte";
+  import LibrarySyncHistoryModal from "./LibrarySyncHistoryModal.svelte";
   import LibraryRunOptionsModal from "./LibraryRunOptionsModal.svelte";
   import Modal from "./Modal.svelte";
   import PurgeMissingModal from "./PurgeMissingModal.svelte";
@@ -45,6 +51,10 @@ www.meshiplaw.com/lyra.
 
   let openMenuId = $state<string | null>(null);
   let actioningId = $state<string | null>(null);
+  let actionError = $state<{ libraryId: string; message: string } | null>(null);
+  let historyLibrary = $state<(LibraryResponse & { id: string }) | null>(null);
+  // Keeps each card's "2 hours ago" current while the page stays open.
+  let now = $state(Date.now());
   let deleteError = $state<string | null>(null);
   let deletingLibrary = $state<LibraryResponse | null>(null);
   let purgingLibrary = $state<(LibraryResponse & { id: string }) | null>(null);
@@ -105,65 +115,14 @@ www.meshiplaw.com/lyra.
     }
 
     void follow();
+    const clock = setInterval(() => (now = Date.now()), 60_000);
 
     return () => {
       controller.abort();
       clearTimeout(retryTimeout);
+      clearInterval(clock);
     };
   });
-
-  function isActiveSync(s: LibrarySyncStatus | undefined): boolean {
-    return (
-      s?.run.status === "queued" ||
-      s?.run.status === "planning" ||
-      s?.run.status === "running" ||
-      s?.run.status === "cancelling"
-    );
-  }
-
-  const stageLabels: Record<string, string> = {
-    discover: "Discovering",
-    entry_sync: "Scanning",
-    metadata_parse: "Importing metadata",
-    metadata_apply: "Importing metadata",
-    provider_refresh: "Refreshing metadata",
-    local_cover_metadata: "Reading covers",
-    lyrics: "Refreshing lyrics",
-    provider_cover: "Refreshing covers",
-    cleanup: "Cleaning up",
-    purge: "Purging",
-  };
-
-  const runVerbs: Record<LibrarySyncRunKind, string> = {
-    library_sync: "Syncing",
-    library_refresh: "Refreshing",
-    library_purge: "Purging",
-  };
-
-  const runNouns: Record<LibrarySyncRunKind, string> = {
-    library_sync: "sync",
-    library_refresh: "refresh",
-    library_purge: "purge",
-  };
-
-  function settledUnits(s: LibrarySyncStatus): number {
-    return (
-      s.progress.completed_units +
-      s.progress.failed_units +
-      s.progress.skipped_units
-    );
-  }
-
-  function syncCompletion(s: LibrarySyncStatus): number | null {
-    if (s.progress.mode !== "determinate" || s.progress.total_units <= 0) {
-      return null;
-    }
-
-    return Math.max(
-      0,
-      Math.min(100, (settledUnits(s) / s.progress.total_units) * 100),
-    );
-  }
 
   function applySyncStatus(status: LibrarySyncStatus) {
     const libraryId = status.run.library_id;
@@ -198,21 +157,6 @@ www.meshiplaw.com/lyra.
     if (lib.language) parts.push(displayName(languageNames, lib.language));
     if (lib.country) parts.push(displayName(regionNames, lib.country));
     return parts;
-  }
-
-  function syncLabel(s: LibrarySyncStatus | undefined): string | null {
-    if (!isActiveSync(s) || !s) return null;
-    if (s.run.status === "cancelling") return "Cancelling";
-
-    const verb = runVerbs[s.run.kind];
-    if (s.current) {
-      return stageLabels[s.current.stage] ?? verb;
-    }
-
-    if (s.run.status === "planning" || s.progress.mode === "estimating") {
-      return `Planning ${runNouns[s.run.kind]}`;
-    }
-    return verb;
   }
 
   function openCreate() {
@@ -292,36 +236,49 @@ www.meshiplaw.com/lyra.
     }
   }
 
+  async function runLibraryAction(
+    libraryId: string,
+    fallbackError: string,
+    action: () => Promise<LibrarySyncStatus>,
+  ) {
+    actioningId = libraryId;
+    actionError = null;
+    try {
+      applySyncStatus(await action());
+    } catch (err) {
+      actionError = {
+        libraryId,
+        message: err instanceof Error ? err.message : fallbackError,
+      };
+    } finally {
+      actioningId = null;
+    }
+  }
+
   async function handleSyncLibrary(lib: LibraryResponse, e: MouseEvent) {
     e.preventDefault();
     e.stopPropagation();
     openMenuId = null;
-    if (lib.id == null) return;
-    actioningId = lib.id;
-    try {
-      const response = await startLibrarySync(lib.id);
-      applySyncStatus(response.run);
-    } catch {
-      // sync start failed — spinner stops regardless
-    } finally {
-      actioningId = null;
-    }
+    const id = lib.id;
+    if (id == null) return;
+    await runLibraryAction(
+      id,
+      "Failed to start the sync",
+      async () => (await startLibrarySync(id)).run,
+    );
   }
 
   async function handleRefreshMetadata(lib: LibraryResponse, e: MouseEvent) {
     e.preventDefault();
     e.stopPropagation();
     openMenuId = null;
-    if (lib.id == null) return;
-    actioningId = lib.id;
-    try {
-      const response = await refreshLibrary(lib.id);
-      applySyncStatus(response.run);
-    } catch {
-      // refresh failed — spinner stops regardless
-    } finally {
-      actioningId = null;
-    }
+    const id = lib.id;
+    if (id == null) return;
+    await runLibraryAction(
+      id,
+      "Failed to start the refresh",
+      async () => (await refreshLibrary(id)).run,
+    );
   }
 
   function handleRunOptions(
@@ -344,21 +301,53 @@ www.meshiplaw.com/lyra.
     if (lib.id == null) return;
     const runId = syncStatuses[lib.id]?.run.id;
     if (runId == null) return;
-    actioningId = lib.id;
-    try {
-      const status = await cancelSyncRun(runId);
-      applySyncStatus(status);
-    } catch {
-      // cancel failed — spinner stops regardless
-    } finally {
-      actioningId = null;
-    }
+    await runLibraryAction(lib.id, "Failed to cancel the run", () =>
+      cancelSyncRun(runId),
+    );
+  }
+
+  function handleHistory(lib: LibraryResponse, e: MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    openMenuId = null;
+    const id = lib.id;
+    if (id != null) historyLibrary = { ...lib, id };
   }
 
   load();
 </script>
 
 <svelte:window onclick={handleWindowClick} />
+
+{#snippet cardStatus(
+  status: LibrarySyncStatus,
+  label: string | null,
+  outcome: string | null,
+)}
+  {@const completion = syncCompletion(status)}
+  {#if label}
+    <span class="truncate">
+      {completion != null && status.run.status !== "cancelling"
+        ? runVerbs[status.run.kind]
+        : label}
+    </span>
+    {#if completion != null && status.run.status !== "cancelling"}
+      <span class="tabular-nums">{completion.toFixed(1)}%</span>
+    {/if}
+  {:else if outcome}
+    <span class="truncate"
+      >{outcome}{status.run.finished_at
+        ? ` ${timeAgo(status.run.finished_at, now)}`
+        : ""}</span
+    >
+    {#if status.failure_count > 0 && status.run.status !== "failed"}
+      <span aria-hidden="true">·</span>
+      <span class="shrink-0">{failedItems(status.failure_count)}</span>
+    {/if}
+  {:else}
+    <span>Never synced</span>
+  {/if}
+{/snippet}
 
 {#if loading}
   <div class="flex items-center justify-center py-20">
@@ -411,6 +400,7 @@ www.meshiplaw.com/lyra.
           {@const label = syncLabel(status)}
           {@const completion = status ? syncCompletion(status) : null}
           {@const locale = localeParts(lib)}
+          {@const outcome = status ? runOutcome(status) : null}
           <a
             href={lib.id != null ? `#/libraries/${lib.id}` : undefined}
             class="block"
@@ -425,26 +415,6 @@ www.meshiplaw.com/lyra.
                   <span class="min-w-0 truncate" title={lib.name}
                     >{lib.name}</span
                   >
-                  {#if label}
-                    <span
-                      class="inline-flex shrink-0 items-center gap-1.5 rounded bg-[#E6CEE3]/35 px-1.5 py-0.5 text-xs font-medium text-[#785473] dark:bg-[#BB7FB5]/10 dark:text-[#cfa2c9]"
-                      title={status
-                        ? `${settledUnits(status).toLocaleString()} steps processed${status.current?.subject ? ` · ${status.current.subject}` : ""}`
-                        : undefined}
-                    >
-                      <span
-                        >{completion != null &&
-                        status?.run.status !== "cancelling"
-                          ? status && runVerbs[status.run.kind]
-                          : label}</span
-                      >
-                      {#if completion != null && status?.run.status !== "cancelling"}
-                        <span class="tabular-nums"
-                          >{completion.toFixed(1)}%</span
-                        >
-                      {/if}
-                    </span>
-                  {/if}
                 </h3>
                 {#if lib.directory || locale.length > 0}
                   <p
@@ -463,10 +433,43 @@ www.meshiplaw.com/lyra.
                     {/each}
                   </p>
                 {/if}
+                {#if actionError?.libraryId === lib.id}
+                  <div
+                    role="alert"
+                    class="mt-1 flex items-start justify-between gap-2 text-xs text-red-600 dark:text-red-400"
+                  >
+                    <span class="min-w-0 break-words"
+                      >{actionError.message}</span
+                    >
+                    <button
+                      type="button"
+                      class="shrink-0 text-slate-500 hover:underline dark:text-neutral-400"
+                      onclick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        actionError = null;
+                      }}>Dismiss</button
+                    >
+                  </div>
+                {:else if status && canManage}
+                  <button
+                    type="button"
+                    class="mt-1 flex max-w-full min-w-0 items-center gap-1.5 text-left text-xs text-slate-500 hover:underline dark:text-neutral-400"
+                    onclick={(e) => handleHistory(lib, e)}
+                  >
+                    {@render cardStatus(status, label, outcome)}
+                  </button>
+                {:else if status && label}
+                  <p
+                    class="mt-1 flex min-w-0 items-center gap-1.5 text-xs text-slate-500 dark:text-neutral-400"
+                  >
+                    {@render cardStatus(status, label, outcome)}
+                  </p>
+                {/if}
               </div>
               {#if label && completion != null && status?.run.status !== "cancelling"}
                 <div
-                  class="absolute inset-x-0 bottom-0 h-0.5 overflow-hidden rounded-b-lg"
+                  class="absolute inset-x-0 bottom-0 h-0.5 overflow-hidden rounded-b-lg bg-slate-100 dark:bg-white/5"
                   aria-hidden="true"
                 >
                   <div
@@ -688,6 +691,28 @@ www.meshiplaw.com/lyra.
                         </svg>
                       </button>
                     </div>
+                    <button
+                      type="button"
+                      role="menuitem"
+                      class="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm text-slate-700 hover:bg-slate-100 dark:text-neutral-200 dark:hover:bg-neutral-600"
+                      onclick={(e) => handleHistory(lib, e)}
+                    >
+                      <svg
+                        class="h-4 w-4 text-slate-400 dark:text-neutral-500"
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        stroke-width="2"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          d="M12 7v5l3 2M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                        />
+                      </svg>
+                      Sync history
+                    </button>
                     {#if canCancel}
                       <button
                         type="button"
@@ -798,6 +823,15 @@ www.meshiplaw.com/lyra.
       applySyncStatus(response.run);
     }}
     onclose={() => (runOptions = null)}
+  />
+{/if}
+
+{#if historyLibrary}
+  <LibrarySyncHistoryModal
+    library={historyLibrary}
+    status={syncStatuses[historyLibrary.id]}
+    onstatus={applySyncStatus}
+    onclose={() => (historyLibrary = null)}
   />
 {/if}
 

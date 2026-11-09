@@ -39,6 +39,7 @@ import type {
   EntryResponse,
   LibraryAccessResponse,
   LibraryResponse,
+  LibrarySyncFailure,
   LibrarySyncStatus,
   LibrarySyncStartResponse,
   PlaylistResponse,
@@ -863,6 +864,28 @@ export function startLibrarySync(
   return post<LibrarySyncStartResponse>(
     withQuery(`/libraries/${id}/sync`, params),
     {},
+  );
+}
+
+// The library's newest 50 runs, newest first.
+export function fetchLibrarySyncRuns(
+  id: string,
+  signal?: AbortSignal,
+): Promise<LibrarySyncStatus[]> {
+  return get<LibrarySyncStatus[]>(
+    `/libraries/${encodeURIComponent(id)}/sync/runs`,
+    signal,
+  );
+}
+
+// At most 200 are stored, so this can hold fewer than the run's failure_count.
+export function fetchSyncRunFailures(
+  runId: string,
+  signal?: AbortSignal,
+): Promise<LibrarySyncFailure[]> {
+  return get<LibrarySyncFailure[]>(
+    `/sync/runs/${encodeURIComponent(runId)}/failures`,
+    signal,
   );
 }
 
