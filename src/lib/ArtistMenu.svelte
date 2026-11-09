@@ -105,14 +105,14 @@ www.meshiplaw.com/lyra.
         onclick={() => {
           anchor = null;
           showEdit = true;
-        }}>Edit metadata…</MenuItem
+        }}>Edit metadata</MenuItem
       >
       <MenuItem
         icon={coverIcon}
         onclick={() => {
           anchor = null;
           showCovers = true;
-        }}>Change cover…</MenuItem
+        }}>Change cover</MenuItem
       >
     {/if}
   </ContextMenu>

@@ -121,7 +121,7 @@ www.meshiplaw.com/lyra.
             class="mt-2 self-start rounded-md px-2 py-1 text-sm text-slate-500 hover:bg-slate-100 hover:text-slate-700 dark:text-neutral-400 dark:hover:bg-neutral-800 dark:hover:text-neutral-200"
             onclick={() => (merging = true)}
           >
-            Merge duplicates…
+            Merge duplicates
           </button>
         {/if}
       </div>

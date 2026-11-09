@@ -264,7 +264,7 @@ www.meshiplaw.com/lyra.
               <button
                 type="button"
                 class="underline hover:text-slate-700 dark:hover:text-neutral-200"
-                onclick={() => (remapping = true)}>Remap…</button
+                onclick={() => (remapping = true)}>Remap</button
               >
             {/if}
           </p>

@@ -66,7 +66,7 @@ www.meshiplaw.com/lyra.
         onclick={() => {
           describing = config.seed;
           anchor = null;
-        }}>Describe a mix…</MenuItem
+        }}>Describe a mix</MenuItem
       >
     {/if}
     {#if canPath}

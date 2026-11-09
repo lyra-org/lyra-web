@@ -47,8 +47,8 @@ own inset highlight. -->
     type="button"
     role="menuitem"
     class="mr-1.5 flex h-6 w-6 shrink-0 items-center justify-center rounded text-slate-400 hover:bg-slate-200 hover:text-slate-700 dark:text-neutral-500 dark:hover:bg-neutral-500 dark:hover:text-neutral-100"
-    title="Refresh with options…"
-    aria-label="Refresh with options…"
+    title="Refresh with options"
+    aria-label="Refresh with options"
     onclick={onoptions}
   >
     <svg

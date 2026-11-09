@@ -611,8 +611,8 @@ www.meshiplaw.com/lyra.
                         role="menuitem"
                         disabled={isRunning}
                         class="mr-1.5 flex h-6 w-6 shrink-0 items-center justify-center rounded text-slate-400 hover:bg-slate-200 hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-transparent dark:text-neutral-500 dark:hover:bg-neutral-500 dark:hover:text-neutral-100 dark:disabled:hover:bg-transparent"
-                        title="Sync with options…"
-                        aria-label="Sync with options…"
+                        title="Sync with options"
+                        aria-label="Sync with options"
                         onclick={(e) => handleRunOptions(lib, "sync", e)}
                       >
                         <svg
@@ -668,8 +668,8 @@ www.meshiplaw.com/lyra.
                         role="menuitem"
                         disabled={isRunning}
                         class="mr-1.5 flex h-6 w-6 shrink-0 items-center justify-center rounded text-slate-400 hover:bg-slate-200 hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-transparent dark:text-neutral-500 dark:hover:bg-neutral-500 dark:hover:text-neutral-100 dark:disabled:hover:bg-transparent"
-                        title="Refresh with options…"
-                        aria-label="Refresh with options…"
+                        title="Refresh with options"
+                        aria-label="Refresh with options"
                         onclick={(e) => handleRunOptions(lib, "refresh", e)}
                       >
                         <svg

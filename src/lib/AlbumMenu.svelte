@@ -111,22 +111,22 @@ www.meshiplaw.com/lyra.
       <MenuItem
         icon="M21 21l-4.35-4.35M11 19a8 8 0 100-16 8 8 0 000 16z"
         onclick={() => openModal(() => (showSearch = true))}
-        >Search metadata…</MenuItem
+        >Search metadata</MenuItem
       >
       <MenuItem
         icon={editIcon}
         onclick={() => openModal(() => (showEdit = true))}
-        >Edit metadata…</MenuItem
+        >Edit metadata</MenuItem
       >
       <MenuItem
         icon="M4 6h16M4 12h16M4 18h7m4 0l3 3m0 0l3-3m-3 3v-7"
         onclick={() => openModal(() => (showChains = true))}
-        >Edit chains…</MenuItem
+        >Edit chains</MenuItem
       >
       <MenuItem
         icon={coverIcon}
         onclick={() => openModal(() => (showCovers = true))}
-        >Change cover…</MenuItem
+        >Change cover</MenuItem
       >
     {/if}
   </ContextMenu>

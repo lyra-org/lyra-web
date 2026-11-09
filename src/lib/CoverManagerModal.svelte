@@ -453,7 +453,7 @@ www.meshiplaw.com/lyra.
                   d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M16 8l-4-4m0 0L8 8m4-4v12"
                 />
               </svg>
-              {hasManual ? "Replace upload…" : "Upload image…"}
+              {hasManual ? "Replace upload" : "Upload image"}
             {/if}
           </button>
           <p class="mt-1.5 text-xs text-slate-500 dark:text-neutral-400">

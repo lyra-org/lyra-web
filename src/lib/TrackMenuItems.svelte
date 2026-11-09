@@ -269,7 +269,7 @@ www.meshiplaw.com/lyra.
     <RefreshMenuItem {onrefresh} onoptions={onrefreshoptions} />
   {/if}
   {#if canManage}
-    <MenuItem icon={editIcon} onclick={onedit}>Edit metadata…</MenuItem>
+    <MenuItem icon={editIcon} onclick={onedit}>Edit metadata</MenuItem>
   {/if}
   {#if canManageLibraries}
     <MenuItem
@@ -280,12 +280,12 @@ www.meshiplaw.com/lyra.
   {#if canFixMissing}
     <MenuItem
       icon="M7.5 21L3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5"
-      onclick={onremap}>Remap…</MenuItem
+      onclick={onremap}>Remap</MenuItem
     >
     {#if onpurge}
       <MenuItem
         icon="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M4 7h16M9 7V4a1 1 0 011-1h4a1 1 0 011 1v3"
-        onclick={onpurge}>Purge…</MenuItem
+        onclick={onpurge}>Purge</MenuItem
       >
     {/if}
   {/if}
