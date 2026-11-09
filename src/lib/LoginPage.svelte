@@ -9,7 +9,7 @@ www.meshiplaw.com/lyra.
   import { untrack } from "svelte";
   import { loginUser } from "./api";
   import { getAuth } from "./auth.svelte.ts";
-  import logo from "../assets/logo.svg";
+  import Logo from "./Logo.svelte";
 
   interface Props {
     initialUsername?: string;
@@ -46,7 +46,7 @@ www.meshiplaw.com/lyra.
 
 <div class="flex min-h-screen items-center justify-center">
   <div class="w-full max-w-sm">
-    <img src={logo} alt="Lyra" class="mx-auto mb-8 h-24 w-24 scale-175" />
+    <Logo class="mx-auto mb-8 h-24 w-24 scale-175" />
     <h1
       class="mb-6 text-center text-2xl font-semibold text-slate-900 dark:text-neutral-100"
     >

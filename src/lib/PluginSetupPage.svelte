@@ -20,7 +20,7 @@ www.meshiplaw.com/lyra.
   import PluginInstallConfirm from "./PluginInstallConfirm.svelte";
   import PluginSource from "./PluginSource.svelte";
   import { pluginOrigin } from "./pluginSource";
-  import logo from "../assets/logo.svg";
+  import Logo from "./Logo.svelte";
 
   interface Props {
     // Called after installing or skipping; the parent refreshes server info.
@@ -181,7 +181,7 @@ www.meshiplaw.com/lyra.
 </script>
 
 <div class="mx-auto w-full max-w-2xl px-4 py-12 sm:px-6">
-  <img src={logo} alt="Lyra" class="mx-auto mb-6 h-20 w-20 scale-175" />
+  <Logo class="mx-auto mb-6 h-20 w-20 scale-175" />
   <h1
     class="mb-2 text-center text-2xl font-semibold text-slate-900 dark:text-neutral-100"
   >

@@ -49,7 +49,7 @@ www.meshiplaw.com/lyra.
   import MenuItem from "./lib/MenuItem.svelte";
   import { headerMixForRoute } from "./lib/headerMix.svelte.ts";
   import { pushEntry, replaceEntry, restoreScroll } from "./lib/history.ts";
-  import logo from "./assets/logo.svg";
+  import Logo from "./lib/Logo.svelte";
 
   const auth = getAuth();
   const setup = getSetup();
@@ -480,7 +480,7 @@ www.meshiplaw.com/lyra.
       class="relative flex flex-wrap items-center gap-x-2 gap-y-1 bg-slate-50 px-4 py-2 sm:gap-4 sm:px-6 sm:py-4 dark:bg-[#181a1b]"
     >
       <a href="#/">
-        <img src={logo} alt="Lyra" class="h-10 w-10 scale-175" />
+        <Logo class="h-10 w-10 scale-175" />
       </a>
       {#if searchOpen}
         <SearchNav
