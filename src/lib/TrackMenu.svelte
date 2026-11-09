@@ -44,6 +44,7 @@ www.meshiplaw.com/lyra.
   import PurgeMissingModal from "./PurgeMissingModal.svelte";
   import RefreshOptionsModal from "./RefreshOptionsModal.svelte";
   import RemapTrackModal from "./RemapTrackModal.svelte";
+  import TrackFilesModal from "./TrackFilesModal.svelte";
   import { refreshEntity, waitForSyncRun } from "./api";
   import TrackMenuItems from "./TrackMenuItems.svelte";
 
@@ -65,6 +66,7 @@ www.meshiplaw.com/lyra.
   let optionsTrack = $state<TrackResponse | null>(null);
   let pathTrack = $state<TrackResponse | null>(null);
   let remappingTrack = $state<TrackResponse | null>(null);
+  let filesTrack = $state<TrackResponse | null>(null);
   let purgingTrack = $state<TrackResponse | null>(null);
 </script>
 
@@ -95,6 +97,10 @@ www.meshiplaw.com/lyra.
         }}
         onpath={() => {
           pathTrack = track;
+          onclose();
+        }}
+        onfiles={() => {
+          filesTrack = track;
           onclose();
         }}
         onremap={() => {
@@ -129,6 +135,10 @@ www.meshiplaw.com/lyra.
 
 {#if pathTrack}
   <PathMixModal from={pathTrack} onclose={() => (pathTrack = null)} />
+{/if}
+
+{#if filesTrack}
+  <TrackFilesModal track={filesTrack} onclose={() => (filesTrack = null)} />
 {/if}
 
 {#if remappingTrack}

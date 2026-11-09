@@ -409,6 +409,11 @@ export function fetchTrackDetail(id: string): Promise<TrackResponse> {
   );
 }
 
+export async function fetchTrackEntries(id: string): Promise<EntryResponse[]> {
+  const track = await get<TrackResponse>(`/tracks/${id}?inc=entries`);
+  return track.entries ?? [];
+}
+
 export function fetchTrackWithArtists(id: string): Promise<TrackResponse> {
   return get<TrackResponse>(`/tracks/${id}?inc=artists`);
 }

@@ -39,6 +39,7 @@ export interface TrackResponse {
   available?: boolean;
   releases?: ReleaseResponse[];
   artists?: ArtistResponse[];
+  entries?: EntryResponse[];
   chain?: TrackChainPosition;
 }
 
@@ -174,6 +175,8 @@ export interface EntryResponse {
   size: number;
   // RFC 3339 timestamp of the file's last modification.
   modified_at: string;
+  // RFC 3339 timestamp of when a sync first failed to find the file.
+  missing_at?: string | null;
   hash?: string | null;
   file_kind?: string | null;
   tracks?: TrackResponse[];

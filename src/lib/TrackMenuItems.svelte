@@ -26,6 +26,7 @@ www.meshiplaw.com/lyra.
     onrefresh: () => void;
     onrefreshoptions: () => void;
     onpath: () => void;
+    onfiles: () => void;
     onremap: () => void;
     // Absent outside a library, which a purge needs.
     onpurge?: () => void;
@@ -40,6 +41,7 @@ www.meshiplaw.com/lyra.
     onrefresh,
     onrefreshoptions,
     onpath,
+    onfiles,
     onremap,
     onpurge,
   }: Props = $props();
@@ -48,9 +50,10 @@ www.meshiplaw.com/lyra.
   let canManage = $derived(getAuth().hasPermission("manage_metadata"));
   let canSync = $derived(getAuth().hasPermission("sync_metadata"));
   let missing = $derived(isMissing(track));
-  let canFixMissing = $derived(
-    missing && getAuth().hasPermission("manage_libraries"),
+  let canManageLibraries = $derived(
+    getAuth().hasPermission("manage_libraries"),
   );
+  let canFixMissing = $derived(missing && canManageLibraries);
 
   const player = getPlayer();
   const tagsStore = getTags();
@@ -286,7 +289,7 @@ www.meshiplaw.com/lyra.
     Lyrics
   </button>
   <RatingMenuItem targetId={trackId} label={track.title} />
-  {#if canSync || canManage || canFixMissing}
+  {#if canSync || canManage || canManageLibraries}
     <div
       role="separator"
       class="my-1 h-px bg-slate-100 dark:bg-neutral-700"
@@ -312,6 +315,25 @@ www.meshiplaw.com/lyra.
         />
       </svg>
       Edit metadata…
+    </button>
+  {/if}
+  {#if canManageLibraries}
+    <button type="button" class={menuItemClass} onclick={onfiles}>
+      <svg
+        class="h-4 w-4 text-slate-400 dark:text-neutral-500"
+        xmlns="http://www.w3.org/2000/svg"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke="currentColor"
+        stroke-width="2"
+      >
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"
+        />
+      </svg>
+      File info
     </button>
   {/if}
   {#if canFixMissing}
