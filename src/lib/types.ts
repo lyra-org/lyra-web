@@ -895,6 +895,9 @@ export interface RepositorySourceResponse {
   commit: string;
   // Tag and commit installs never move; branch installs track new releases.
   pinned: boolean;
+  // Whether the plugin's own code is held in the official Lyra repository's
+  // default branch.
+  official: boolean;
   // The release the subscribed repository offered at its last refresh or
   // daily check.
   offered?: OfferedReleaseResponse | null;
@@ -978,7 +981,8 @@ export interface PluginEffect {
   // Whose personal data it reaches, for the personal kinds.
   users?: PluginUsers | null;
   // The scopes giving the effect, each with the plugin declaring it.
-  via: { plugin: string; scope: string }[];
+  // `author_reason` is the plugin author's own unverified text for that scope.
+  via: { plugin: string; scope: string; author_reason?: string | null }[];
   description: string;
 }
 
@@ -1258,6 +1262,9 @@ export type PluginPreviewResponse = {
   commit?: string | null;
   // Present only when the repository index points at another repository.
   source?: { origin: string } | null;
+  // Whether the plugin's own code is held in the official Lyra repository's
+  // default branch.
+  official: boolean;
   // Why the plugin has no installable release; `name`, `version`,
   // `description` and `scopes` are then empty. An `unknown` status's `reason`
   // can repeat it.

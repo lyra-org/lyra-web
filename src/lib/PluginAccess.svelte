@@ -6,62 +6,60 @@ www.meshiplaw.com/lyra.
 -->
 
 <script lang="ts">
-  import type { PluginEffect, PluginPreviewResponse } from "./types";
+  import type { PluginPreviewResponse } from "./types";
+  import PluginAccessLabels from "./PluginAccessLabels.svelte";
+  import PluginEffects from "./PluginEffects.svelte";
   import PluginGain from "./PluginGain.svelte";
-  import PluginRiskReasons from "./PluginRiskReasons.svelte";
   import PluginScopeList from "./PluginScopeList.svelte";
 
   interface Props {
     plugin: PluginPreviewResponse;
+    // Lists everything outright, for a page already asking about this plugin.
+    expanded?: boolean;
   }
 
-  let { plugin }: Props = $props();
+  let { plugin, expanded = false }: Props = $props();
 
   let access = $derived(plugin.access);
-
-  // Names the dependencies an effect comes through, leaving out the plugin
-  // itself.
-  function through(via: PluginEffect["via"]): string {
-    const others = [
-      ...new Set(
-        via.map((source) => source.plugin).filter((id) => id !== plugin.id),
-      ),
-    ];
-    return others.length > 0 ? ` (through ${others.join(", ")})` : "";
-  }
 </script>
 
 {#if access}
-  {#if access.effects.length > 0}
-    <ul
-      class="mt-2 list-disc pl-5 text-sm text-slate-700 dark:text-neutral-300"
-    >
-      {#each access.effects as effect, i (i)}
-        <li>{effect.description}{through(effect.via)}</li>
-      {/each}
-    </ul>
-  {:else}
+  {#if access.effects.length === 0}
     <p class="mt-2 text-sm text-slate-500 dark:text-neutral-400">
       Only reads the shared library.
     </p>
+  {:else if expanded}
+    <div class="mt-2">
+      <PluginEffects effects={access.effects} plugin={plugin.id} />
+    </div>
+  {:else}
+    <div class="mt-2">
+      <PluginAccessLabels effects={access.effects} />
+    </div>
   {/if}
   {#if access.unresolved_dependencies.length > 0}
-    <p class="mt-1 text-sm text-amber-700 dark:text-amber-400">
+    <p class="mt-1 text-sm text-slate-600 dark:text-neutral-400">
       Depends on {access.unresolved_dependencies.join(", ")}, which
       {access.unresolved_dependencies.length === 1 ? "is" : "are"} not available,
       so it may be able to do more than listed.
     </p>
   {/if}
-  <PluginRiskReasons risk={access.risk} />
-  {#if access.reached_scopes.length > 0}
+  {#if !expanded && (access.effects.length > 0 || access.reached_scopes.length > 0)}
     <details class="mt-2">
       <summary
         class="cursor-pointer text-xs text-slate-400 select-none hover:text-slate-600 dark:text-neutral-500 dark:hover:text-neutral-300"
       >
-        Scopes ({access.reached_scopes.length})
+        {access.effects.length > 0
+          ? "What it can do and why"
+          : `Scopes (${access.reached_scopes.length})`}
       </summary>
-      <div class="mt-1">
-        <PluginScopeList scopes={access.reached_scopes.map((s) => s.scope)} />
+      <div class="mt-1 space-y-2">
+        {#if access.effects.length > 0}
+          <PluginEffects effects={access.effects} plugin={plugin.id} />
+        {/if}
+        {#if access.reached_scopes.length > 0}
+          <PluginScopeList scopes={access.reached_scopes.map((s) => s.scope)} />
+        {/if}
       </div>
     </details>
   {/if}

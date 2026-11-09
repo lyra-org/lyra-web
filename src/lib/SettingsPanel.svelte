@@ -16,6 +16,7 @@ www.meshiplaw.com/lyra.
   import CloseButton from "./CloseButton.svelte";
   import UserSettings from "./UserSettings.svelte";
   import PluginManagement from "./PluginManagement.svelte";
+  import { shortOrigin } from "./pluginSource";
   import ProviderSettings from "./ProviderSettings.svelte";
   import { getAuth } from "./auth.svelte.ts";
   import type {
@@ -352,7 +353,7 @@ www.meshiplaw.com/lyra.
     }
     const source = selectedPluginSource;
     if (source == null) return null;
-    let text = `Installed from ${source.origin.replace(/^https?:\/\//, "")}, ${source.pinned ? "pinned to" : "tracking"} ${source.ref ?? "the default branch"} (${source.commit.slice(0, 7)})`;
+    let text = `Installed from ${source.official ? "the official Lyra repository" : shortOrigin(source.origin)}, ${source.pinned ? "pinned to" : "tracking"} ${source.ref ?? "the default branch"} (${source.commit.slice(0, 7)})`;
     if (source.installed_automatically && source.installed_at) {
       text += `. Updated automatically on ${new Date(source.installed_at).toLocaleDateString()}`;
     }

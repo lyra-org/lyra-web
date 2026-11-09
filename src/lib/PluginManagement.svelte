@@ -29,7 +29,10 @@ www.meshiplaw.com/lyra.
   } from "./pluginUpdates.svelte.ts";
   import PluginHoldNotice from "./PluginHoldNotice.svelte";
   import PluginAccess from "./PluginAccess.svelte";
-  import PluginRiskBadge from "./PluginRiskBadge.svelte";
+  import PluginInstallConfirm from "./PluginInstallConfirm.svelte";
+  import PluginSource from "./PluginSource.svelte";
+  import { pluginOrigin } from "./pluginSource";
+  import PluginAccessLabels from "./PluginAccessLabels.svelte";
 
   interface Props {
     plugins: PluginManifestResponse[];
@@ -85,6 +88,9 @@ www.meshiplaw.com/lyra.
   );
 
   let held = $derived(plugins.filter(isAwaitingApproval));
+
+  // A plugin from outside the official repository, awaiting confirmation.
+  let confirming = $state<CatalogEntry | null>(null);
 
   onMount(() => {
     if (setup.catalog == null && !setup.catalogLoading) {
@@ -164,6 +170,20 @@ www.meshiplaw.com/lyra.
       }
       return `Installed ${entry.plugin.name}.`;
     });
+  }
+
+  function requestInstall(entry: CatalogEntry) {
+    if (entry.plugin.official) {
+      void install(entry);
+    } else {
+      confirming = entry;
+    }
+  }
+
+  function confirmInstall() {
+    const entry = confirming;
+    confirming = null;
+    if (entry) void install(entry);
   }
 
   function previewRepository(event: SubmitEvent) {
@@ -269,6 +289,10 @@ www.meshiplaw.com/lyra.
                   <span class="text-xs text-slate-400 dark:text-neutral-500"
                     >v{plugin.version} → v{plugin.source.offered.version}</span
                   >
+                  <PluginSource
+                    official={plugin.source.official}
+                    origin={plugin.source.origin}
+                  />
                 </div>
                 <PluginHoldNotice
                   hold={plugin.source.hold}
@@ -326,9 +350,10 @@ www.meshiplaw.com/lyra.
                       >v{plugin.version}</span
                     >
                   {/if}
-                  {#if plugin.access}
-                    <PluginRiskBadge risk={plugin.access.risk} />
-                  {/if}
+                  <PluginSource
+                    official={plugin.official}
+                    origin={pluginOrigin(group.repo.origin, plugin)}
+                  />
                 </div>
                 {#if plugin.description}
                   <p class="mt-1 text-sm text-slate-600 dark:text-neutral-400">
@@ -347,7 +372,7 @@ www.meshiplaw.com/lyra.
                   type="button"
                   class={primaryClass}
                   {disabled}
-                  onclick={() => install({ repo: group.repo, plugin })}
+                  onclick={() => requestInstall({ repo: group.repo, plugin })}
                 >
                   {pending === `install:${plugin.id}`
                     ? "Installing…"
@@ -455,8 +480,14 @@ www.meshiplaw.com/lyra.
                   <span class="text-xs text-slate-400 dark:text-neutral-500"
                     >v{plugin.version}</span
                   >
-                  {#if plugin.access}
-                    <PluginRiskBadge risk={plugin.access.risk} />
+                  <PluginSource
+                    official={plugin.official}
+                    origin={pluginOrigin(repositoryPreview.origin, plugin)}
+                  />
+                  {#if plugin.access && plugin.access.effects.length > 0}
+                    <div class="mt-1">
+                      <PluginAccessLabels effects={plugin.access.effects} />
+                    </div>
                   {/if}
                 </li>
               {/each}
@@ -475,3 +506,16 @@ www.meshiplaw.com/lyra.
     </form>
   </section>
 </div>
+
+{#if confirming}
+  <PluginInstallConfirm
+    entries={[
+      {
+        plugin: confirming.plugin,
+        origin: pluginOrigin(confirming.repo.origin, confirming.plugin),
+      },
+    ]}
+    onclose={() => (confirming = null)}
+    onconfirm={confirmInstall}
+  />
+{/if}

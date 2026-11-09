@@ -11,12 +11,15 @@ www.meshiplaw.com/lyra.
     CatalogRepository,
     FailedInstallResponse,
     InstalledPluginResponse,
+    PluginPreviewResponse,
     PreviewedPlugin,
   } from "./types";
   import { installRepositoryPlugins, updateServerSetup } from "./api";
   import { getSetup } from "./setup.svelte.ts";
   import PluginAccess from "./PluginAccess.svelte";
-  import PluginRiskBadge from "./PluginRiskBadge.svelte";
+  import PluginInstallConfirm from "./PluginInstallConfirm.svelte";
+  import PluginSource from "./PluginSource.svelte";
+  import { pluginOrigin } from "./pluginSource";
   import logo from "../assets/logo.svg";
 
   interface Props {
@@ -75,6 +78,28 @@ www.meshiplaw.com/lyra.
         ),
       }))
       .filter((s) => s.plugins.length > 0);
+  }
+
+  // Selected plugins from outside the official repository, once the admin has
+  // asked to install them.
+  let confirming = $state<
+    { plugin: PluginPreviewResponse; origin: string }[] | null
+  >(null);
+
+  function requestInstall() {
+    const unofficial = (setup.catalog ?? []).flatMap((repo) =>
+      repo.plugins
+        .filter((p) => selected[key(repo, p.id)] && p.commit && !p.official)
+        .map((plugin) => ({
+          plugin,
+          origin: pluginOrigin(repo.origin, plugin),
+        })),
+    );
+    if (unofficial.length > 0) {
+      confirming = unofficial;
+    } else {
+      void install();
+    }
   }
 
   async function install() {
@@ -265,9 +290,11 @@ www.meshiplaw.com/lyra.
                           class="text-xs text-slate-500 dark:text-neutral-400"
                           >Installed</span
                         >
-                      {:else if plugin.access}
-                        <PluginRiskBadge risk={plugin.access.risk} />
                       {/if}
+                      <PluginSource
+                        official={plugin.official}
+                        origin={pluginOrigin(repo.origin, plugin)}
+                      />
                     </div>
                     {#if plugin.description}
                       <p
@@ -349,7 +376,7 @@ www.meshiplaw.com/lyra.
           type="button"
           class={primaryClass}
           disabled={busy || selectedCount === 0}
-          onclick={install}
+          onclick={requestInstall}
         >
           {installing
             ? "Installing..."
@@ -366,3 +393,14 @@ www.meshiplaw.com/lyra.
     </p>
   {/if}
 </div>
+
+{#if confirming}
+  <PluginInstallConfirm
+    entries={confirming}
+    onclose={() => (confirming = null)}
+    onconfirm={() => {
+      confirming = null;
+      void install();
+    }}
+  />
+{/if}
