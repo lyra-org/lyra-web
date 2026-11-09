@@ -43,7 +43,7 @@ www.meshiplaw.com/lyra.
   }
 </script>
 
-<div class="flex items-center gap-1.5 {className}" {title}>
+<div class="flex min-w-0 items-center gap-1.5 {className}" {title}>
   <button
     type="button"
     class="cursor-pointer text-slate-400 hover:text-slate-600 disabled:cursor-not-allowed disabled:opacity-30 dark:text-neutral-500 dark:hover:text-neutral-300"
@@ -93,7 +93,7 @@ www.meshiplaw.com/lyra.
     {disabled}
     oninput={(e) => oninput(Number(e.currentTarget.value))}
     onchange={settle}
-    class="h-1 w-20 cursor-pointer appearance-none rounded-full bg-slate-200 accent-[#E6CEE3] disabled:cursor-not-allowed disabled:opacity-30 dark:bg-neutral-700 dark:accent-[#BB7FB5]"
+    class="h-1 w-20 min-w-0 cursor-pointer appearance-none rounded-full bg-slate-200 accent-[#E6CEE3] disabled:cursor-not-allowed disabled:opacity-30 dark:bg-neutral-700 dark:accent-[#BB7FB5]"
     aria-label="Volume"
   />
 </div>

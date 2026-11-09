@@ -180,16 +180,20 @@ www.meshiplaw.com/lyra.
     <!-- svelte-ignore a11y_click_events_have_key_events -->
     <!-- svelte-ignore a11y_no_static_element_interactions -->
     <div
-      class="group relative h-1.5 w-full cursor-pointer overflow-hidden rounded-full bg-slate-200 dark:bg-neutral-700"
+      class="group relative z-10 -mt-2 -mb-1.5 cursor-pointer pt-2 pb-1.5 sm:m-0 sm:p-0"
       onclick={onSeek}
     >
       <div
-        class="h-full bg-[#E6CEE3] transition-[width] duration-200 ease-out dark:bg-[#BB7FB5]"
-        style="width: {progress}%"
-      ></div>
+        class="h-1.5 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-neutral-700"
+      >
+        <div
+          class="h-full bg-[#E6CEE3] transition-[width] duration-200 ease-out dark:bg-[#BB7FB5]"
+          style="width: {progress}%"
+        ></div>
+      </div>
     </div>
 
-    <div class="flex items-center gap-4 px-4 py-2">
+    <div class="flex items-center gap-1 px-3 py-1.5 sm:gap-4 sm:px-4 sm:py-2">
       <!-- Left: cover + track info -->
       <div class="flex min-w-0 flex-1 items-center gap-3">
         <CoverImage {cover} class="h-10 w-10 rounded" />
@@ -208,17 +212,18 @@ www.meshiplaw.com/lyra.
       </div>
 
       <!-- Center: controls -->
-      <div class="flex items-center gap-2">
+      <div class="flex items-center gap-1 sm:gap-2">
         {#if trackId}
           <FavoriteButton
             targetId={trackId}
             label={title}
             size="sm"
             stopPropagation
+            class="relative mr-1.5 before:absolute before:-inset-2 sm:mr-0 sm:before:hidden"
           />
         {/if}
         <button
-          class="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-neutral-300 dark:hover:bg-neutral-800 dark:hover:text-neutral-100"
+          class="hidden h-8 w-8 cursor-pointer items-center justify-center rounded-full text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 sm:flex dark:text-neutral-300 dark:hover:bg-neutral-800 dark:hover:text-neutral-100"
           onclick={previous}
           disabled={!supports("previous_track")}
           aria-label="Previous track"
@@ -235,7 +240,7 @@ www.meshiplaw.com/lyra.
           </svg>
         </button>
         <button
-          class="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full bg-[#E6CEE3] text-slate-900 shadow-sm transition-all hover:scale-105 hover:bg-[#d4b5cf] disabled:scale-100 disabled:opacity-40 disabled:hover:bg-[#E6CEE3] dark:bg-[#BB7FB5] dark:text-white dark:hover:bg-[#cfa2c9] dark:disabled:hover:bg-[#BB7FB5]"
+          class="flex h-11 w-11 cursor-pointer items-center justify-center rounded-full bg-[#E6CEE3] text-slate-900 shadow-sm transition-all hover:scale-105 hover:bg-[#d4b5cf] disabled:scale-100 disabled:opacity-40 disabled:hover:bg-[#E6CEE3] sm:h-9 sm:w-9 dark:bg-[#BB7FB5] dark:text-white dark:hover:bg-[#cfa2c9] dark:disabled:hover:bg-[#BB7FB5]"
           onclick={toggle}
           disabled={remote
             ? !supports(playing ? "pause" : "unpause") && !supports("play")
@@ -275,7 +280,7 @@ www.meshiplaw.com/lyra.
           {/if}
         </button>
         <button
-          class="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-neutral-300 dark:hover:bg-neutral-800 dark:hover:text-neutral-100"
+          class="hidden h-8 w-8 cursor-pointer items-center justify-center rounded-full text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 sm:flex dark:text-neutral-300 dark:hover:bg-neutral-800 dark:hover:text-neutral-100"
           onclick={stop}
           disabled={!supports("stop")}
           aria-label="Stop"
@@ -290,7 +295,7 @@ www.meshiplaw.com/lyra.
           </svg>
         </button>
         <button
-          class="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-neutral-300 dark:hover:bg-neutral-800 dark:hover:text-neutral-100"
+          class="flex h-11 w-11 cursor-pointer items-center justify-center rounded-full text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 sm:h-8 sm:w-8 dark:text-neutral-300 dark:hover:bg-neutral-800 dark:hover:text-neutral-100"
           onclick={next}
           disabled={!supports("next_track")}
           aria-label="Next track"
@@ -309,16 +314,18 @@ www.meshiplaw.com/lyra.
       </div>
 
       <!-- Right: volume + time -->
-      <div class="flex flex-1 items-center justify-end gap-3">
-        <VolumeControl
-          value={volume}
-          disabled={!supports("set_volume")}
-          title={remote
-            ? "Sets the device's volume; its current level isn't reported"
-            : undefined}
-          oninput={setVolume}
-          onchange={commitVolume}
-        />
+      <div class="hidden flex-1 items-center justify-end gap-3 sm:flex">
+        <div class="hidden md:block">
+          <VolumeControl
+            value={volume}
+            disabled={!supports("set_volume")}
+            title={remote
+              ? "Sets the device's volume; its current level isn't reported"
+              : undefined}
+            oninput={setVolume}
+            onchange={commitVolume}
+          />
+        </div>
         <div class="relative" data-device-picker>
           <button
             type="button"
@@ -393,7 +400,9 @@ www.meshiplaw.com/lyra.
             </svg>
           </button>
         {/if}
-        <span class="text-xs text-slate-500 tabular-nums dark:text-neutral-400">
+        <span
+          class="text-xs whitespace-nowrap text-slate-500 tabular-nums dark:text-neutral-400"
+        >
           {formatTime(positionS)} / {formatTime(durationS)}
         </span>
       </div>

@@ -191,7 +191,7 @@ www.meshiplaw.com/lyra.
         </div>
 
         <!-- Center: prev, play, next, stop -->
-        <div class="flex items-center gap-3">
+        <div class="flex items-center gap-1 sm:gap-3">
           <button
             class="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-neutral-300 dark:hover:bg-neutral-800 dark:hover:text-neutral-100"
             onclick={() => player.prevTrack()}
@@ -279,7 +279,7 @@ www.meshiplaw.com/lyra.
         </div>
 
         <!-- Right: volume -->
-        <div class="flex w-24 items-center justify-end">
+        <div class="flex w-24 min-w-0 items-center justify-end">
           <VolumeControl
             value={player.volume}
             oninput={(v) => player.setVolume(v)}
