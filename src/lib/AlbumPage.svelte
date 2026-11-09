@@ -6,6 +6,7 @@ www.meshiplaw.com/lyra.
 -->
 
 <script lang="ts">
+  import { PageResource } from "./pageResource.svelte.ts";
   import type { ArtistResponse, ReleaseResponse, TrackResponse } from "./types";
   import { fetchRelease } from "./api";
   import { getPlayer, isMissing, MISSING_HINT } from "./player.svelte.ts";
@@ -16,7 +17,9 @@ www.meshiplaw.com/lyra.
   import ChangeCoverButton from "./ChangeCoverButton.svelte";
   import CoverManagerModal from "./CoverManagerModal.svelte";
   import { shownCover } from "./covers.svelte.ts";
+  import AlbumMenu from "./AlbumMenu.svelte";
   import { anchorAtPointer, anchorBelow } from "./ContextMenu.svelte";
+  import OptionsButton from "./OptionsButton.svelte";
   import TrackMenu, { type TrackMenuTarget } from "./TrackMenu.svelte";
   import FavoriteButton from "./FavoriteButton.svelte";
   import RatingButton from "./RatingButton.svelte";
@@ -31,11 +34,18 @@ www.meshiplaw.com/lyra.
 
   let { albumId }: Props = $props();
 
-  let album = $state<ReleaseResponse | null>(null);
-  let loading = $state(true);
-  let error: string | null = $state(null);
+  const resource = new PageResource(
+    () => albumId,
+    fetchRelease,
+    "Failed to load album",
+  );
+  let album = $derived(resource.value);
+  let loading = $derived(resource.loading);
+  let error = $derived(resource.error);
   const auth = getAuth();
   let canManage = $derived(auth.hasPermission("manage_metadata"));
+  let canSync = $derived(auth.hasPermission("sync_metadata"));
+  let albumMenu = $state<AlbumMenu>();
   let showCovers = $state(false);
 
   let cover = $derived(album ? shownCover(album.id, album.cover) : null);
@@ -107,19 +117,6 @@ www.meshiplaw.com/lyra.
     return `${minutes}:${seconds.toString().padStart(2, "0")}`;
   }
 
-  async function load(id: string) {
-    loading = true;
-    error = null;
-    album = null;
-    try {
-      album = await fetchRelease(id);
-    } catch (e) {
-      error = e instanceof Error ? e.message : "Failed to load album";
-    } finally {
-      loading = false;
-    }
-  }
-
   let trackMenu = $state<TrackMenuTarget | null>(null);
 
   function openTrackMenu(e: MouseEvent, track: TrackResponse) {
@@ -154,10 +151,6 @@ www.meshiplaw.com/lyra.
       coverBlurhash: cover?.blurhash ?? null,
       trackArtistNames,
     };
-  });
-
-  $effect(() => {
-    load(albumId);
   });
 
   $effect(() => {
@@ -206,6 +199,14 @@ www.meshiplaw.com/lyra.
           {#if album.id}
             <FavoriteButton targetId={album.id} label={album.title} />
             <RatingButton targetId={album.id} label={album.title} />
+            {#if canManage || canSync}
+              <OptionsButton
+                label="Album options"
+                expanded={albumMenu?.isOpen() ?? false}
+                busy={albumMenu?.isRefreshing() ?? false}
+                onclick={(e) => albumMenu?.toggle(e)}
+              />
+            {/if}
           {/if}
         </div>
         <p class="mt-1 text-lg text-slate-600 dark:text-neutral-300">
@@ -453,8 +454,13 @@ www.meshiplaw.com/lyra.
 <TrackMenu
   target={trackMenu}
   onclose={() => (trackMenu = null)}
-  onchanged={() => load(albumId)}
+  onchanged={resource.reload}
+  onedited={resource.reload}
 />
+
+{#if album}
+  <AlbumMenu bind:this={albumMenu} {album} onchanged={resource.reload} />
+{/if}
 
 {#if showCovers && album?.id}
   <CoverManagerModal

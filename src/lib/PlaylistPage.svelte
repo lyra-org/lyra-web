@@ -6,6 +6,7 @@ www.meshiplaw.com/lyra.
 -->
 
 <script lang="ts">
+  import { PageResource } from "./pageResource.svelte.ts";
   import type { PlaylistResponse, PlaylistTrackResponse } from "./types";
   import {
     fetchPlaylist,
@@ -29,9 +30,14 @@ www.meshiplaw.com/lyra.
 
   let { playlistId }: Props = $props();
 
-  let playlist = $state<PlaylistResponse | null>(null);
-  let loading = $state(true);
-  let error: string | null = $state(null);
+  const resource = new PageResource(
+    () => playlistId,
+    fetchPlaylist,
+    "Failed to load playlist",
+  );
+  let playlist = $derived(resource.value);
+  let loading = $derived(resource.loading);
+  let error = $derived(resource.error);
 
   let editing = $state(false);
   let editName = $state("");
@@ -63,19 +69,6 @@ www.meshiplaw.com/lyra.
     const hours = Math.floor(totalMinutes / 60);
     const mins = totalMinutes % 60;
     return `${hours} hr ${mins} min`;
-  }
-
-  async function load(id: string) {
-    loading = true;
-    error = null;
-    playlist = null;
-    try {
-      playlist = await fetchPlaylist(id);
-    } catch (e) {
-      error = e instanceof Error ? e.message : "Failed to load playlist";
-    } finally {
-      loading = false;
-    }
   }
 
   let playlistContext = $derived.by(() => {
@@ -128,7 +121,7 @@ www.meshiplaw.com/lyra.
     if (!playlist?.id || !editName.trim() || saving) return;
     saving = true;
     try {
-      playlist = await updatePlaylist(playlist.id, {
+      resource.value = await updatePlaylist(playlist.id, {
         name: editName.trim(),
         description: editDescription.trim() || null,
       });
@@ -154,7 +147,7 @@ www.meshiplaw.com/lyra.
     if (!playlist?.id) return;
     try {
       await removePlaylistTrack(playlist.id, entryId);
-      playlist = {
+      resource.value = {
         ...playlist,
         tracks: (playlist.tracks ?? []).filter((t) => t.entry_id !== entryId),
       };
@@ -171,15 +164,11 @@ www.meshiplaw.com/lyra.
         entryId,
         newPosition,
       );
-      playlist = { ...playlist, tracks: updatedItems };
+      resource.value = { ...playlist, tracks: updatedItems };
     } catch {
       // ignore
     }
   }
-
-  $effect(() => {
-    load(playlistId);
-  });
 </script>
 
 {#if loading}
@@ -488,5 +477,6 @@ www.meshiplaw.com/lyra.
 <TrackMenu
   target={trackMenu}
   onclose={() => (trackMenu = null)}
-  onchanged={() => load(playlistId)}
+  onchanged={resource.reload}
+  onedited={resource.reload}
 />

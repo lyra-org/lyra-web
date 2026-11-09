@@ -6,13 +6,13 @@ www.meshiplaw.com/lyra.
 -->
 
 <script lang="ts">
+  import MenuItem, { editIcon } from "./MenuItem.svelte";
   import type { PlaylistResponse, TagColor, TrackResponse } from "./types";
   import type { PlaybackContext } from "./player.svelte.ts";
   import { addPlaylistTracks, fetchPlaylists, fetchAllPages } from "./api";
   import { getPlayer, isMissing } from "./player.svelte.ts";
   import { getAuth } from "./auth.svelte.ts";
   import { mixSupport } from "./mixOptions";
-  import { menuItemClass } from "./ContextMenu.svelte";
   import RatingMenuItem from "./RatingMenuItem.svelte";
   import RefreshMenuItem from "./RefreshMenuItem.svelte";
   import { TAG_COLORS, getTags, tagSwatchClass } from "./tags.svelte.ts";
@@ -161,6 +161,7 @@ www.meshiplaw.com/lyra.
 {#if view === "main"}
   <button
     type="button"
+    role="menuitem"
     disabled={missing}
     title={missing ? "This track's file is missing" : undefined}
     class="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-transparent dark:text-neutral-200 dark:hover:bg-neutral-600 dark:disabled:hover:bg-transparent"
@@ -183,29 +184,14 @@ www.meshiplaw.com/lyra.
     Add to queue
   </button>
   {#if pathSupported && !missing}
-    <button type="button" class={menuItemClass} onclick={onpath}>
-      <svg
-        class="h-4 w-4 text-slate-400 dark:text-neutral-500"
-        xmlns="http://www.w3.org/2000/svg"
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke="currentColor"
-        stroke-width="2"
-        aria-hidden="true"
-      >
-        <circle cx="6" cy="18" r="2" />
-        <circle cx="18" cy="6" r="2" />
-        <path
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          d="M8 18h7a3 3 0 0 0 0-6H9a3 3 0 0 1 0-6h7"
-        />
-      </svg>
-      Path to…
-    </button>
+    <MenuItem
+      icon="M16 6a2 2 0 1 0 4 0a2 2 0 1 0-4 0M4 18a2 2 0 1 0 4 0a2 2 0 1 0-4 0M8 18h7a3 3 0 0 0 0-6H9a3 3 0 0 1 0-6h7"
+      onclick={onpath}>Path to…</MenuItem
+    >
   {/if}
   <button
     type="button"
+    role="menuitem"
     class="flex w-full items-center justify-between gap-2 px-3 py-1.5 text-left text-sm text-slate-700 hover:bg-slate-100 dark:text-neutral-200 dark:hover:bg-neutral-600"
     onclick={openPlaylists}
   >
@@ -239,6 +225,7 @@ www.meshiplaw.com/lyra.
   </button>
   <button
     type="button"
+    role="menuitem"
     class="flex w-full items-center justify-between gap-2 px-3 py-1.5 text-left text-sm text-slate-700 hover:bg-slate-100 dark:text-neutral-200 dark:hover:bg-neutral-600"
     onclick={openTags}
   >
@@ -270,24 +257,7 @@ www.meshiplaw.com/lyra.
       <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
     </svg>
   </button>
-  <button type="button" class={menuItemClass} onclick={onlyrics}>
-    <svg
-      class="h-4 w-4 text-slate-400 dark:text-neutral-500"
-      xmlns="http://www.w3.org/2000/svg"
-      fill="none"
-      viewBox="0 0 24 24"
-      stroke="currentColor"
-      stroke-width="2"
-      aria-hidden="true"
-    >
-      <path
-        stroke-linecap="round"
-        stroke-linejoin="round"
-        d="M4 6h16M4 12h16M4 18h10"
-      />
-    </svg>
-    Lyrics
-  </button>
+  <MenuItem icon="M4 6h16M4 12h16M4 18h10" onclick={onlyrics}>Lyrics</MenuItem>
   <RatingMenuItem targetId={trackId} label={track.title} />
   {#if canSync || canManage || canManageLibraries}
     <div
@@ -299,79 +269,24 @@ www.meshiplaw.com/lyra.
     <RefreshMenuItem {onrefresh} onoptions={onrefreshoptions} />
   {/if}
   {#if canManage}
-    <button type="button" class={menuItemClass} onclick={onedit}>
-      <svg
-        class="h-4 w-4 text-slate-400 dark:text-neutral-500"
-        xmlns="http://www.w3.org/2000/svg"
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke="currentColor"
-        stroke-width="2"
-      >
-        <path
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
-        />
-      </svg>
-      Edit metadata…
-    </button>
+    <MenuItem icon={editIcon} onclick={onedit}>Edit metadata…</MenuItem>
   {/if}
   {#if canManageLibraries}
-    <button type="button" class={menuItemClass} onclick={onfiles}>
-      <svg
-        class="h-4 w-4 text-slate-400 dark:text-neutral-500"
-        xmlns="http://www.w3.org/2000/svg"
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke="currentColor"
-        stroke-width="2"
-      >
-        <path
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"
-        />
-      </svg>
-      File info
-    </button>
+    <MenuItem
+      icon="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"
+      onclick={onfiles}>File info</MenuItem
+    >
   {/if}
   {#if canFixMissing}
-    <button type="button" class={menuItemClass} onclick={onremap}>
-      <svg
-        class="h-4 w-4 text-slate-400 dark:text-neutral-500"
-        xmlns="http://www.w3.org/2000/svg"
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke="currentColor"
-        stroke-width="2"
-      >
-        <path
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          d="M7.5 21L3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5"
-        />
-      </svg>
-      Remap…
-    </button>
+    <MenuItem
+      icon="M7.5 21L3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5"
+      onclick={onremap}>Remap…</MenuItem
+    >
     {#if onpurge}
-      <button type="button" class={menuItemClass} onclick={onpurge}>
-        <svg
-          class="h-4 w-4 text-slate-400 dark:text-neutral-500"
-          xmlns="http://www.w3.org/2000/svg"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-          stroke-width="2"
-        >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M4 7h16M9 7V4a1 1 0 011-1h4a1 1 0 011 1v3"
-          />
-        </svg>
-        Purge…
-      </button>
+      <MenuItem
+        icon="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M4 7h16M9 7V4a1 1 0 011-1h4a1 1 0 011 1v3"
+        onclick={onpurge}>Purge…</MenuItem
+      >
     {/if}
   {/if}
 {:else if view === "playlists"}

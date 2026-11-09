@@ -6,9 +6,9 @@ www.meshiplaw.com/lyra.
 -->
 
 <script lang="ts">
+  import MenuItem from "./MenuItem.svelte";
   import ContextMenu, {
     anchorBelow,
-    menuItemClass,
     type MenuAnchor,
   } from "./ContextMenu.svelte";
   import DescribeMixModal from "./DescribeMixModal.svelte";
@@ -62,30 +62,20 @@ www.meshiplaw.com/lyra.
 {#if anchor}
   <ContextMenu {anchor} onclose={() => (anchor = null)}>
     {#if support.query}
-      <button
-        type="button"
-        role="menuitem"
-        class={menuItemClass}
+      <MenuItem
         onclick={() => {
           describing = config.seed;
           anchor = null;
-        }}
+        }}>Describe a mix…</MenuItem
       >
-        Describe a mix…
-      </button>
     {/if}
     {#if canPath}
-      <button
-        type="button"
-        role="menuitem"
-        class={menuItemClass}
+      <MenuItem
         onclick={() => {
           pathFrom = config.pathFrom;
           anchor = null;
-        }}
+        }}>Path from this track to…</MenuItem
       >
-        Path from this track to…
-      </button>
     {/if}
   </ContextMenu>
 {/if}

@@ -108,7 +108,7 @@ www.meshiplaw.com/lyra.
     () => {},
   );
 
-  function reload() {
+  export function reload() {
     revision += 1;
   }
 

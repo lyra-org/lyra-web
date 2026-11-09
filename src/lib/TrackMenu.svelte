@@ -56,9 +56,19 @@ www.meshiplaw.com/lyra.
     onclose: () => void;
     // A remap or purge changed the list.
     onchanged?: () => void;
+    // A refresh or edit changed what the track shows.
+    onedited?: () => void;
+    onlyricschanged?: () => void;
   }
 
-  let { target, libraryId, onclose, onchanged }: Props = $props();
+  let {
+    target,
+    libraryId,
+    onclose,
+    onchanged,
+    onedited,
+    onlyricschanged,
+  }: Props = $props();
 
   // Outlives the menu, which closes when the modal opens.
   let editTrack = $state<TrackResponse | null>(null);
@@ -68,6 +78,23 @@ www.meshiplaw.com/lyra.
   let remappingTrack = $state<TrackResponse | null>(null);
   let filesTrack = $state<TrackResponse | null>(null);
   let purgingTrack = $state<TrackResponse | null>(null);
+  let refreshingIds = $state<string[]>([]);
+
+  export function isRefreshing(id: string): boolean {
+    return refreshingIds.includes(id);
+  }
+
+  async function refresh(id: string) {
+    refreshingIds.push(id);
+    try {
+      await refreshEntity(id);
+      onedited?.();
+    } catch {
+      // A failed refresh leaves the track as it was; nothing to update.
+    } finally {
+      refreshingIds = refreshingIds.filter((other) => other !== id);
+    }
+  }
 </script>
 
 {#if target}
@@ -87,8 +114,7 @@ www.meshiplaw.com/lyra.
           onclose();
         }}
         onrefresh={() => {
-          // Nothing in a track list shows refresh progress or failure.
-          refreshEntity(track.id).catch(() => {});
+          refresh(track.id);
           onclose();
         }}
         onrefreshoptions={() => {
@@ -121,6 +147,7 @@ www.meshiplaw.com/lyra.
 {#if editTrack}
   <MetadataEditModal
     entityId={editTrack.id}
+    onchanged={onedited}
     onclose={() => (editTrack = null)}
   />
 {/if}
@@ -129,6 +156,7 @@ www.meshiplaw.com/lyra.
   <LyricsModal
     trackId={lyricsTrack.id}
     title={lyricsTrack.title}
+    onchanged={onlyricschanged}
     onclose={() => (lyricsTrack = null)}
   />
 {/if}
@@ -164,6 +192,7 @@ www.meshiplaw.com/lyra.
 {#if optionsTrack}
   <RefreshOptionsModal
     entityId={optionsTrack.id}
+    onrefreshed={onedited}
     onclose={() => (optionsTrack = null)}
   />
 {/if}

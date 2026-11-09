@@ -53,10 +53,13 @@ www.meshiplaw.com/lyra.
 
   interface Props {
     entityId: string;
+    // A saved edit changed what the entity shows. A merge reloads the whole
+    // page instead.
+    onchanged?: () => void;
     onclose: () => void;
   }
 
-  let { entityId, onclose }: Props = $props();
+  let { entityId, onchanged, onclose }: Props = $props();
 
   interface ProviderGroup {
     providerId: string;
@@ -108,6 +111,7 @@ www.meshiplaw.com/lyra.
   let previews = $state<MetadataChangePreview[]>([]);
   let busy = $state(false);
   let notice = $state<string | null>(null);
+  let saved = false;
   let merged = false;
 
   let fields = $derived(
@@ -534,6 +538,7 @@ www.meshiplaw.com/lyra.
     notice = null;
     try {
       await applyMetadataChanges(withExpected(changeSet, previews));
+      saved = true;
       merged = merging;
       await followIds();
     } catch (err) {
@@ -590,6 +595,7 @@ www.meshiplaw.com/lyra.
 
   function finish() {
     if (merged) catalogChanged();
+    else if (saved) onchanged?.();
     onclose();
   }
 

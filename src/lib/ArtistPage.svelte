@@ -6,6 +6,7 @@ www.meshiplaw.com/lyra.
 -->
 
 <script lang="ts">
+  import { PageResource } from "./pageResource.svelte.ts";
   import type { ArtistRelationResponse, ArtistResponse } from "./types";
   import { fetchArtist } from "./api";
   import { getAuth } from "./auth.svelte.ts";
@@ -15,7 +16,9 @@ www.meshiplaw.com/lyra.
   import CoverManagerModal from "./CoverManagerModal.svelte";
   import { shownCover } from "./covers.svelte.ts";
   import AlbumCard from "./AlbumCard.svelte";
+  import ArtistMenu from "./ArtistMenu.svelte";
   import ArtistPortraitCard from "./ArtistPortraitCard.svelte";
+  import OptionsButton from "./OptionsButton.svelte";
   import FavoriteButton from "./FavoriteButton.svelte";
   import RatingButton from "./RatingButton.svelte";
 
@@ -25,11 +28,18 @@ www.meshiplaw.com/lyra.
 
   let { artistId }: Props = $props();
 
-  let artist = $state<ArtistResponse | null>(null);
-  let loading = $state(true);
-  let error: string | null = $state(null);
+  const resource = new PageResource(
+    () => artistId,
+    fetchArtist,
+    "Failed to load artist",
+  );
+  let artist = $derived(resource.value);
+  let loading = $derived(resource.loading);
+  let error = $derived(resource.error);
   const auth = getAuth();
   let canManage = $derived(auth.hasPermission("manage_metadata"));
+  let canSync = $derived(auth.hasPermission("sync_metadata"));
+  let artistMenu = $state<ArtistMenu>();
   let showCovers = $state(false);
 
   let cover = $derived(artist ? shownCover(artist.id, artist.cover) : null);
@@ -73,23 +83,6 @@ www.meshiplaw.com/lyra.
     }
     return label;
   }
-
-  async function load(id: string) {
-    loading = true;
-    error = null;
-    artist = null;
-    try {
-      artist = await fetchArtist(id);
-    } catch (e) {
-      error = e instanceof Error ? e.message : "Failed to load artist";
-    } finally {
-      loading = false;
-    }
-  }
-
-  $effect(() => {
-    load(artistId);
-  });
 </script>
 
 {#if loading}
@@ -137,6 +130,14 @@ www.meshiplaw.com/lyra.
           {#if artist.id}
             <FavoriteButton targetId={artist.id} label={artist.name} />
             <RatingButton targetId={artist.id} label={artist.name} />
+            {#if canManage || canSync}
+              <OptionsButton
+                label="Artist options"
+                expanded={artistMenu?.isOpen() ?? false}
+                busy={artistMenu?.isRefreshing() ?? false}
+                onclick={(e) => artistMenu?.toggle(e)}
+              />
+            {/if}
           {/if}
         </h2>
         {#if sortedReleases.length > 0}
@@ -190,6 +191,15 @@ www.meshiplaw.com/lyra.
       </div>
     {/if}
   </div>
+{/if}
+
+{#if artist}
+  <ArtistMenu
+    bind:this={artistMenu}
+    artistId={artist.id}
+    artistName={artist.name}
+    onchanged={resource.reload}
+  />
 {/if}
 
 {#if showCovers && artist?.id}

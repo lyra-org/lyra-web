@@ -6,12 +6,13 @@ www.meshiplaw.com/lyra.
 -->
 
 <script lang="ts">
+  import MenuItem, { coverIcon, editIcon } from "./MenuItem.svelte";
   import { refreshEntity } from "./api";
   import { getAuth } from "./auth.svelte.ts";
   import { reloadShownCover } from "./covers.svelte.ts";
   import ContextMenu, {
     anchorAtPointer,
-    menuItemClass,
+    anchorBelow,
     type MenuAnchor,
   } from "./ContextMenu.svelte";
   import CoverManagerModal from "./CoverManagerModal.svelte";
@@ -23,9 +24,11 @@ www.meshiplaw.com/lyra.
   interface Props {
     artistId: string;
     artistName: string;
+    // A refresh or edit changed what the artist shows.
+    onchanged?: () => void;
   }
 
-  let { artistId, artistName }: Props = $props();
+  let { artistId, artistName, onchanged }: Props = $props();
 
   const auth = getAuth();
 
@@ -33,6 +36,7 @@ www.meshiplaw.com/lyra.
   let canSync = $derived(auth.hasPermission("sync_metadata"));
 
   let anchor = $state<MenuAnchor | null>(null);
+  let refreshing = $state(false);
   let showEdit = $state(false);
   let showOptions = $state(false);
   let showCovers = $state(false);
@@ -43,19 +47,35 @@ www.meshiplaw.com/lyra.
     anchor = anchorAtPointer(e);
   }
 
+  export function toggle(e: MouseEvent) {
+    anchor = anchor ? null : anchorBelow(e.currentTarget as Element);
+  }
+
+  export function isOpen(): boolean {
+    return anchor != null;
+  }
+
+  export function isRefreshing(): boolean {
+    return refreshing;
+  }
+
   // The refresh returns once the server has refreshed the artist and synced
   // its cover, so the cover it shows now is the refreshed one.
   function showRefreshedCover() {
     reloadShownCover("artist", artistId).catch(() => {});
+    onchanged?.();
   }
 
   async function handleRefresh() {
     anchor = null;
+    refreshing = true;
     try {
       await refreshEntity(artistId);
     } catch {
       // A failed refresh leaves the artist as it was; nothing to update.
       return;
+    } finally {
+      refreshing = false;
     }
     showRefreshedCover();
   }
@@ -80,62 +100,30 @@ www.meshiplaw.com/lyra.
       />
     {/if}
     {#if canManage}
-      <button
-        type="button"
-        role="menuitem"
-        class={menuItemClass}
+      <MenuItem
+        icon={editIcon}
         onclick={() => {
           anchor = null;
           showEdit = true;
-        }}
+        }}>Edit metadata…</MenuItem
       >
-        <svg
-          class="h-4 w-4 text-slate-400 dark:text-neutral-500"
-          xmlns="http://www.w3.org/2000/svg"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-          stroke-width="2"
-        >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
-          />
-        </svg>
-        Edit metadata…
-      </button>
-      <button
-        type="button"
-        role="menuitem"
-        class={menuItemClass}
+      <MenuItem
+        icon={coverIcon}
         onclick={() => {
           anchor = null;
           showCovers = true;
-        }}
+        }}>Change cover…</MenuItem
       >
-        <svg
-          class="h-4 w-4 text-slate-400 dark:text-neutral-500"
-          xmlns="http://www.w3.org/2000/svg"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-          stroke-width="2"
-        >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-          />
-        </svg>
-        Change cover…
-      </button>
     {/if}
   </ContextMenu>
 {/if}
 
 {#if showEdit}
-  <MetadataEditModal entityId={artistId} onclose={() => (showEdit = false)} />
+  <MetadataEditModal
+    entityId={artistId}
+    {onchanged}
+    onclose={() => (showEdit = false)}
+  />
 {/if}
 
 {#if showOptions}

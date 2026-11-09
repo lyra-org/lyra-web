@@ -16,10 +16,11 @@ www.meshiplaw.com/lyra.
 
   interface Props {
     releaseId: string;
+    onchanged?: () => void;
     onclose: () => void;
   }
 
-  let { releaseId, onclose }: Props = $props();
+  let { releaseId, onchanged, onclose }: Props = $props();
 
   let tracks = $state<TrackResponse[]>([]);
   // Each chain's track ids in play order.
@@ -85,6 +86,7 @@ www.meshiplaw.com/lyra.
     error = null;
     try {
       await replaceReleaseChains(releaseId, chains);
+      onchanged?.();
       onclose();
     } catch (err) {
       error = err instanceof Error ? err.message : "Failed to save chains";

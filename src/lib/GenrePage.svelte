@@ -6,6 +6,7 @@ www.meshiplaw.com/lyra.
 -->
 
 <script lang="ts">
+  import { PageResource } from "./pageResource.svelte.ts";
   import type { GenreResponse } from "./types";
   import { fetchGenre, fetchReleases } from "./api";
   import { getAuth } from "./auth.svelte.ts";
@@ -30,9 +31,14 @@ www.meshiplaw.com/lyra.
 
   let { genreId, libraryId = null }: Props = $props();
 
-  let genre = $state<GenreResponse | null>(null);
-  let loading = $state(true);
-  let error: string | null = $state(null);
+  const resource = new PageResource(
+    () => genreId,
+    (id) => fetchGenre(id, { inc: ["parents", "children", "covers"] }),
+    "Failed to load genre",
+  );
+  let genre = $derived(resource.value);
+  let loading = $derived(resource.loading);
+  let error = $derived(resource.error);
   let merging = $state(false);
 
   const auth = getAuth();
@@ -45,27 +51,6 @@ www.meshiplaw.com/lyra.
     genre ? genreCoverObjectPosition(genre.id ?? genre.name) : "object-center",
   );
 
-  $effect(() => {
-    const id = genreId;
-    let cancelled = false;
-    loading = true;
-    error = null;
-    genre = null;
-    fetchGenre(id, { inc: ["parents", "children", "covers"] })
-      .then((result) => {
-        if (!cancelled) genre = result;
-      })
-      .catch((e) => {
-        if (!cancelled)
-          error = e instanceof Error ? e.message : "Failed to load genre";
-      })
-      .finally(() => {
-        if (!cancelled) loading = false;
-      });
-    return () => {
-      cancelled = true;
-    };
-  });
   const sort = savedSort("genre/albums", "albums", {
     sortBy: "release_date",
     sortOrder: "descending",

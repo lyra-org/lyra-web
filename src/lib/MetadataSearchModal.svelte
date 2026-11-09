@@ -27,10 +27,11 @@ www.meshiplaw.com/lyra.
 
   interface Props {
     album: ReleaseResponse;
+    onchanged?: () => void;
     onclose: () => void;
   }
 
-  let { album, onclose }: Props = $props();
+  let { album, onchanged, onclose }: Props = $props();
 
   let query = $state(untrack(() => album.title));
   let entityType = $state<SearchEntityType>("release");
@@ -152,6 +153,7 @@ www.meshiplaw.com/lyra.
         await applyMetadataChanges(withExpected(changes, previews));
       }
       await refreshEntity(albumId);
+      onchanged?.();
       onclose();
     } catch {
       applyingUrl = null;

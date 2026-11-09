@@ -6,16 +6,20 @@ www.meshiplaw.com/lyra.
 -->
 
 <script lang="ts">
+  import { PageResource } from "./pageResource.svelte.ts";
   import type { ArtistResponse, CreditType, TrackResponse } from "./types";
   import { fetchTrackDetail } from "./api";
   import { getAuth } from "./auth.svelte.ts";
   import { getPlayer, isMissing } from "./player.svelte.ts";
+  import { anchorBelow } from "./ContextMenu.svelte";
   import CoverImage from "./CoverImage.svelte";
   import ArtistPortraitCard from "./ArtistPortraitCard.svelte";
   import FavoriteButton from "./FavoriteButton.svelte";
   import LyricsPanel from "./LyricsPanel.svelte";
+  import OptionsButton from "./OptionsButton.svelte";
   import RatingButton from "./RatingButton.svelte";
   import RemapTrackModal from "./RemapTrackModal.svelte";
+  import TrackMenu, { type TrackMenuTarget } from "./TrackMenu.svelte";
 
   interface Props {
     trackId: string;
@@ -26,10 +30,18 @@ www.meshiplaw.com/lyra.
   const player = getPlayer();
   const auth = getAuth();
 
-  let track = $state<TrackResponse | null>(null);
+  const resource = new PageResource(
+    () => trackId,
+    fetchTrackDetail,
+    "Failed to load track",
+  );
+  let track = $derived(resource.value);
   let remapping = $state(false);
-  let loading = $state(true);
-  let error: string | null = $state(null);
+  let menu = $state<TrackMenuTarget | null>(null);
+  let trackMenu = $state<TrackMenu>();
+  let lyricsPanel = $state<LyricsPanel>();
+  let loading = $derived(resource.loading);
+  let error = $derived(resource.error);
 
   let release = $derived(track?.releases?.[0] ?? null);
 
@@ -109,22 +121,12 @@ www.meshiplaw.com/lyra.
     });
   }
 
-  async function load(id: string) {
-    loading = true;
-    error = null;
-    track = null;
-    try {
-      track = await fetchTrackDetail(id);
-    } catch (e) {
-      error = e instanceof Error ? e.message : "Failed to load track";
-    } finally {
-      loading = false;
-    }
+  function toggleMenu(e: MouseEvent) {
+    menu =
+      menu || !track
+        ? null
+        : { track, anchor: anchorBelow(e.currentTarget as Element) };
   }
-
-  $effect(() => {
-    load(trackId);
-  });
 </script>
 
 {#if loading}
@@ -244,6 +246,12 @@ www.meshiplaw.com/lyra.
           {#if track.id}
             <FavoriteButton targetId={track.id} label={track.title} />
             <RatingButton targetId={track.id} label={track.title} />
+            <OptionsButton
+              label="Track options"
+              expanded={menu != null}
+              busy={trackMenu?.isRefreshing(track.id) ?? false}
+              onclick={toggleMenu}
+            />
           {/if}
         </div>
 
@@ -286,16 +294,29 @@ www.meshiplaw.com/lyra.
 
     {#if track.id}
       <div class="mt-8">
-        <LyricsPanel trackId={track.id} title={track.title} />
+        <LyricsPanel
+          bind:this={lyricsPanel}
+          trackId={track.id}
+          title={track.title}
+        />
       </div>
     {/if}
   </div>
 {/if}
 
+<TrackMenu
+  bind:this={trackMenu}
+  target={menu}
+  onclose={() => (menu = null)}
+  onchanged={resource.reload}
+  onedited={resource.reload}
+  onlyricschanged={() => lyricsPanel?.reload()}
+/>
+
 {#if remapping && track}
   <RemapTrackModal
     {track}
-    onremapped={() => load(trackId)}
+    onremapped={resource.reload}
     onclose={() => (remapping = false)}
   />
 {/if}
