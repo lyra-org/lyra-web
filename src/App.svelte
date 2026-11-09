@@ -76,6 +76,11 @@ www.meshiplaw.com/lyra.
     }
   });
 
+  $effect(() => {
+    const nowPlaying = [player.currentTrack?.title, player.currentArtistNames];
+    document.title = nowPlaying.filter(Boolean).join(" - ") || "Lyra";
+  });
+
   let hash = $state(window.location.hash);
   let settingsOpen = $state(false);
   let searchQuery = $state("");
