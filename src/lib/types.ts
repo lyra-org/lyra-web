@@ -847,6 +847,7 @@ export interface PublicUser {
 
 export interface SetupStatus {
   account_required: boolean;
+  setup_code_required: boolean;
   plugin_selection_required: boolean;
 }
 

@@ -1459,11 +1459,18 @@ export function deleteUser(userId: string): Promise<void> {
   return del<void>(`/users/${encodeURIComponent(userId)}`);
 }
 
+// `setupCode` is the code the server logged at startup. Only the request that
+// creates the first account takes it.
 export function createUser(
   username: string,
   password: string,
+  setupCode?: string,
 ): Promise<PublicUser> {
-  return post<PublicUser>("/users", { username, password });
+  return post<PublicUser>("/users", {
+    username,
+    password,
+    setup_code: setupCode,
+  });
 }
 
 // Plugins

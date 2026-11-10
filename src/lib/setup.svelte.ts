@@ -186,6 +186,9 @@ export function getSetup() {
     get accountRequired() {
       return info?.setup.account_required ?? false;
     },
+    get setupCodeRequired() {
+      return info?.setup.setup_code_required ?? false;
+    },
     get pluginSelectionRequired() {
       return info?.setup.plugin_selection_required ?? false;
     },

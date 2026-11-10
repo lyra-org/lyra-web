@@ -9,6 +9,7 @@ www.meshiplaw.com/lyra.
   import { ApiError, createUser, loginUser } from "./api";
   import { getAuth } from "./auth.svelte.ts";
   import Logo from "./Logo.svelte";
+  import { getSetup } from "./setup.svelte.ts";
 
   interface Props {
     // The account was created but the automatic sign-in failed; the parent
@@ -23,7 +24,9 @@ www.meshiplaw.com/lyra.
   let { onloginfailed, onaccountexists, ondone }: Props = $props();
 
   const auth = getAuth();
+  const setup = getSetup();
 
+  let setupCode = $state("");
   let username = $state("");
   let password = $state("");
   let confirm = $state("");
@@ -43,7 +46,11 @@ www.meshiplaw.com/lyra.
     submitting = true;
     error = null;
     try {
-      await createUser(username, password);
+      await createUser(
+        username,
+        password,
+        setup.setupCodeRequired ? setupCode : undefined,
+      );
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
         onaccountexists();
@@ -80,6 +87,35 @@ www.meshiplaw.com/lyra.
       Create the first account for this server. It will be the administrator.
     </p>
     <form class="space-y-4" onsubmit={handleSubmit}>
+      {#if setup.setupCodeRequired}
+        <div>
+          <label
+            for="setup-code"
+            class="mb-1 block text-sm font-medium text-slate-700 dark:text-neutral-300"
+            >Setup code</label
+          >
+          <input
+            id="setup-code"
+            type="text"
+            bind:value={setupCode}
+            required
+            autocomplete="off"
+            autocapitalize="characters"
+            spellcheck="false"
+            placeholder="ABCD-EFGH-JKMN"
+            class="{inputClass} font-mono"
+          />
+          <p class="mt-1 text-xs text-slate-500 dark:text-neutral-400">
+            Lyra printed this code in its log when it started.
+            <a
+              href="https://lyra.pub/guides/getting-started/#create-the-first-account"
+              target="_blank"
+              rel="noreferrer"
+              class="underline">Where to find it</a
+            >
+          </p>
+        </div>
+      {/if}
       <div>
         <label
           for="username"
