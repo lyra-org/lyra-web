@@ -40,10 +40,10 @@ www.meshiplaw.com/lyra.
   empty={filter.value === "all"
     ? "No artists in this library."
     : "No matching artists."}
-  loadPage={(cursor, limit) =>
+  loadPage={(offset, limit) =>
     fetchArtists({
       libraryId,
-      cursor,
+      offset,
       limit,
       sortBy: sort.sortBy,
       sortOrder: sort.sortOrder,

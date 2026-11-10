@@ -7,12 +7,11 @@ www.meshiplaw.com/lyra.
 
 <script lang="ts" generics="T">
   import { tick, untrack, type Snippet } from "svelte";
-  import { ApiError } from "./api";
   import { entryKey, readView, writeView } from "./history";
   import type { Page } from "./types";
 
   interface Props {
-    loadPage: (cursor: string | undefined, limit: number) => Promise<Page<T>>;
+    loadPage: (offset: number, limit: number) => Promise<Page<T>>;
     scope?: string;
     label: string;
     pageSize?: number;
@@ -32,16 +31,21 @@ www.meshiplaw.com/lyra.
     empty = "No items found.",
     compact = false,
   }: Props = $props();
-  let pages = $state.raw<Page<T>[]>([]);
+  let page = $state.raw<Page<T> | null>(null);
   let index = $state(0);
   let loading = $state(true);
   let error = $state<string | null>(null);
-  let expired = $state(false);
-  let cursors: (string | null)[] = [];
   let failedIndex = 0;
   let request = 0;
   let content: HTMLDivElement;
-  let page = $derived(pages[index]);
+  let pageCount = $derived(lastIndex(page?.total ?? 0) + 1);
+  let hasNext = $derived(
+    page != null && page.offset + page.items.length < page.total,
+  );
+
+  function lastIndex(total: number) {
+    return Math.max(0, Math.ceil(total / pageSize) - 1);
+  }
 
   // The page is kept in the history entry so going back returns to it, while
   // following a link to the list starts from the first page.
@@ -50,59 +54,38 @@ www.meshiplaw.com/lyra.
   }
 
   function restorePosition() {
-    const saved = readView(historyKey()) as
-      | { index?: unknown; cursors?: unknown }
-      | undefined;
-    if (!Number.isInteger(saved?.index) || !Array.isArray(saved?.cursors))
-      return null;
-    return saved as { index: number; cursors: (string | null)[] };
+    const saved = (readView(historyKey()) as { index?: unknown } | undefined)
+      ?.index;
+    return typeof saved === "number" && Number.isInteger(saved) && saved > 0
+      ? saved
+      : null;
   }
 
-  function savePosition(entry: string) {
-    writeView(entry, historyKey(), {
-      index,
-      cursors: cursors.slice(0, index + 1),
-    });
-  }
-
-  async function load(target: number, scroll = false, restoring = false) {
+  async function load(target: number, scroll = false) {
     const currentRequest = ++request;
     const entry = entryKey();
     error = null;
-    expired = false;
     loading = true;
     try {
-      if (!pages[target]) {
-        const cursor =
-          target === 0
-            ? null
-            : (pages[target - 1]?.next_cursor ?? cursors[target] ?? null);
-        const result = await loadPage(cursor ?? undefined, pageSize);
+      let result = await loadPage(target * pageSize, pageSize);
+      if (currentRequest !== request) return;
+      // The list no longer reaches this page, so show the last one it has.
+      if (target > 0 && result.items.length === 0) {
+        target = lastIndex(result.total);
+        result = await loadPage(target * pageSize, pageSize);
         if (currentRequest !== request) return;
-        const nextPages = pages.slice(0, target);
-        nextPages[target] = result;
-        pages = nextPages;
-        cursors = cursors.slice(0, target);
-        cursors[target] = cursor;
       }
+      page = result;
       index = target;
-      savePosition(entry);
+      writeView(entry, historyKey(), { index });
       if (scroll) {
         await tick();
         if (currentRequest === request)
           content?.scrollIntoView({ block: "start" });
       }
-    } catch (e) {
+    } catch {
       if (currentRequest !== request) return;
-      expired = e instanceof ApiError && e.status === 409;
-      // A saved page whose cursor has expired quietly starts over.
-      if (expired && restoring) {
-        reload();
-        return;
-      }
-      error = expired
-        ? "This list has changed or expired. Refresh to continue."
-        : "Couldn't load this page. Please try again.";
+      error = "Couldn't load this page. Please try again.";
       failedIndex = target;
       if (scroll) {
         await tick();
@@ -115,8 +98,7 @@ www.meshiplaw.com/lyra.
   }
 
   export function reload() {
-    pages = [];
-    cursors = [];
+    page = null;
     index = 0;
     return load(0);
   }
@@ -130,11 +112,10 @@ www.meshiplaw.com/lyra.
     untrack(() => {
       const saved = restored ? null : restorePosition();
       restored = true;
-      if (!saved) return reload();
-      pages = [];
-      cursors = saved.cursors;
-      index = saved.index;
-      return load(saved.index, false, true);
+      if (saved == null) return reload();
+      page = null;
+      index = saved;
+      return load(saved);
     });
     return () => {
       request += 1;
@@ -177,14 +158,14 @@ www.meshiplaw.com/lyra.
     <span
       class="min-w-12 text-center text-xs text-slate-500 tabular-nums dark:text-neutral-400"
       aria-live={position === "bottom" ? "polite" : "off"}
-      >{loading ? "Loading…" : `Page ${index + 1}`}</span
+      >{loading ? "Loading…" : `Page ${index + 1} of ${pageCount}`}</span
     >
     <button
       type="button"
       class={pagerButtonClass}
       aria-label="Next page"
       title="Next page"
-      disabled={loading || !page?.next_cursor}
+      disabled={loading || !hasNext}
       onclick={() => load(index + 1, true)}
     >
       <svg
@@ -226,8 +207,7 @@ www.meshiplaw.com/lyra.
         type="button"
         class={buttonClass}
         disabled={loading}
-        onclick={() => (expired ? reload() : load(failedIndex))}
-        >{expired ? "Refresh" : "Retry"}</button
+        onclick={() => load(failedIndex)}>Retry</button
       >
     </div>
   {/if}
@@ -259,7 +239,7 @@ www.meshiplaw.com/lyra.
     {/if}
   {/if}
 
-  {#if page && (!compact || index > 0 || page.next_cursor)}
+  {#if page && (!compact || index > 0 || hasNext)}
     <div
       class="mt-6 flex flex-wrap items-center justify-between gap-x-6 gap-y-2"
     >
@@ -269,8 +249,8 @@ www.meshiplaw.com/lyra.
         aria-atomic="true"
       >
         <span
-          >{page.items.length}
-          {page.items.length === 1 ? "item" : "items"}</span
+          >{page.total.toLocaleString()}
+          {page.total === 1 ? "item" : "items"}</span
         >
         {#if !compact}
           <span

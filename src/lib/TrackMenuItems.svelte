@@ -81,8 +81,8 @@ www.meshiplaw.com/lyra.
     if (playlistsLoaded) return;
     try {
       const ownerId = getAuth().me?.id;
-      playlists = await fetchAllPages((cursor) =>
-        fetchPlaylists({ cursor, ownerId }),
+      playlists = await fetchAllPages((offset) =>
+        fetchPlaylists({ offset, ownerId }),
       );
     } catch {
       // ignore

@@ -198,16 +198,17 @@ async function get<T>(path: string, signal?: AbortSignal): Promise<T> {
   return parseBody<T>(res);
 }
 
+// Every item of a list, read a page at a time. Each page is read from the list
+// as it is at that request, so a change in between can repeat or skip items.
 export async function fetchAllPages<T>(
-  fetchPage: (cursor?: string) => Promise<Page<T>>,
+  fetchPage: (offset: number) => Promise<Page<T>>,
 ): Promise<T[]> {
   const items: T[] = [];
-  let cursor: string | undefined;
+  let page: Page<T>;
   do {
-    const page = await fetchPage(cursor);
+    page = await fetchPage(items.length);
     items.push(...page.items);
-    cursor = page.next_cursor ?? undefined;
-  } while (cursor);
+  } while (page.items.length > 0 && items.length < page.total);
   return items;
 }
 
@@ -325,7 +326,7 @@ export function fetchReleases(opts?: {
   query?: string;
   signal?: AbortSignal;
   genreId?: string;
-  cursor?: string;
+  offset?: number;
   sortBy?: string;
   sortOrder?: "ascending" | "descending";
   filter?: ListFilter;
@@ -337,7 +338,7 @@ export function fetchReleases(opts?: {
   if (opts?.genreId) params.set("genre_id", opts.genreId);
   if (opts?.sortBy) params.set("sort_by", opts.sortBy);
   if (opts?.sortOrder) params.set("sort_order", opts.sortOrder);
-  if (opts?.cursor) params.set("cursor", opts.cursor);
+  if (opts?.offset) params.set("offset", String(opts.offset));
   if (opts?.limit != null) params.set("limit", String(opts.limit));
   setListFilter(params, opts?.filter);
   return get<Page<ReleaseResponse>>(`/releases?${params}`, opts?.signal);
@@ -373,7 +374,7 @@ export function fetchGenres(opts?: {
   signal?: AbortSignal;
   sortBy?: string;
   sortOrder?: "ascending" | "descending";
-  cursor?: string;
+  offset?: number;
   limit?: number;
 }): Promise<Page<GenreResponse>> {
   const params = new URLSearchParams({ inc: "covers" });
@@ -382,7 +383,7 @@ export function fetchGenres(opts?: {
   if (opts?.sortBy) params.set("sort_by", opts.sortBy);
   if (opts?.sortOrder) params.set("sort_order", opts.sortOrder);
   if (opts?.limit != null) params.set("limit", String(opts.limit));
-  if (opts?.cursor) params.set("cursor", opts.cursor);
+  if (opts?.offset) params.set("offset", String(opts.offset));
   const query = params.toString();
   return get<Page<GenreResponse>>(
     `/genres${query ? `?${query}` : ""}`,
@@ -446,38 +447,30 @@ export async function fetchTrackForRemote(id: string): Promise<TrackResponse> {
 }
 
 export async function fetchActivePlaybacks(): Promise<ActivePlayback[]> {
+  const playbacks = await fetchAllPages((offset) =>
+    fetchPlaybacks(true, offset, true),
+  );
   const sessions: ActivePlayback[] = [];
-  let cursor: string | null | undefined;
-  do {
-    const page = await fetchPlaybacks(true, cursor, true);
-    for (const playback of page.items) {
-      if (playback.current == null) continue;
-      sessions.push({
-        ...playback.current,
-        playback_id: playback.id,
-        client_name: playback.client_name,
-        plugin_id: playback.plugin_id,
-        queue_revision: playback.queue_revision,
-        connection_id: playback.controller?.id ?? null,
-      });
-    }
-    cursor = page.next_cursor;
-  } while (cursor);
+  for (const playback of playbacks) {
+    if (playback.current == null) continue;
+    sessions.push({
+      ...playback.current,
+      playback_id: playback.id,
+      client_name: playback.client_name,
+      plugin_id: playback.plugin_id,
+      queue_revision: playback.queue_revision,
+      connection_id: playback.controller?.id ?? null,
+    });
+  }
   return sessions;
 }
 
 // Every playback with a server-managed queue, newest first.
 export async function fetchQueuePlaybacks(): Promise<PlaybackResponse[]> {
-  const playbacks: PlaybackResponse[] = [];
-  let cursor: string | null | undefined;
-  do {
-    const page = await fetchPlaybacks(undefined, cursor, true);
-    for (const playback of page.items) {
-      if (playback.queue_revision != null) playbacks.push(playback);
-    }
-    cursor = page.next_cursor;
-  } while (cursor);
-  return playbacks;
+  const playbacks = await fetchAllPages((offset) =>
+    fetchPlaybacks(undefined, offset, true),
+  );
+  return playbacks.filter((playback) => playback.queue_revision != null);
 }
 
 export function fetchConnections(): Promise<Connection[]> {
@@ -502,7 +495,7 @@ export function fetchArtists(opts?: {
   signal?: AbortSignal;
   sortBy?: string;
   sortOrder?: "ascending" | "descending";
-  cursor?: string;
+  offset?: number;
   filter?: ListFilter;
   limit?: number;
 }): Promise<Page<ArtistResponse>> {
@@ -512,7 +505,7 @@ export function fetchArtists(opts?: {
   if (opts?.sortOrder) params.set("sort_order", opts.sortOrder);
   if (opts?.query != null) params.set("query", opts.query);
   if (opts?.libraryId) params.set("library_id", opts.libraryId);
-  if (opts?.cursor) params.set("cursor", opts.cursor);
+  if (opts?.offset) params.set("offset", String(opts.offset));
   setListFilter(params, opts?.filter);
   return get<Page<ArtistResponse>>(`/artists?${params}`, opts?.signal);
 }
@@ -607,12 +600,12 @@ export function replacePlaybackQueue(
 
 export function fetchPlaybacks(
   active?: boolean,
-  cursor?: string | null,
+  offset?: number,
   includeController = false,
 ): Promise<Page<PlaybackResponse>> {
   const params = new URLSearchParams();
   if (active != null) params.set("active", String(active));
-  if (cursor) params.set("cursor", cursor);
+  if (offset) params.set("offset", String(offset));
   if (includeController) params.set("inc", "controller");
   return get<Page<PlaybackResponse>>(`/me/playbacks?${params}`);
 }
@@ -999,7 +992,7 @@ export async function streamSyncEvents(
 // Playlists
 
 export function fetchPlaylists(opts?: {
-  cursor?: string;
+  offset?: number;
   limit?: number;
   sortBy?: string;
   sortOrder?: "ascending" | "descending";
@@ -1012,7 +1005,7 @@ export function fetchPlaylists(opts?: {
   if (opts?.ownerId) params.set("owner_id", opts.ownerId);
   if (opts?.favorite != null) params.set("favorite", String(opts.favorite));
   if (opts?.limit != null) params.set("limit", String(opts.limit));
-  if (opts?.cursor) params.set("cursor", opts.cursor);
+  if (opts?.offset) params.set("offset", String(opts.offset));
   return get<Page<PlaylistResponse>>(`/playlists?${params}`);
 }
 
@@ -1088,11 +1081,11 @@ export function movePlaylistTrack(
 // Tags
 
 export function fetchTags(
-  cursor?: string,
+  offset?: number,
   limit?: number,
 ): Promise<TagListResponse> {
   const params = new URLSearchParams();
-  if (cursor) params.set("cursor", cursor);
+  if (offset) params.set("offset", String(offset));
   if (limit != null) params.set("limit", String(limit));
   const qs = params.toString();
   return get<TagListResponse>(`/me/tags${qs ? `?${qs}` : ""}`);
@@ -1127,11 +1120,11 @@ export function deleteTag(id: string): Promise<void> {
 
 export function fetchTagTargets(
   id: string,
-  cursor?: string,
+  offset?: number,
   limit?: number,
 ): Promise<TargetListResponse> {
   const params = new URLSearchParams();
-  if (cursor) params.set("cursor", cursor);
+  if (offset) params.set("offset", String(offset));
   if (limit != null) params.set("limit", String(limit));
   const qs = params.toString();
   return get<TargetListResponse>(`/me/tags/${id}/targets${qs ? `?${qs}` : ""}`);
@@ -1198,7 +1191,7 @@ export function fetchTracks(opts?: {
   signal?: AbortSignal;
   sortBy?: string;
   sortOrder?: "ascending" | "descending";
-  cursor?: string;
+  offset?: number;
   filter?: ListFilter;
   limit?: number;
 }): Promise<Page<TrackResponse>> {
@@ -1207,7 +1200,7 @@ export function fetchTracks(opts?: {
   if (opts?.sortOrder) params.set("sort_order", opts.sortOrder);
   if (opts?.query != null) params.set("query", opts.query);
   if (opts?.libraryId) params.set("library_id", opts.libraryId);
-  if (opts?.cursor) params.set("cursor", opts.cursor);
+  if (opts?.offset) params.set("offset", String(opts.offset));
   if (opts?.limit != null) params.set("limit", String(opts.limit));
   setListFilter(params, opts?.filter);
   return get<Page<TrackResponse>>(`/tracks?${params}`, opts?.signal);
@@ -1224,8 +1217,8 @@ export function remapTrack(
   });
 }
 
-// The first page of each list for `query`. Each `next_cursor` continues on
-// that type's list endpoint with the same query.
+// The first page of each list for `query`. Each list carries on at that type's
+// list endpoint, by offset with the same query.
 export function searchLibrary(opts: {
   query: string;
   limit: number;
@@ -1234,7 +1227,6 @@ export function searchLibrary(opts: {
   const params = new URLSearchParams({
     query: opts.query,
     limit: String(opts.limit),
-    paginate: "true",
     track_inc: TRACK_LIST_INC,
     artist_inc: ARTIST_LIST_INC,
     release_inc: RELEASE_LIST_INC,

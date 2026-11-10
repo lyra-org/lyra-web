@@ -178,11 +178,11 @@ www.meshiplaw.com/lyra.
         empty={filter.value === "all"
           ? "No albums tagged with this genre."
           : "No matching albums."}
-        loadPage={(cursor, limit) =>
+        loadPage={(offset, limit) =>
           fetchReleases({
             genreId,
             libraryId: libraryId ?? undefined,
-            cursor,
+            offset,
             limit,
             sortBy: sort.sortBy,
             sortOrder: sort.sortOrder,

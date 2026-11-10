@@ -126,9 +126,9 @@ www.meshiplaw.com/lyra.
     empty={filter.value === "favorites"
       ? "No favorite playlists yet."
       : "No playlists yet."}
-    loadPage={(cursor, limit) =>
+    loadPage={(offset, limit) =>
       fetchPlaylists({
-        cursor,
+        offset,
         limit,
         sortBy: sort.sortBy,
         sortOrder: sort.sortOrder,

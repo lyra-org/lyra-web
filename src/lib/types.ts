@@ -11,11 +11,13 @@ export interface Session {
 
 export type LoginResponse = Session;
 
-// Generic paginated list response. Returned by the various list endpoints
-// that switched from bare arrays to `{ items, next_cursor }`.
+// One page of a list endpoint. `total` counts the whole list under the
+// request's filters, and `offset` is where `items` starts in it: the requested
+// offset, or `total` when that is past the end.
 export interface Page<T> {
   items: T[];
-  next_cursor?: string | null;
+  total: number;
+  offset: number;
 }
 
 export interface LibrarySearchResponse {
@@ -651,10 +653,7 @@ export interface TagResponse {
   created_at: string;
 }
 
-export interface TagListResponse {
-  items: TagResponse[];
-  next_cursor?: string | null;
-}
+export type TagListResponse = Page<TagResponse>;
 
 export type TargetListResponse = Page<string>;
 

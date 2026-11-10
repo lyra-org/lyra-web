@@ -29,10 +29,10 @@ www.meshiplaw.com/lyra.
   scope={`${libraryId}/${sort.sortBy}/${sort.sortOrder}`}
   label="genres"
   empty="No genres in this library yet."
-  loadPage={(cursor, limit) =>
+  loadPage={(offset, limit) =>
     fetchGenres({
       libraryId,
-      cursor,
+      offset,
       limit,
       sortBy: sort.sortBy,
       sortOrder: sort.sortOrder,

@@ -42,8 +42,8 @@ www.meshiplaw.com/lyra.
   }
 
   // One search request fills every section's first page. A section loading its
-  // first page again, to retry or after its cursor expired, asks its list
-  // endpoint instead of reusing that response.
+  // first page again, to retry or on the way back from a later page, asks its
+  // list endpoint instead of reusing that response.
   function firstPage<S extends Section>(section: S, limit: number) {
     const key = `${limit}:${query}`;
     if (search?.key !== key) {
@@ -93,9 +93,9 @@ www.meshiplaw.com/lyra.
     label="albums"
     pageSize={12}
     empty={`No albums match “${query}”.`}
-    loadPage={(cursor, limit) =>
-      (!cursor && firstPage("releases", limit)) ||
-      fetchReleases({ query, cursor, limit, signal: nextSignal("albums") })}
+    loadPage={(offset, limit) =>
+      (offset === 0 && firstPage("releases", limit)) ||
+      fetchReleases({ query, offset, limit, signal: nextSignal("albums") })}
   >
     {#snippet children(albums)}
       <div
@@ -121,9 +121,9 @@ www.meshiplaw.com/lyra.
     label="artists"
     pageSize={12}
     empty={`No artists match “${query}”.`}
-    loadPage={(cursor, limit) =>
-      (!cursor && firstPage("artists", limit)) ||
-      fetchArtists({ query, cursor, limit, signal: nextSignal("artists") })}
+    loadPage={(offset, limit) =>
+      (offset === 0 && firstPage("artists", limit)) ||
+      fetchArtists({ query, offset, limit, signal: nextSignal("artists") })}
   >
     {#snippet children(artists)}
       <div
@@ -149,9 +149,9 @@ www.meshiplaw.com/lyra.
     label="tracks"
     pageSize={12}
     empty={`No tracks match “${query}”.`}
-    loadPage={(cursor, limit) =>
-      (!cursor && firstPage("tracks", limit)) ||
-      fetchTracks({ query, cursor, limit, signal: nextSignal("tracks") })}
+    loadPage={(offset, limit) =>
+      (offset === 0 && firstPage("tracks", limit)) ||
+      fetchTracks({ query, offset, limit, signal: nextSignal("tracks") })}
   >
     {#snippet children(tracks)}
       <ul>

@@ -18,8 +18,8 @@ www.meshiplaw.com/lyra.
   scope={`${sortBy}/${sortOrder}`}
   label="albums"
   empty="No albums found."
-  loadPage={(cursor, limit) =>
-    fetchReleases({ cursor, limit, sortBy, sortOrder })}
+  loadPage={(offset, limit) =>
+    fetchReleases({ offset, limit, sortBy, sortOrder })}
 >
   {#snippet toolbar()}
     <SortControls kind="albums" bind:sortBy bind:sortOrder />

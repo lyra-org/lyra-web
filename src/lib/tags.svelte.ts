@@ -7,6 +7,7 @@ import type { TagColor, TagResponse } from "./types";
 import {
   attachTag as apiAttachTag,
   detachTag as apiDetachTag,
+  fetchAllPages,
   fetchTagTargets,
   fetchTags,
 } from "./api";
@@ -17,27 +18,14 @@ let loaded = $state(false);
 let loading = $state(false);
 let loadPromise: Promise<void> | null = null;
 
-async function fetchAllTargets(tagId: string): Promise<string[]> {
-  const ids: string[] = [];
-  let cursor: string | undefined;
-  do {
-    const page = await fetchTagTargets(tagId, cursor, 500);
-    ids.push(...page.items);
-    cursor = page.next_cursor ?? undefined;
-  } while (cursor);
-  return ids;
+function fetchAllTargets(tagId: string): Promise<string[]> {
+  return fetchAllPages((offset) => fetchTagTargets(tagId, offset, 500));
 }
 
 async function loadInternal() {
   loading = true;
   try {
-    const all: TagResponse[] = [];
-    let cursor: string | undefined;
-    do {
-      const page = await fetchTags(cursor, 500);
-      all.push(...page.items);
-      cursor = page.next_cursor ?? undefined;
-    } while (cursor);
+    const all = await fetchAllPages((offset) => fetchTags(offset, 500));
     const targets: Record<string, Set<string>> = {};
     await Promise.all(
       all.map(async (t) => {

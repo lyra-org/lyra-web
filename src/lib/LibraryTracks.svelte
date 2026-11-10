@@ -98,10 +98,10 @@ www.meshiplaw.com/lyra.
     empty={filter.value === "all"
       ? "No tracks in this library."
       : "No matching tracks."}
-    loadPage={(cursor, limit) =>
+    loadPage={(offset, limit) =>
       fetchTracks({
         libraryId,
-        cursor,
+        offset,
         limit,
         sortBy: sort.sortBy,
         sortOrder: sort.sortOrder,
