@@ -1490,6 +1490,12 @@ export function deletePluginSettings(pluginId: string): Promise<void> {
   return del<void>(`/plugins/${encodeURIComponent(pluginId)}/settings`);
 }
 
+// Reloads the plugin runtime from the plugins directory, which picks up
+// plugins that were left out when it last loaded.
+export function reloadPlugins(): Promise<void> {
+  return post<void>("/plugins/reload", {});
+}
+
 export function restartPlugin(pluginId: string): Promise<void> {
   return post<void>(`/plugins/${encodeURIComponent(pluginId)}/restart`, {});
 }

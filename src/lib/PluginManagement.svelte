@@ -287,7 +287,8 @@ www.meshiplaw.com/lyra.
                 <div class="flex flex-wrap items-baseline gap-x-2">
                   <span class="text-sm font-medium">{plugin.name}</span>
                   <span class="text-xs text-slate-400 dark:text-neutral-500"
-                    >v{plugin.version} → v{plugin.source.offered.version}</span
+                    >{plugin.version ? `v${plugin.version} → ` : ""}v{plugin
+                      .source.offered.version}</span
                   >
                   <PluginSource
                     official={plugin.source.official}

@@ -886,13 +886,24 @@ export interface CheckRatingsResponse {
 
 // Plugins
 
+// An installed plugin. `name`, `version` and `description` come from its
+// manifest; when that cannot be read, `name` is the `id`, `description` is
+// empty, and `version` is the installed release of a repository plugin and
+// absent otherwise.
 export interface PluginManifestResponse {
   id: string;
   name: string;
-  version: string;
+  version?: string;
   description: string;
+  load: PluginLoadState;
   source: PluginSourceResponse;
 }
+
+// Whether the plugin runtime runs the plugin. A plugin that did not load has
+// no settings and cannot restart, but can still be updated or uninstalled.
+export type PluginLoadState =
+  | { state: "loaded" }
+  | { state: "not_loaded"; reason: string };
 
 // `local` plugins were placed in the plugins directory by hand and cannot be
 // updated or uninstalled through the API. `invalid` plugins carry a source

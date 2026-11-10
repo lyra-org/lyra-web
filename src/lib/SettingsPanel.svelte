@@ -36,6 +36,7 @@ www.meshiplaw.com/lyra.
     updateUserPluginSettings,
     deletePluginSettings,
     deleteUserPluginSettings,
+    reloadPlugins,
     restartPlugin,
     uninstallPlugin,
     updatePlugins,
@@ -53,7 +54,7 @@ www.meshiplaw.com/lyra.
   }
 
   type SidebarPlugin = Pick<PluginManifestResponse, "id" | "name" | "version"> &
-    Partial<Pick<PluginManifestResponse, "description" | "source">>;
+    Partial<Pick<PluginManifestResponse, "description" | "load" | "source">>;
 
   let { onclose }: Props = $props();
   const auth = getAuth();
@@ -175,7 +176,8 @@ www.meshiplaw.com/lyra.
   let saving = $state(false);
   let saveError = $state<string | null>(null);
   let actionMessage = $state<string | null>(null);
-  let lifecycleAction = $state<"update" | "uninstall" | null>(null);
+  type LifecycleAction = "update" | "reload" | "uninstall";
+  let lifecycleAction = $state<LifecycleAction | null>(null);
   let lifecycleMessage = $state<string | null>(null);
   let lifecycleError = $state<string | null>(null);
 
@@ -338,6 +340,12 @@ www.meshiplaw.com/lyra.
     }
   }
 
+  // Why the runtime left the selected plugin out, when it did.
+  let notLoadedReason = $derived(
+    selectedPlugin?.load?.state === "not_loaded"
+      ? selectedPlugin.load.reason
+      : null,
+  );
   let selectedPluginLocal = $derived(selectedPlugin?.source?.kind === "local");
   let selectedPluginSource = $derived(
     selectedPlugin?.source?.kind === "repository"
@@ -373,7 +381,7 @@ www.meshiplaw.com/lyra.
   });
 
   async function runLifecycle(
-    action: "update" | "uninstall",
+    action: LifecycleAction,
     work: (
       plugin: NonNullable<typeof selectedPlugin>,
     ) => Promise<string | null>,
@@ -411,6 +419,13 @@ www.meshiplaw.com/lyra.
         return `Updated to v${updated.version}.`;
       }
       return updateOutcome(result);
+    });
+  }
+
+  function reload() {
+    return runLifecycle("reload", async () => {
+      await reloadPlugins();
+      return "Plugins reloaded.";
     });
   }
 
@@ -718,7 +733,7 @@ www.meshiplaw.com/lyra.
             </p>
           {:else if plugins.length === 0}
             <p class="px-2 py-1 text-sm text-slate-500 dark:text-neutral-400">
-              No plugins loaded.
+              No plugins installed.
             </p>
           {:else}
             <ul class="space-y-0.5">
@@ -743,7 +758,12 @@ www.meshiplaw.com/lyra.
                     <div
                       class="truncate text-xs text-slate-500 dark:text-neutral-500"
                     >
-                      v{plugin.version}
+                      {[
+                        plugin.version && `v${plugin.version}`,
+                        plugin.load?.state === "not_loaded" && "Not loaded",
+                      ]
+                        .filter(Boolean)
+                        .join(" · ")}
                     </div>
                   </button>
                 </li>
@@ -838,7 +858,9 @@ www.meshiplaw.com/lyra.
                 {selectedPlugin.name}
               </h3>
               <p class="text-xs text-slate-500 dark:text-neutral-400">
-                {selectedPlugin.id} · v{selectedPlugin.version}
+                {selectedPlugin.id}{selectedPlugin.version
+                  ? ` · v${selectedPlugin.version}`
+                  : ""}
               </p>
               {#if selectedPlugin.description}
                 <p class="mt-1 text-sm text-slate-600 dark:text-neutral-300">
@@ -847,7 +869,7 @@ www.meshiplaw.com/lyra.
               {/if}
             </div>
             <div class="flex items-center gap-2">
-              {#if canManagePlugins}
+              {#if canManagePlugins && notLoadedReason == null}
                 <div
                   class="inline-flex rounded-md border border-slate-300 bg-white p-0.5 text-xs dark:border-neutral-700 dark:bg-[#1b1d1e]"
                   role="tablist"
@@ -894,7 +916,25 @@ www.meshiplaw.com/lyra.
 
           <!-- Settings body -->
           <div class="flex-1 overflow-y-auto px-6 py-5">
-            {#if loadingByScope[scope] && entriesByScope[scope] == null}
+            {#if notLoadedReason != null}
+              <div class="space-y-1 text-sm">
+                <p class="font-medium text-slate-800 dark:text-neutral-200">
+                  This plugin is not running.
+                </p>
+                <p class="break-words text-slate-600 dark:text-neutral-300">
+                  {notLoadedReason}
+                </p>
+                <button
+                  type="button"
+                  onclick={reload}
+                  disabled={saving}
+                  class="text-xs text-slate-500 underline disabled:opacity-40 dark:text-neutral-400"
+                  >{lifecycleAction === "reload"
+                    ? "Reloading…"
+                    : "Reload plugins"}</button
+                >
+              </div>
+            {:else if loadingByScope[scope] && entriesByScope[scope] == null}
               <p class="text-sm text-slate-500 dark:text-neutral-400">
                 Loading settings…
               </p>
