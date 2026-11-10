@@ -1398,7 +1398,13 @@ export interface ServerSettingsResponse {
     fields: ServerSettingField[];
   }[];
   pending_restart: string[];
-  boot: { port: number; data_dir: string; db: { kind: string; path: string } };
+  boot: {
+    port: number;
+    data_dir: string;
+    db: { kind: string; path: string };
+    // The certificate and key files the server serves HTTPS from, when it does.
+    tls: { cert: string; key: string } | null;
+  };
 }
 
 export interface ApiKeyResponse {

@@ -377,6 +377,15 @@ www.meshiplaw.com/lyra.
             <dt>Database</dt>
             <dd>{settings.boot.db.kind} · {settings.boot.db.path}</dd>
           </div>
+          <div>
+            <dt>HTTPS</dt>
+            {#if settings.boot.tls}
+              <dd>Certificate · {settings.boot.tls.cert}</dd>
+              <dd>Key · {settings.boot.tls.key}</dd>
+            {:else}
+              <dd>Off</dd>
+            {/if}
+          </div>
         </dl>
         <div class="mt-4">
           <button
