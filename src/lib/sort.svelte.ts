@@ -50,6 +50,7 @@ export const sortFields: Record<SortKind, string[]> = {
   ],
   genres: [
     "name",
+    "date_created",
     "last_played_at",
     "listen_count",
     "release_count",
