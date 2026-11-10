@@ -49,10 +49,13 @@ www.meshiplaw.com/lyra.
       message =
         "Password changed. Other sessions were signed out and API keys were revoked.";
     } catch (err) {
+      const status = err instanceof ApiError ? err.status : null;
       error =
-        err instanceof ApiError && err.status === 401
+        status === 401
           ? "Your current password is incorrect."
-          : "Unable to change password. Check your connection and try again.";
+          : status === 429
+            ? "Too many incorrect attempts. Wait a while before trying again."
+            : "Unable to change password. Check your connection and try again.";
     } finally {
       busy = false;
     }
