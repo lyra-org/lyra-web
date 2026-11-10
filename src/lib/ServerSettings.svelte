@@ -317,6 +317,21 @@ www.meshiplaw.com/lyra.
                   oninput={(event) => edit(field, event.currentTarget.value)}
                   aria-describedby={`${id}-description`}
                   class={inputClass}></textarea>
+              {:else if field.type === "choice"}
+                <select
+                  {id}
+                  value={String(drafts[field.key] ?? "")}
+                  required={field.required && !resets[field.key]}
+                  disabled={field.locked}
+                  onchange={(event) => edit(field, event.currentTarget.value)}
+                  aria-describedby={`${id}-description`}
+                  class={inputClass}
+                >
+                  {#if !field.required}<option value="">—</option>{/if}
+                  {#each field.options as option (option)}
+                    <option value={option}>{option}</option>
+                  {/each}
+                </select>
               {:else if field.type !== "bool"}
                 <input
                   {id}

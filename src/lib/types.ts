@@ -1381,6 +1381,13 @@ export type ServerSettingField = ServerSettingProps &
       }
     | { type: "bool"; value: boolean | null; default: boolean | null }
     | { type: "string_list"; value: string[] | null; default: string[] | null }
+    | {
+        type: "choice";
+        // The values the setting takes, in display order.
+        options: string[];
+        value: string | null;
+        default: string | null;
+      }
   );
 
 export interface ServerSettingsResponse {
