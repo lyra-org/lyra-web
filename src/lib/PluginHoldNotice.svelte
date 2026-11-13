@@ -22,7 +22,7 @@ www.meshiplaw.com/lyra.
   <p class="text-amber-700 dark:text-amber-400">
     {describeHold(hold, version)}
   </p>
-  {#if hold.reason === "adds_scopes"}
+  {#if hold.reason === "adds_reach"}
     {#each hold.gains as gain (gain.plugin)}
       <PluginGain {gain} />
     {/each}

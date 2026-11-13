@@ -951,10 +951,10 @@ export interface OfferedReleaseResponse {
   scopes: string[];
 }
 
-// An update request naming the release approves an `adds_scopes` hold. The
+// An update request naming the release approves an `adds_reach` hold. The
 // other holds apply no update until the plugins involved change.
 export type PluginHold =
-  | { reason: "adds_scopes"; gains: ScopeGainResponse[] }
+  | { reason: "adds_reach"; gains: ScopeGainResponse[] }
   | { reason: "breaks_dependents"; dependents: PluginRequirement[] }
   | { reason: "unmet_dependencies"; dependencies: PluginRequirement[] }
   | { reason: "dependency_cycle"; plugins: string[] };
@@ -967,9 +967,21 @@ export interface ScopeGainResponse {
   previous_risk: PluginRiskLevel;
   effects: PluginEffect[];
   scopes: string[];
+  // Hosts it could newly send HTTP requests to.
+  hosts: PluginHost[];
   // Dependencies whose scopes are unknown because they are not installed.
   unresolved_dependencies: string[];
 }
+
+// A destination a plugin lists for its HTTP requests. `subdomains` is every
+// name under `host` but not `host` itself. `setting` is the host of the URL in
+// that plugin setting, nothing while it is unset; `plugin` names whose setting
+// it is when that is not clear from where the entry appears.
+export type PluginHost =
+  | { kind: "host"; host: string }
+  | { kind: "subdomains"; host: string }
+  | { kind: "setting"; setting: string; plugin?: string | null }
+  | { kind: "any" };
 
 export interface PluginRequirement {
   id: string;
@@ -1007,7 +1019,13 @@ export interface PluginEffect {
   users?: PluginUsers | null;
   // The scopes giving the effect, each with the plugin declaring it.
   // `author_reason` is the plugin author's own unverified text for that scope.
-  via: { plugin: string; scope: string; author_reason?: string | null }[];
+  // `hosts`, only on `harmony.http`, limits where that scope sends requests.
+  via: {
+    plugin: string;
+    scope: string;
+    author_reason?: string | null;
+    hosts?: PluginHost[] | null;
+  }[];
   description: string;
 }
 

@@ -71,11 +71,11 @@ export function getPluginUpdates() {
   };
 }
 
-// Why the update to `version` waits. Only `adds_scopes` can be approved.
+// Why the update to `version` waits. Only `adds_reach` can be approved.
 export function describeHold(hold: PluginHold, version: string): string {
   switch (hold.reason) {
-    case "adds_scopes":
-      return `v${version} needs approval because it widens what plugins can do.`;
+    case "adds_reach":
+      return `v${version} needs approval because it widens what plugins can do or reach.`;
     case "breaks_dependents":
       return `v${version} is held: ${hold.dependents
         .map((d) => `${d.id} requires ${d.requires}`)

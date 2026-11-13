@@ -7,6 +7,7 @@ www.meshiplaw.com/lyra.
 
 <script lang="ts">
   import type { PluginEffect } from "./types";
+  import { egressHosts } from "./pluginHosts";
 
   interface Props {
     effects: PluginEffect[];
@@ -38,13 +39,19 @@ www.meshiplaw.com/lyra.
   let entries = $derived.by(() => {
     const byReasons = new Map<
       string,
-      { descriptions: string[]; reasons: string[] }
+      {
+        descriptions: { text: string; hosts: string | null }[];
+        reasons: string[];
+      }
     >();
     effects.forEach((effect, i) => {
       const reasons = reasonsOf(effect);
       const key = reasons.length > 0 ? JSON.stringify(reasons) : `none:${i}`;
       const entry = byReasons.get(key) ?? { descriptions: [], reasons };
-      entry.descriptions.push(`${effect.description}${through(effect.via)}`);
+      entry.descriptions.push({
+        text: `${effect.description}${through(effect.via)}`,
+        hosts: egressHosts(effect, plugin),
+      });
       byReasons.set(key, entry);
     });
     return [...byReasons.values()];
@@ -59,7 +66,12 @@ www.meshiplaw.com/lyra.
   {#each entries as entry, i (i)}
     <li>
       {#each entry.descriptions as description, d (d)}
-        <span class="block">{description}</span>
+        <span class="block">{description.text}</span>
+        {#if description.hosts}
+          <span class="block text-slate-500 dark:text-neutral-400"
+            >{description.hosts}</span
+          >
+        {/if}
       {/each}
       {#each entry.reasons as reason, r (r)}
         <span class="block text-slate-500 dark:text-neutral-400"

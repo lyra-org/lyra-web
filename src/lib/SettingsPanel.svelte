@@ -991,7 +991,7 @@ www.meshiplaw.com/lyra.
                   />
                 {/if}
                 <div class="flex flex-wrap gap-2">
-                  {#if selectedPluginSource?.status === "update_available" && selectedPluginSource.offered && (selectedPluginSource.hold == null || selectedPluginSource.hold.reason === "adds_scopes")}
+                  {#if selectedPluginSource?.status === "update_available" && selectedPluginSource.offered && (selectedPluginSource.hold == null || selectedPluginSource.hold.reason === "adds_reach")}
                     <button
                       type="button"
                       onclick={update}

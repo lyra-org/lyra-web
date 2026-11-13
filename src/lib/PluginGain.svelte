@@ -9,6 +9,7 @@ www.meshiplaw.com/lyra.
   import type { ScopeGainResponse } from "./types";
   import PluginEffects from "./PluginEffects.svelte";
   import PluginScopeList from "./PluginScopeList.svelte";
+  import { describeHosts } from "./pluginHosts";
 
   interface Props {
     gain: ScopeGainResponse;
@@ -17,6 +18,13 @@ www.meshiplaw.com/lyra.
   let { gain }: Props = $props();
 
   let rises = $derived(gain.risk.level !== gain.previous_risk);
+
+  let hosts = $derived(
+    describeHosts(
+      gain.hosts.map((host) => ({ host, owner: gain.plugin })),
+      gain.plugin,
+    ),
+  );
 </script>
 
 <!-- What one installed plugin would newly reach. When that raises its risk, the
@@ -28,6 +36,11 @@ combined reasons follow, since the effects alone list only what is new. -->
   {#if gain.effects.length > 0}
     <p class="mt-1 mb-0.5 text-slate-500 dark:text-neutral-400">Would newly:</p>
     <PluginEffects effects={gain.effects} plugin={gain.plugin} />
+  {/if}
+  {#if gain.hosts.length > 0}
+    <p class="mt-1 text-slate-600 dark:text-neutral-400">
+      Could newly send requests to {hosts}.
+    </p>
   {/if}
   {#if gain.unresolved_dependencies.length > 0}
     <p class="mt-1 text-slate-600 dark:text-neutral-400">

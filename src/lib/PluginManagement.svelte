@@ -300,7 +300,7 @@ www.meshiplaw.com/lyra.
                   version={plugin.source.offered.version}
                 />
               </div>
-              {#if plugin.source.hold.reason === "adds_scopes"}
+              {#if plugin.source.hold.reason === "adds_reach"}
                 <button
                   type="button"
                   class={primaryClass}
