@@ -808,8 +808,8 @@ export function updateLibrary(
   return patch<LibraryResponse>(`/libraries/${id}`, data);
 }
 
-// Purges the named missing tracks, or without any every missing file of the
-// library and the tracks only they hold.
+// Purges the named unavailable tracks, or without any every missing or rejected
+// file of the library and the tracks only they hold.
 export function purgeLibrary(
   id: string,
   trackIds?: string[],

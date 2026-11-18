@@ -115,11 +115,12 @@ function shuffleTracksFrom(
   return [...head, ...rest.flat()];
 }
 
-export const MISSING_HINT =
-  "A sync couldn't find this track's file, so it can't play.";
+export const UNAVAILABLE_HINT =
+  "A sync found this track's file missing, or no longer holding it, so it can't play.";
 
-// Whether a sync found the track's files gone, so that playing it can't work.
-export function isMissing(track: TrackResponse): boolean {
+// Whether a sync found the track's files gone, or changed and no longer
+// holding it, so that playing it can't work.
+export function isUnavailable(track: TrackResponse): boolean {
   return track.available === false;
 }
 
@@ -138,7 +139,7 @@ function contextUpcomingTracks(): TrackResponse[] {
       const id = shuffledIds[i];
       if (skippedUpNextIds.has(id)) continue;
       const track = playbackContext.tracks.find((t) => t.id === id);
-      if (track && !isMissing(track)) upcoming.push(track);
+      if (track && !isUnavailable(track)) upcoming.push(track);
     }
     return upcoming;
   }
@@ -148,7 +149,7 @@ function contextUpcomingTracks(): TrackResponse[] {
   if (idx < 0) return [];
   return playbackContext.tracks
     .slice(idx + 1)
-    .filter((t) => !isSkipped(t) && !isMissing(t));
+    .filter((t) => !isSkipped(t) && !isUnavailable(t));
 }
 
 function getUpNext(): UpNextItem[] {
@@ -180,7 +181,7 @@ function previousContextTrack(): TrackResponse | null {
     shuffle && shuffledIds.length > 0 ? shuffledIds : tracks.map((t) => t.id);
   for (let i = order.indexOf(currentTrack.id) - 1; i >= 0; i--) {
     const track = tracks.find((t) => t.id === order[i]);
-    if (track && !isMissing(track)) return track;
+    if (track && !isUnavailable(track)) return track;
   }
   return null;
 }
@@ -199,12 +200,12 @@ function dismissNotice() {
   noticeTimer = null;
 }
 
-function missingNotice(track: TrackResponse): string {
-  return `${track.title ? `“${track.title}”` : "This track"} can't play: its file is missing.`;
+function unavailableNotice(track: TrackResponse): string {
+  return `${track.title ? `“${track.title}”` : "This track"} can't play: a sync found its file missing, or no longer holding it.`;
 }
 
 // Learned from the server, so the rest of this queue passes over the track.
-function markMissing(id: string) {
+function markUnavailable(id: string) {
   queue = queue.filter((item) => item.track.id !== id);
   if (!playbackContext) return;
   playbackContext.tracks = playbackContext.tracks.map((t) =>
@@ -543,14 +544,14 @@ function abandonStart(
     );
     return;
   }
-  showNotice(missingNotice(track));
-  markMissing(track.id);
+  showNotice(unavailableNotice(track));
+  markUnavailable(track.id);
   if (options.autoplay !== false && !options.handoffToken) nextTrack();
 }
 
 async function playTrack(track: TrackResponse, context: PlaybackContext) {
-  if (isMissing(track)) {
-    showNotice(missingNotice(track));
+  if (isUnavailable(track)) {
+    showNotice(unavailableNotice(track));
     return;
   }
   skippedUpNextIds = new Set();
@@ -612,8 +613,8 @@ function nextTrack() {
 
 function addToQueue(track: TrackResponse, context: PlaybackContext) {
   if (!track.id) return;
-  if (isMissing(track)) {
-    showNotice(missingNotice(track));
+  if (isUnavailable(track)) {
+    showNotice(unavailableNotice(track));
     return;
   }
   if (currentTrack == null) {

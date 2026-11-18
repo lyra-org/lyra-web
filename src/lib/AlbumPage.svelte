@@ -9,7 +9,11 @@ www.meshiplaw.com/lyra.
   import { PageResource } from "./pageResource.svelte.ts";
   import type { ArtistResponse, ReleaseResponse, TrackResponse } from "./types";
   import { fetchRelease } from "./api";
-  import { getPlayer, isMissing, MISSING_HINT } from "./player.svelte.ts";
+  import {
+    getPlayer,
+    isUnavailable,
+    UNAVAILABLE_HINT,
+  } from "./player.svelte.ts";
   import { getTags, tagChipClasses } from "./tags.svelte.ts";
   import { getAuth } from "./auth.svelte.ts";
   import CoverImage from "./CoverImage.svelte";
@@ -267,13 +271,13 @@ www.meshiplaw.com/lyra.
               {#each tracks as track}
                 <tr
                   class="group border-b border-slate-100 last:border-b-0 hover:bg-slate-50 dark:border-neutral-900 dark:hover:bg-neutral-700/50"
-                  class:cursor-pointer={!isMissing(track)}
-                  title={isMissing(track) ? MISSING_HINT : undefined}
+                  class:cursor-pointer={!isUnavailable(track)}
+                  title={isUnavailable(track) ? UNAVAILABLE_HINT : undefined}
                   class:bg-slate-100={player.isCurrentTrack(track)}
                   class:dark:bg-neutral-700={player.isCurrentTrack(track)}
                   onclick={() =>
                     albumContext &&
-                    !isMissing(track) &&
+                    !isUnavailable(track) &&
                     player.playTrack(track, albumContext)}
                   oncontextmenu={(e) => openTrackMenu(e, track)}
                 >
@@ -306,7 +310,7 @@ www.meshiplaw.com/lyra.
                           clip-rule="evenodd"
                         />
                       </svg>
-                    {:else if isMissing(track)}
+                    {:else if isUnavailable(track)}
                       {track.track ?? ""}
                     {:else}
                       <span class="group-hover:hidden">{track.track ?? ""}</span
@@ -334,7 +338,7 @@ www.meshiplaw.com/lyra.
                     class:dark:text-neutral-100={!player.isCurrentTrack(track)}
                   >
                     <span class="inline-flex flex-wrap items-center gap-1.5">
-                      <span class:opacity-60={isMissing(track)}
+                      <span class:opacity-60={isUnavailable(track)}
                         >{track.title}</span
                       >
                       {#if chainTitles[track.id]}

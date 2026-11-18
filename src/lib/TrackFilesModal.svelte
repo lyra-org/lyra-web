@@ -60,10 +60,20 @@ www.meshiplaw.com/lyra.
     return `${value.toFixed(1)} ${units[unit]}`;
   }
 
+  const since = (at: string) => new Date(at).toLocaleDateString();
+
+  // Missing takes precedence: a missing file's last read no longer matters.
+  function status(file: EntryResponse): string[] {
+    if (file.missing_at) return [`Missing since ${since(file.missing_at)}`];
+    if (file.rejected_at)
+      return [`Holds no track since ${since(file.rejected_at)}`];
+    return [];
+  }
+
   function details(file: EntryResponse): string {
-    const modified = new Date(file.modified_at).toLocaleDateString();
+    const modified = since(file.modified_at);
     return [
-      ...(file.missing_at ? ["Missing"] : []),
+      ...status(file),
       formatSize(file.size),
       `Modified ${modified}`,
     ].join(" · ");

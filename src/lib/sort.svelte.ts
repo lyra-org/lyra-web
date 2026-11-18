@@ -74,7 +74,7 @@ export const listFilters = {
   unplayed: { listened: false },
   rated: { rated: true },
   unrated: { rated: false },
-  missing: { available: false },
+  unavailable: { available: false },
 } satisfies Record<string, ListFilter>;
 
 export type ListFilterKey = keyof typeof listFilters;
@@ -86,7 +86,7 @@ export const listFilterOptions: { value: ListFilterKey; label: string }[] = [
   { value: "unplayed", label: "Not played" },
   { value: "rated", label: "Rated" },
   { value: "unrated", label: "Not rated" },
-  { value: "missing", label: "Missing" },
+  { value: "unavailable", label: "Unavailable" },
 ];
 
 const STORAGE_PREFIX = "lyra-sort";

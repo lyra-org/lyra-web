@@ -15,7 +15,11 @@ www.meshiplaw.com/lyra.
     removePlaylistTrack,
     movePlaylistTrack,
   } from "./api";
-  import { getPlayer, isMissing, MISSING_HINT } from "./player.svelte.ts";
+  import {
+    getPlayer,
+    isUnavailable,
+    UNAVAILABLE_HINT,
+  } from "./player.svelte.ts";
   import FavoriteButton from "./FavoriteButton.svelte";
   import { anchorAtPointer } from "./ContextMenu.svelte";
   import TrackMenu, { type TrackMenuTarget } from "./TrackMenu.svelte";
@@ -94,7 +98,7 @@ www.meshiplaw.com/lyra.
   });
 
   function playItem(item: PlaylistTrackResponse) {
-    if (playlistContext && !isMissing(item.track)) {
+    if (playlistContext && !isUnavailable(item.track)) {
       player.playTrack(item.track, playlistContext);
     }
   }
@@ -281,8 +285,8 @@ www.meshiplaw.com/lyra.
             {#each sortedItems as item, idx}
               <tr
                 class="group border-b border-slate-100 last:border-b-0 hover:bg-slate-50 dark:border-neutral-900 dark:hover:bg-neutral-700/50"
-                class:cursor-pointer={!isMissing(item.track)}
-                title={isMissing(item.track) ? MISSING_HINT : undefined}
+                class:cursor-pointer={!isUnavailable(item.track)}
+                title={isUnavailable(item.track) ? UNAVAILABLE_HINT : undefined}
                 class:bg-slate-100={player.isCurrentTrack(item.track)}
                 class:dark:bg-neutral-700={player.isCurrentTrack(item.track)}
                 onclick={() => playItem(item)}
@@ -318,7 +322,7 @@ www.meshiplaw.com/lyra.
                         clip-rule="evenodd"
                       />
                     </svg>
-                  {:else if isMissing(item.track)}
+                  {:else if isUnavailable(item.track)}
                     {idx + 1}
                   {:else}
                     <span class="group-hover:hidden">{idx + 1}</span>
@@ -350,7 +354,7 @@ www.meshiplaw.com/lyra.
                     item.track,
                   )}
                 >
-                  <span class:opacity-60={isMissing(item.track)}
+                  <span class:opacity-60={isUnavailable(item.track)}
                     >{item.track.title}</span
                   >
                 </td>

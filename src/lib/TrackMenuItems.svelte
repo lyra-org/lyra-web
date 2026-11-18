@@ -10,7 +10,11 @@ www.meshiplaw.com/lyra.
   import type { PlaylistResponse, TagColor, TrackResponse } from "./types";
   import type { PlaybackContext } from "./player.svelte.ts";
   import { addPlaylistTracks, fetchPlaylists, fetchAllPages } from "./api";
-  import { getPlayer, isMissing } from "./player.svelte.ts";
+  import {
+    getPlayer,
+    isUnavailable,
+    UNAVAILABLE_HINT,
+  } from "./player.svelte.ts";
   import { getAuth } from "./auth.svelte.ts";
   import { mixSupport } from "./mixOptions";
   import RatingMenuItem from "./RatingMenuItem.svelte";
@@ -49,11 +53,11 @@ www.meshiplaw.com/lyra.
   let trackId = $derived(track.id);
   let canManage = $derived(getAuth().hasPermission("manage_metadata"));
   let canSync = $derived(getAuth().hasPermission("sync_metadata"));
-  let missing = $derived(isMissing(track));
+  let unavailable = $derived(isUnavailable(track));
   let canManageLibraries = $derived(
     getAuth().hasPermission("manage_libraries"),
   );
-  let canFixMissing = $derived(missing && canManageLibraries);
+  let canFixUnavailable = $derived(unavailable && canManageLibraries);
 
   const player = getPlayer();
   const tagsStore = getTags();
@@ -162,8 +166,8 @@ www.meshiplaw.com/lyra.
   <button
     type="button"
     role="menuitem"
-    disabled={missing}
-    title={missing ? "This track's file is missing" : undefined}
+    disabled={unavailable}
+    title={unavailable ? UNAVAILABLE_HINT : undefined}
     class="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-transparent dark:text-neutral-200 dark:hover:bg-neutral-600 dark:disabled:hover:bg-transparent"
     onclick={handleAddToQueue}
   >
@@ -183,7 +187,7 @@ www.meshiplaw.com/lyra.
     </svg>
     Add to queue
   </button>
-  {#if pathSupported && !missing}
+  {#if pathSupported && !unavailable}
     <MenuItem
       icon="M16 6a2 2 0 1 0 4 0a2 2 0 1 0-4 0M4 18a2 2 0 1 0 4 0a2 2 0 1 0-4 0M8 18h7a3 3 0 0 0 0-6H9a3 3 0 0 1 0-6h7"
       onclick={onpath}>Path to…</MenuItem
@@ -277,7 +281,7 @@ www.meshiplaw.com/lyra.
       onclick={onfiles}>File info</MenuItem
     >
   {/if}
-  {#if canFixMissing}
+  {#if canFixUnavailable}
     <MenuItem
       icon="M7.5 21L3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5"
       onclick={onremap}>Remap</MenuItem

@@ -7,10 +7,15 @@ www.meshiplaw.com/lyra.
 
 <script lang="ts">
   import { PageResource } from "./pageResource.svelte.ts";
-  import type { ArtistResponse, CreditType, TrackResponse } from "./types";
-  import { fetchTrackDetail } from "./api";
+  import type {
+    ArtistResponse,
+    CreditType,
+    EntryResponse,
+    TrackResponse,
+  } from "./types";
+  import { fetchTrackDetail, fetchTrackEntries } from "./api";
   import { getAuth } from "./auth.svelte.ts";
-  import { getPlayer, isMissing } from "./player.svelte.ts";
+  import { getPlayer, isUnavailable } from "./player.svelte.ts";
   import { anchorBelow } from "./ContextMenu.svelte";
   import CoverImage from "./CoverImage.svelte";
   import ArtistPortraitCard from "./ArtistPortraitCard.svelte";
@@ -44,6 +49,38 @@ www.meshiplaw.com/lyra.
   let error = $derived(resource.error);
 
   let release = $derived(track?.releases?.[0] ?? null);
+
+  // The files of an unavailable track, to tell why it can't play.
+  let files = $state<{ trackId: string; entries: EntryResponse[] } | null>(
+    null,
+  );
+
+  $effect(() => {
+    if (!track || !isUnavailable(track)) return;
+    const id = track.id;
+    let current = true;
+    fetchTrackEntries(id)
+      .then((entries) => {
+        if (current) files = { trackId: id, entries };
+      })
+      .catch(() => {
+        // Without them, the page gives the general reason.
+      });
+    return () => {
+      current = false;
+    };
+  });
+
+  let unavailableReason = $derived.by(() => {
+    const entries = files?.trackId === track?.id ? files?.entries : undefined;
+    const missing = entries?.some((entry) => entry.missing_at) ?? false;
+    const rejected = entries?.some((entry) => entry.rejected_at) ?? false;
+    if (missing && !rejected) return "A sync couldn't find this track's file.";
+    if (rejected && !missing) {
+      return "A sync found this track's file changed and no longer holding it.";
+    }
+    return "This track's file can't play.";
+  });
 
   const CREDIT_ORDER: CreditType[] = [
     "artist",
@@ -209,7 +246,7 @@ www.meshiplaw.com/lyra.
           <button
             type="button"
             class="inline-flex items-center gap-2 rounded-full bg-[#E6CEE3] px-5 py-2 text-sm font-medium text-slate-900 shadow-sm hover:bg-[#d4b5cf] disabled:opacity-50 dark:bg-[#BB7FB5] dark:text-white dark:hover:bg-[#cfa2c9]"
-            disabled={isMissing(track) ||
+            disabled={isUnavailable(track) ||
               (player.loading && player.isCurrentTrack(track))}
             onclick={handlePlay}
           >
@@ -255,11 +292,11 @@ www.meshiplaw.com/lyra.
           {/if}
         </div>
 
-        {#if isMissing(track)}
+        {#if isUnavailable(track)}
           <p
             class="mt-3 flex flex-wrap items-center gap-2 text-sm text-slate-500 dark:text-neutral-400"
           >
-            A sync couldn't find this track's file.
+            {unavailableReason}
             {#if auth.hasPermission("manage_libraries")}
               <button
                 type="button"

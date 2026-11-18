@@ -65,7 +65,7 @@ www.meshiplaw.com/lyra.
 {/snippet}
 
 <Modal
-  title="Remap missing track"
+  title="Remap unavailable track"
   subtitle="Point it at the track its file became"
   width="narrow"
   onclose={() => {
@@ -77,7 +77,7 @@ www.meshiplaw.com/lyra.
       <div
         class="mb-1 text-xs font-medium text-slate-500 dark:text-neutral-400"
       >
-        Missing track
+        Unavailable track
       </div>
       <div class="text-slate-900 dark:text-neutral-100">
         {@render trackLine(track)}

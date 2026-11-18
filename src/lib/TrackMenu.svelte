@@ -41,7 +41,7 @@ www.meshiplaw.com/lyra.
   import LyricsModal from "./LyricsModal.svelte";
   import MetadataEditModal from "./MetadataEditModal.svelte";
   import PathMixModal from "./PathMixModal.svelte";
-  import PurgeMissingModal from "./PurgeMissingModal.svelte";
+  import PurgeUnavailableModal from "./PurgeUnavailableModal.svelte";
   import RefreshOptionsModal from "./RefreshOptionsModal.svelte";
   import RemapTrackModal from "./RemapTrackModal.svelte";
   import TrackFilesModal from "./TrackFilesModal.svelte";
@@ -178,7 +178,7 @@ www.meshiplaw.com/lyra.
 {/if}
 
 {#if purgingTrack && libraryId != null}
-  <PurgeMissingModal
+  <PurgeUnavailableModal
     {libraryId}
     track={purgingTrack}
     onstarted={async ({ run }) => {

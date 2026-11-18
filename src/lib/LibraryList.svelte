@@ -36,7 +36,7 @@ www.meshiplaw.com/lyra.
   import LibrarySyncHistoryModal from "./LibrarySyncHistoryModal.svelte";
   import LibraryRunOptionsModal from "./LibraryRunOptionsModal.svelte";
   import Modal from "./Modal.svelte";
-  import PurgeMissingModal from "./PurgeMissingModal.svelte";
+  import PurgeUnavailableModal from "./PurgeUnavailableModal.svelte";
 
   const SYNC_RETRY_BASE_MS = 1_000;
   const SYNC_RETRY_MAX_MS = 60_000;
@@ -598,7 +598,7 @@ www.meshiplaw.com/lyra.
           d="M7 21l-4.3-4.3c-1-1-1-2.5 0-3.4l9.6-9.6c1-1 2.5-1 3.4 0l5.6 5.6c1 1 1 2.5 0 3.4L13 21M22 21H7M5 11l9 9"
         />
       </svg>
-      Purge missing
+      Purge unavailable
     </button>
     <div
       class={[
@@ -816,7 +816,7 @@ www.meshiplaw.com/lyra.
 {/if}
 
 {#if purgingLibrary}
-  <PurgeMissingModal
+  <PurgeUnavailableModal
     libraryId={purgingLibrary.id}
     libraryName={purgingLibrary.name}
     onstarted={(response) => applySyncStatus(response.run)}

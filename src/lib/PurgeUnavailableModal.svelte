@@ -10,7 +10,8 @@ www.meshiplaw.com/lyra.
   import { purgeLibrary } from "./api";
   import Modal from "./Modal.svelte";
 
-  // One missing track, or else all of the library's missing files.
+  // One unavailable track, or else all of the library's missing and rejected
+  // files.
   type Props = {
     libraryId: string;
     onstarted: (response: LibrarySyncStartResponse) => void;
@@ -39,7 +40,7 @@ www.meshiplaw.com/lyra.
 </script>
 
 <Modal
-  title={track ? "Purge missing track?" : "Purge missing files?"}
+  title={track ? "Purge unavailable track?" : "Purge unavailable files?"}
   width="narrow"
   onclose={() => {
     if (!starting) onclose();
@@ -50,9 +51,11 @@ www.meshiplaw.com/lyra.
       “{scope.track.title}” leaves Lyra with its favorites, ratings, listens,
       playlist entries and lyrics.
     {:else}
-      Every missing file in “{scope.libraryName}” leaves Lyra, with the tracks
-      only they hold and those tracks' favorites, ratings, listens, playlist
-      entries and lyrics. Albums and artists left with nothing go too.
+      The tracks in “{scope.libraryName}” that only missing files, or changed
+      files no longer holding them, can play leave Lyra with their favorites,
+      ratings, listens, playlist entries and lyrics. Albums and artists left
+      with nothing go too. Missing files leave with them; changed files stay,
+      and the next sync reads them as new.
     {/if}
     This cannot be undone.
   </p>

@@ -179,6 +179,9 @@ export interface EntryResponse {
   modified_at: string;
   // RFC 3339 timestamp of when a sync first failed to find the file.
   missing_at?: string | null;
+  // RFC 3339 timestamp of when a sync first read the changed file and found
+  // nothing in it to replace its tracks, which stay, unable to play.
+  rejected_at?: string | null;
   hash?: string | null;
   file_kind?: string | null;
   tracks?: TrackResponse[];
