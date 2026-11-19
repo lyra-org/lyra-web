@@ -6,6 +6,7 @@
 import type {
   ForwardedCommand,
   PlaybackState,
+  PlaybackUrlResponse,
   QueueResponse,
   QueueSnapshot,
   TrackResponse,
@@ -232,6 +233,37 @@ const PAUSED_REPORT_MS = 30_000;
 
 const audio = new Audio();
 
+// The stream URL's token lapses at its expiry, or once unused for its idle
+// time, after which the browser's next request for more of the track fails.
+let streamExpiresAt = 0;
+let streamIdleMs = 0;
+// When the stream last stopped playing; null while it plays.
+let streamIdleSince: number | null = null;
+// When the current play last reloaded its stream after a failure.
+let streamReloadedAt = 0;
+const STREAM_LAPSE_MARGIN_MS = 30_000;
+// A fresh token can't lapse this soon, so a failure this soon after a reload
+// isn't one that another reload fixes.
+const STREAM_RELOAD_COOLDOWN_MS = 30_000;
+
+function useStream(url: PlaybackUrlResponse) {
+  if (!url.stream_url) {
+    throw new Error("No playable audio stream available");
+  }
+  audio.src = url.stream_url;
+  streamExpiresAt = Date.parse(url.expires_at);
+  streamIdleMs = url.idle_expires_after_seconds * 1000;
+  streamIdleSince = Date.now();
+}
+
+function streamMayHaveLapsed(): boolean {
+  const soon = Date.now() + STREAM_LAPSE_MARGIN_MS;
+  return (
+    soon >= streamExpiresAt ||
+    (streamIdleSince != null && soon - streamIdleSince >= streamIdleMs)
+  );
+}
+
 const PLAY_ID_ALPHABET =
   "_-0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
@@ -406,6 +438,7 @@ audio.addEventListener("loadedmetadata", () => {
 audio.addEventListener("play", () => {
   const wasPlaying = playing;
   playing = true;
+  streamIdleSince = null;
   if (!loading && !wasPlaying && playbackId != null && !handingOff) {
     reportProgress("playing");
     startReportInterval();
@@ -414,11 +447,24 @@ audio.addEventListener("play", () => {
 
 audio.addEventListener("pause", () => {
   playing = false;
+  streamIdleSince = Date.now();
   if (loading || handingOff) return;
   reportProgress("paused");
   if (playbackId != null) {
     startReportInterval();
   }
+});
+
+// A track that fails while starting is handled where it starts.
+audio.addEventListener("error", () => {
+  if (loading || handingOff || playId == null) return;
+  if (!audio.hasAttribute("src")) return;
+  if (audio.error?.code === MediaError.MEDIA_ERR_ABORTED) return;
+  if (Date.now() - streamReloadedAt < STREAM_RELOAD_COOLDOWN_MS) {
+    stopOnStreamFailure();
+    return;
+  }
+  reloadStream(playing);
 });
 
 audio.addEventListener("ended", () => {
@@ -491,10 +537,8 @@ async function playTrackInternal(
       serialize(() => bindCurrentTrack(track, trackPlayId, options.adopt)),
     ]);
     if (playId !== trackPlayId) return;
-    if (!playbackUrl.stream_url) {
-      throw new Error("No playable audio stream available");
-    }
-    audio.src = playbackUrl.stream_url;
+    useStream(playbackUrl);
+    streamReloadedAt = 0;
     if (options.positionMs) await seekOnceLoaded(options.positionMs / 1000);
     if (playId !== trackPlayId) return;
     if (options.autoplay !== false) {
@@ -549,6 +593,60 @@ function abandonStart(
   if (options.autoplay !== false && !options.handoffToken) nextTrack();
 }
 
+// Continues the current play from where it is on a fresh stream URL, as one
+// that failed or lapsed can't fetch the rest of the track.
+async function reloadStream(resumePlaying: boolean) {
+  const track = currentTrack;
+  const trackPlayId = playId;
+  if (!track?.id || trackPlayId == null || loading) return;
+
+  const position = audio.currentTime;
+  stopReportInterval();
+  loading = true;
+  streamReloadedAt = Date.now();
+  let started = false;
+  try {
+    const playbackUrl = await createPlaybackUrl(
+      track.id,
+      browserPlaybackOptions(),
+    );
+    if (playId !== trackPlayId) return;
+    useStream(playbackUrl);
+    await seekOnceLoaded(position);
+    if (playId !== trackPlayId) return;
+    if (resumePlaying) {
+      await audio.play();
+      started = true;
+    }
+  } catch (e) {
+    console.error("Reloading the stream failed:", e);
+    if (playId === trackPlayId) stopOnStreamFailure();
+    return;
+  } finally {
+    if (playId === trackPlayId) loading = false;
+  }
+  playing = started;
+  if (started) reportProgress("playing");
+  startReportInterval();
+}
+
+// Pauses where the stream gave out. Resuming reloads it.
+function stopOnStreamFailure() {
+  const track = currentTrack;
+  loading = false;
+  playing = false;
+  // Pausing reports itself.
+  if (!audio.paused) {
+    audio.pause();
+  } else {
+    reportProgress("paused");
+    startReportInterval();
+  }
+  showNotice(
+    `${track?.title ? `“${track.title}”` : "This track"} stopped playing.`,
+  );
+}
+
 async function playTrack(track: TrackResponse, context: PlaybackContext) {
   if (isUnavailable(track)) {
     showNotice(unavailableNotice(track));
@@ -585,8 +683,13 @@ function togglePlayback() {
 // A track that failed to start has no audio to resume, so it starts again.
 function resume() {
   if (!currentTrack) return;
-  if (audio.hasAttribute("src")) audio.play();
-  else if (playbackContext) playTrackInternal(currentTrack, playbackContext);
+  if (!audio.hasAttribute("src")) {
+    if (playbackContext) playTrackInternal(currentTrack, playbackContext);
+  } else if (audio.error || streamMayHaveLapsed()) {
+    reloadStream(true);
+  } else {
+    audio.play();
+  }
 }
 
 function pause() {
