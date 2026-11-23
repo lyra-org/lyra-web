@@ -20,6 +20,7 @@ www.meshiplaw.com/lyra.
   import PluginInstallConfirm from "./PluginInstallConfirm.svelte";
   import PluginSource from "./PluginSource.svelte";
   import { pluginOrigin } from "./pluginSource";
+  import { previewedRelease } from "./pluginUpdates.svelte.ts";
   import Logo from "./Logo.svelte";
 
   interface Props {
@@ -71,11 +72,10 @@ www.meshiplaw.com/lyra.
     return (setup.catalog ?? [])
       .map((repo) => ({
         repo,
-        plugins: repo.plugins.flatMap((p) =>
-          selected[key(repo, p.id)] && p.commit
-            ? [{ id: p.id, commit: p.commit }]
-            : [],
-        ),
+        plugins: repo.plugins.flatMap((p) => {
+          const release = selected[key(repo, p.id)] && previewedRelease(p);
+          return release ? [release] : [];
+        }),
       }))
       .filter((s) => s.plugins.length > 0);
   }

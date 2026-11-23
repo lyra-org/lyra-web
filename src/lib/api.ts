@@ -68,6 +68,7 @@ import type {
   PluginSettingValue,
   CatalogRepository,
   PluginRepository,
+  ApprovedRelease,
   PreviewedPlugin,
   RefreshPluginRepositoriesResponse,
   RepositoryPreview,
@@ -1514,7 +1515,7 @@ export function restartPlugin(pluginId: string): Promise<void> {
 // that release adds. Omitting `plugins` sends `{}`, which updates every
 // repository-managed plugin whose update is not held.
 export function updatePlugins(
-  plugins?: PreviewedPlugin[],
+  plugins?: ApprovedRelease[],
 ): Promise<UpdatePluginsResponse> {
   return post<UpdatePluginsResponse>("/plugins/update", { plugins });
 }

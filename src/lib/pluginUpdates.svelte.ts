@@ -7,6 +7,8 @@ import type {
   PluginHold,
   PluginManifestResponse,
   PluginSourceResponse,
+  ApprovedRelease,
+  PluginPreviewResponse,
   PreviewedPlugin,
   UpdatePluginsResponse,
 } from "./types";
@@ -32,11 +34,31 @@ export function isAwaitingApproval(plugin: PluginManifestResponse): boolean {
 export function offeredRelease(plugin: {
   id: string;
   source?: PluginSourceResponse;
-}): PreviewedPlugin | null {
+}): ApprovedRelease | null {
   if (plugin.source?.kind !== "repository") return null;
   if (plugin.source.status !== "update_available") return null;
   const offered = plugin.source.offered;
-  return offered ? { id: plugin.id, commit: offered.commit } : null;
+  return offered
+    ? {
+        id: plugin.id,
+        commit: offered.commit,
+        manifest_digest: offered.manifest_digest,
+      }
+    : null;
+}
+
+// The release an install request names for `plugin`, as its repository
+// listed it, when it has one to install.
+export function previewedRelease(
+  plugin: PluginPreviewResponse,
+): PreviewedPlugin | null {
+  if (!plugin.commit || !plugin.manifest_digest) return null;
+  return {
+    id: plugin.id,
+    commit: plugin.commit,
+    manifest_digest: plugin.manifest_digest,
+    source: plugin.source ?? null,
+  };
 }
 
 function track(plugins: PluginManifestResponse[]) {

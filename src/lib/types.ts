@@ -957,8 +957,9 @@ export type UpdateStatus =
 
 export interface OfferedReleaseResponse {
   version: string;
-  // An update request names this commit to approve the release.
+  // An update request names this commit and digest to approve the release.
   commit: string;
+  manifest_digest: string;
   scopes: string[];
 }
 
@@ -1312,8 +1313,10 @@ export type PluginPreviewResponse = {
   // Capability scopes the release declares, which installing it grants.
   scopes: string[];
   access?: PluginAccessResponse | null;
-  // The release an install takes; requests name it with the plugin id.
+  // The release an install takes; requests name it with the plugin id, its
+  // `source` and the BLAKE3 digest of its `plugin.json`.
   commit?: string | null;
+  manifest_digest?: string | null;
   // Present only when the repository index points at another repository.
   source?: { origin: string } | null;
   // Whether the plugin's own code is held in the official Lyra repository's
@@ -1348,10 +1351,17 @@ export interface RepositoryPreview {
   plugins: PluginPreviewResponse[];
 }
 
-// A plugin bound to the release its preview or status showed.
-export interface PreviewedPlugin {
+// A plugin update bound to the release its status offered.
+export interface ApprovedRelease {
   id: string;
   commit: string;
+  manifest_digest: string;
+}
+
+// A plugin install bound to where its preview showed it and the release it
+// showed; either changing since fails the install.
+export interface PreviewedPlugin extends ApprovedRelease {
+  source?: { origin: string } | null;
 }
 
 export interface InstalledPluginResponse {

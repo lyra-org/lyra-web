@@ -25,6 +25,7 @@ www.meshiplaw.com/lyra.
     describeHold,
     isAwaitingApproval,
     offeredRelease,
+    previewedRelease,
     updateOutcome,
   } from "./pluginUpdates.svelte.ts";
   import PluginHoldNotice from "./PluginHoldNotice.svelte";
@@ -150,9 +151,9 @@ www.meshiplaw.com/lyra.
 
   function install(entry: CatalogEntry) {
     return run(`install:${entry.plugin.id}`, async () => {
-      const result = await installRepositoryPlugins(entry.repo.id, [
-        { id: entry.plugin.id, commit: entry.plugin.commit! },
-      ]);
+      const release = previewedRelease(entry.plugin);
+      if (release == null) throw new Error("No release to install.");
+      const result = await installRepositoryPlugins(entry.repo.id, [release]);
       await onchange();
       // `up_to_date` is what this repository now reports. Other repositories
       // listing the plugin compare against their own offer, but the catalog
