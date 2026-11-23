@@ -21,8 +21,11 @@ www.meshiplaw.com/lyra.
     updatePlugins,
   } from "./api";
   import { getSetup } from "./setup.svelte.ts";
+  import { getAuth } from "./auth.svelte.ts";
   import {
     describeHold,
+    holdNeedsAdmin,
+    installNeedsAdmin,
     isAwaitingApproval,
     offeredRelease,
     previewedRelease,
@@ -67,6 +70,9 @@ www.meshiplaw.com/lyra.
   });
 
   let disabled = $derived(pending != null || setup.catalogLoading);
+  const auth = getAuth();
+  let isAdmin = $derived(auth.hasPermission("admin"));
+  const adminOnly = "An admin must approve this";
 
   interface CatalogEntry {
     repo: CatalogRepository;
@@ -301,7 +307,9 @@ www.meshiplaw.com/lyra.
                   version={plugin.source.offered.version}
                 />
               </div>
-              {#if plugin.source.hold.reason === "adds_reach"}
+              {#if plugin.source.hold.reason === "adds_reach" && !isAdmin && holdNeedsAdmin(plugin.source.hold)}
+                <span class={mutedClass}>{adminOnly}</span>
+              {:else if plugin.source.hold.reason === "adds_reach"}
                 <button
                   type="button"
                   class={primaryClass}
@@ -369,7 +377,9 @@ www.meshiplaw.com/lyra.
                 {/if}
                 <PluginAccess {plugin} />
               </div>
-              {#if plugin.commit && !plugin.error}
+              {#if plugin.commit && !plugin.error && !isAdmin && installNeedsAdmin(plugin)}
+                <span class={mutedClass}>{adminOnly}</span>
+              {:else if plugin.commit && !plugin.error}
                 <button
                   type="button"
                   class={primaryClass}

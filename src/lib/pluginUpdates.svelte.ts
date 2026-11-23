@@ -47,6 +47,25 @@ export function offeredRelease(plugin: {
     : null;
 }
 
+// Granting reach that leaves a plugin at `high` risk takes an admin's
+// signed-in session; the server refuses anyone else with 403. These read the
+// risks the server reported; it judges a request again as a whole.
+export function holdNeedsAdmin(hold: PluginHold): boolean {
+  return (
+    hold.reason === "adds_reach" &&
+    hold.gains.some((gain) => gain.risk.level === "high")
+  );
+}
+
+export function installNeedsAdmin(plugin: PluginPreviewResponse): boolean {
+  const access = plugin.access;
+  if (access == null) return false;
+  return (
+    access.risk.level === "high" ||
+    access.widens.some((gain) => gain.risk.level === "high")
+  );
+}
+
 // The release an install request names for `plugin`, as its repository
 // listed it, when it has one to install.
 export function previewedRelease(
