@@ -585,9 +585,17 @@ export interface ArtistResponse {
   credit?: ArtistCreditResponse | null;
   available?: boolean;
   relations?: ArtistRelationResponse[];
-  releases?: ReleaseResponse[];
-  tracks?: TrackResponse[];
+  // The releases credited to the artist and the tracks credited to it or on
+  // those releases, within the request's filters. Present on the artist list,
+  // lookup and search; absent where the artist sits inside another resource.
+  release_count?: number;
+  track_count?: number;
+  total_duration_ms?: number;
 }
+
+// Which credits an artist filter on a list matches: those on the item itself
+// or, through the release or track linking them, on the other.
+export type CreditRole = "track" | "release" | "any";
 
 export interface LyricsWordResponse {
   ts_ms: number;

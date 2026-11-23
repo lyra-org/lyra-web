@@ -7,8 +7,8 @@ www.meshiplaw.com/lyra.
 
 <script lang="ts">
   import { PageResource } from "./pageResource.svelte.ts";
-  import type { ArtistRelationResponse, ArtistResponse } from "./types";
-  import { fetchArtist } from "./api";
+  import type { ArtistRelationResponse, ReleaseResponse } from "./types";
+  import { fetchArtist, fetchReleases } from "./api";
   import { getAuth } from "./auth.svelte.ts";
   import CoverImage from "./CoverImage.svelte";
   import DescriptionSection from "./DescriptionSection.svelte";
@@ -21,6 +21,15 @@ www.meshiplaw.com/lyra.
   import OptionsButton from "./OptionsButton.svelte";
   import FavoriteButton from "./FavoriteButton.svelte";
   import RatingButton from "./RatingButton.svelte";
+  import PaginatedList from "./PaginatedList.svelte";
+  import SortControls from "./SortControls.svelte";
+  import FilterControl from "./FilterControl.svelte";
+  import {
+    listFilterOptions,
+    listFilters,
+    savedFilter,
+    savedSort,
+  } from "./sort.svelte.ts";
 
   interface Props {
     artistId: string;
@@ -44,14 +53,51 @@ www.meshiplaw.com/lyra.
 
   let cover = $derived(artist ? shownCover(artist.id, artist.cover) : null);
 
-  let sortedReleases = $derived.by(() => {
-    const releases = artist?.releases ?? [];
-    return [...releases].sort((a, b) => {
-      const ay = a.release_date ?? "";
-      const by = b.release_date ?? "";
-      return by.localeCompare(ay);
-    });
+  const sort = savedSort("artist/albums", "albums", {
+    sortBy: "release_date",
+    sortOrder: "descending",
   });
+  const filter = savedFilter(
+    "artist/albums",
+    listFilterOptions.map((option) => option.value),
+  );
+  let listScope = $derived(
+    `${artistId}/${sort.sortBy}/${sort.sortOrder}/${filter.value}`,
+  );
+
+  function loadAlbums(offset: number, limit: number) {
+    return fetchReleases({
+      artistId,
+      creditRole: "release",
+      offset,
+      limit,
+      sortBy: sort.sortBy,
+      sortOrder: sort.sortOrder,
+      filter: listFilters[filter.value],
+    });
+  }
+
+  let summary = $derived.by(() => {
+    if (!artist) return [];
+    const parts: string[] = [];
+    const releases = artist.release_count ?? 0;
+    const tracks = artist.track_count ?? 0;
+    if (releases > 0)
+      parts.push(`${releases} album${releases !== 1 ? "s" : ""}`);
+    if (tracks > 0) parts.push(`${tracks} track${tracks !== 1 ? "s" : ""}`);
+    if ((artist.total_duration_ms ?? 0) > 0) {
+      parts.push(formatTotalDuration(artist.total_duration_ms!));
+    }
+    return parts;
+  });
+
+  function formatTotalDuration(ms: number): string {
+    const totalMinutes = Math.floor(ms / 60000);
+    if (totalMinutes < 60) return `${totalMinutes} min`;
+    const hours = Math.floor(totalMinutes / 60);
+    const mins = totalMinutes % 60;
+    return `${hours} hr ${mins} min`;
+  }
 
   let relations = $derived.by(() => {
     const items = artist?.relations ?? [];
@@ -140,11 +186,9 @@ www.meshiplaw.com/lyra.
             {/if}
           {/if}
         </h2>
-        {#if sortedReleases.length > 0}
+        {#if summary.length > 0}
           <p class="mt-2 text-sm text-slate-500 dark:text-neutral-400">
-            {sortedReleases.length} album{sortedReleases.length !== 1
-              ? "s"
-              : ""}
+            {summary.join(" · ")}
           </p>
         {/if}
       </div>
@@ -173,21 +217,44 @@ www.meshiplaw.com/lyra.
       </div>
     {/if}
 
-    <!-- Albums -->
-    {#if sortedReleases.length > 0}
+    {#snippet albumGrid(albums: ReleaseResponse[])}
+      <div
+        class="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6"
+      >
+        {#each albums as album (album.id)}
+          <AlbumCard {album} />
+        {/each}
+      </div>
+    {/snippet}
+
+    {#if (artist.release_count ?? 1) > 0}
       <div class="mt-8">
         <h3
           class="mb-3 text-xs font-semibold tracking-wide text-slate-400 uppercase dark:text-neutral-500"
         >
           Albums
         </h3>
-        <div
-          class="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6"
+        <PaginatedList
+          scope={listScope}
+          label="albums"
+          empty={filter.value === "all" ? "No albums." : "No matching albums."}
+          loadPage={loadAlbums}
+          children={albumGrid}
         >
-          {#each sortedReleases as album (album.id ?? album.title)}
-            <AlbumCard {album} />
-          {/each}
-        </div>
+          {#snippet toolbar()}
+            <div class="flex flex-wrap items-center gap-2">
+              <SortControls
+                kind="albums"
+                bind:sortBy={sort.sortBy}
+                bind:sortOrder={sort.sortOrder}
+              />
+              <FilterControl
+                options={listFilterOptions}
+                bind:value={filter.value}
+              />
+            </div>
+          {/snippet}
+        </PaginatedList>
       </div>
     {/if}
   </div>

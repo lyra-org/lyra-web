@@ -27,6 +27,7 @@ import type {
   ProviderResponse,
   ProviderOptionValues,
   CoverUpdate,
+  CreditRole,
   SyncReleases,
   SearchResult,
   SearchEntityType,
@@ -326,6 +327,11 @@ export function fetchReleases(opts?: {
   query?: string;
   signal?: AbortSignal;
   genreId?: string;
+  // Releases credited to the artist, in `creditRole` (the server's default is
+  // either role) and not in `excludeCreditRole`.
+  artistId?: string;
+  creditRole?: CreditRole;
+  excludeCreditRole?: CreditRole;
   offset?: number;
   sortBy?: string;
   sortOrder?: "ascending" | "descending";
@@ -336,6 +342,11 @@ export function fetchReleases(opts?: {
   if (opts?.query != null) params.set("query", opts.query);
   if (opts?.libraryId) params.set("library_id", opts.libraryId);
   if (opts?.genreId) params.set("genre_id", opts.genreId);
+  if (opts?.artistId) params.set("artist_id", opts.artistId);
+  if (opts?.creditRole) params.set("credit_role", opts.creditRole);
+  if (opts?.excludeCreditRole) {
+    params.set("exclude_credit_role", opts.excludeCreditRole);
+  }
   if (opts?.sortBy) params.set("sort_by", opts.sortBy);
   if (opts?.sortOrder) params.set("sort_order", opts.sortOrder);
   if (opts?.offset) params.set("offset", String(opts.offset));
@@ -512,7 +523,7 @@ export function fetchArtists(opts?: {
 
 export function fetchArtist(id: string): Promise<ArtistResponse> {
   return get<ArtistResponse>(
-    `/artists/${id}?inc=releases,relations,covers,relation_covers,release_artists,release_covers`,
+    `/artists/${id}?inc=relations,covers,relation_covers`,
   );
 }
 
