@@ -46,6 +46,8 @@ www.meshiplaw.com/lyra.
 
   const auth = getAuth();
   const canManage = $derived(auth.hasPermission("manage_libraries"));
+  // A new library points Lyra at a server directory, which takes an admin.
+  const canCreate = $derived(auth.hasPermission("admin"));
 
   let libraries: LibraryResponse[] = $state([]);
   let loading = $state(true);
@@ -376,7 +378,7 @@ www.meshiplaw.com/lyra.
         <h2 class="text-xl font-semibold text-slate-900 dark:text-neutral-100">
           Your library is empty
         </h2>
-        {#if canManage}
+        {#if canCreate}
           <p class="mt-2 text-sm text-slate-500 dark:text-neutral-400">
             Point Lyra at a folder of music to start listening.
           </p>
@@ -393,7 +395,7 @@ www.meshiplaw.com/lyra.
         {/if}
       </div>
     {:else}
-      {#if canManage}
+      {#if canCreate}
         <div class="mb-4 flex items-center justify-end">
           <button
             class="rounded-md bg-[#E6CEE3] px-3 py-1.5 text-sm font-medium text-slate-900 hover:bg-[#d4b5cf] dark:bg-[#BB7FB5] dark:text-white dark:hover:bg-[#cfa2c9]"
