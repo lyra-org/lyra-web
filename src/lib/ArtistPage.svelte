@@ -64,17 +64,34 @@ www.meshiplaw.com/lyra.
   let listScope = $derived(
     `${artistId}/${sort.sortBy}/${sort.sortOrder}/${filter.value}`,
   );
+  // How many releases the artist appears on without a credit of its own, as
+  // the last page read for the current list counted them; the section stays
+  // hidden without any.
+  let appearances = $state({ scope: "", total: 0 });
 
-  function loadAlbums(offset: number, limit: number) {
+  function loadReleases(
+    role: "albums" | "appearances",
+    offset: number,
+    limit: number,
+  ) {
     return fetchReleases({
       artistId,
-      creditRole: "release",
+      ...(role === "albums"
+        ? { creditRole: "release" }
+        : { creditRole: "track", excludeCreditRole: "release" }),
       offset,
       limit,
       sortBy: sort.sortBy,
       sortOrder: sort.sortOrder,
       filter: listFilters[filter.value],
     });
+  }
+
+  async function loadAppearances(offset: number, limit: number) {
+    const scope = listScope;
+    const page = await loadReleases("appearances", offset, limit);
+    appearances = { scope, total: page.total };
+    return page;
   }
 
   let summary = $derived.by(() => {
@@ -238,7 +255,7 @@ www.meshiplaw.com/lyra.
           scope={listScope}
           label="albums"
           empty={filter.value === "all" ? "No albums." : "No matching albums."}
-          loadPage={loadAlbums}
+          loadPage={(offset, limit) => loadReleases("albums", offset, limit)}
           children={albumGrid}
         >
           {#snippet toolbar()}
@@ -257,6 +274,27 @@ www.meshiplaw.com/lyra.
         </PaginatedList>
       </div>
     {/if}
+
+    <!-- Releases holding a track credited to the artist, under the albums'
+         sort and filter. Mounted while hidden so it can learn whether there
+         are any. -->
+    <div
+      class="mt-8"
+      class:hidden={appearances.scope !== listScope || appearances.total === 0}
+    >
+      <h3
+        class="mb-3 text-xs font-semibold tracking-wide text-slate-400 uppercase dark:text-neutral-500"
+      >
+        Appears on
+      </h3>
+      <PaginatedList
+        compact
+        scope={listScope}
+        label="appearances"
+        loadPage={loadAppearances}
+        children={albumGrid}
+      />
+    </div>
   </div>
 {/if}
 
