@@ -281,19 +281,51 @@ const QUEUE_HISTORY_CAP = 100;
 
 function queueSnapshot(): QueueSnapshot | null {
   if (!currentTrack?.id || !playbackContext) return null;
-  const order =
-    shuffle && shuffledIds.length > 0
-      ? shuffledIds
-      : playbackContext.tracks.map((t) => t.id).filter((id) => !!id);
+  const contextIds = playbackContext.tracks
+    .map((t) => t.id)
+    .filter((id) => !!id);
+  const shuffled = shuffle && shuffledIds.length > 0;
+  const order = shuffled ? shuffledIds : contextIds;
   const idx = order.indexOf(currentTrack.id);
   const history = idx > 0 ? order.slice(0, idx).slice(-QUEUE_HISTORY_CAP) : [];
   const upNext = getUpNext().map((item) => item.track.id);
+  const trackIds = [...history, currentTrack.id, ...upNext].slice(0, QUEUE_CAP);
   return {
-    track_ids: [...history, currentTrack.id, ...upNext].slice(0, QUEUE_CAP),
+    track_ids: trackIds,
     current_index: history.length,
     repeat_mode: "none",
-    shuffle_enabled: shuffle,
+    unshuffled_track_ids: shuffled
+      ? unshuffledOrder(trackIds, contextIds, currentTrack.id)
+      : null,
   };
+}
+
+// `trackIds`, each as many times, in the order turning shuffle off plays
+// them: the context's own order, with the queued tracks after the current one.
+function unshuffledOrder(
+  trackIds: string[],
+  contextIds: string[],
+  currentId: string,
+): string[] {
+  const left = new Map<string, number>();
+  for (const id of trackIds) left.set(id, (left.get(id) ?? 0) + 1);
+  const at = contextIds.indexOf(currentId);
+  const order = [
+    ...contextIds.slice(0, at + 1),
+    ...queue.map((item) => item.track.id),
+    ...contextIds.slice(at + 1),
+    // Any not placed above, such as a current track outside its context,
+    // keep their play order.
+    ...trackIds,
+  ];
+  const ids: string[] = [];
+  for (const id of order) {
+    const count = left.get(id) ?? 0;
+    if (count === 0) continue;
+    left.set(id, count - 1);
+    ids.push(id);
+  }
+  return ids;
 }
 
 function serialize<T>(task: () => Promise<T>): Promise<T> {
@@ -871,9 +903,12 @@ async function playQueue(
       ? i === snapshot.current_index
       : snapshot.track_ids.indexOf(id) === i,
   );
+  // A shuffled queue's context keeps the order turning shuffle off returns to.
+  const unshuffled = snapshot.unshuffled_track_ids;
+  const contextIds = unshuffled ? [...new Set(unshuffled)] : ids;
   const current = await fetchTrackDetail(currentId);
   const context: PlaybackContext = {
-    tracks: ids.map((id) =>
+    tracks: contextIds.map((id) =>
       id === currentId ? current : placeholderTrack(id),
     ),
     title: "",
@@ -884,7 +919,7 @@ async function playQueue(
   };
   queue = [];
   skippedUpNextIds = new Set();
-  shuffle = snapshot.shuffle_enabled;
+  shuffle = unshuffled != null;
   shuffledIds = shuffle ? ids : [];
   await playTrackInternal(current, context, {
     ...options,

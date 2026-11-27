@@ -117,7 +117,9 @@ export interface QueueSnapshot {
   track_ids: string[];
   current_index: number;
   repeat_mode: RepeatMode;
-  shuffle_enabled: boolean;
+  // The ids of `track_ids` in the order turning shuffle off returns to,
+  // present exactly while the queue is shuffled.
+  unshuffled_track_ids: string[] | null;
 }
 
 export interface QueueResponse extends QueueSnapshot {
