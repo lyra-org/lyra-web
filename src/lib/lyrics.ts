@@ -85,6 +85,7 @@ export function lyricsSourceLabel(
 ): string {
   if (source.scope === "personal") return "Your lyrics";
   if (source.source === "manual") return "Shared lyrics";
+  if (source.source === "local") return "Library files";
   const id = source.provider_id ?? "";
   return providerNames[id] ?? id;
 }

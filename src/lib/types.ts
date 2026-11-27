@@ -615,7 +615,9 @@ export interface LyricsResponse {
   provider_lyrics_id?: string | null;
   language: string;
   scope: "personal" | "shared";
-  source: "manual" | "provider";
+  // `local` lyrics were read from the library's files by a sync. They are
+  // shared and read-only: they follow the files.
+  source: "manual" | "provider" | "local";
   plain_text: string;
   has_word_cues: boolean;
   // RFC 3339 timestamp; updated only when content changes.
